@@ -341,11 +341,16 @@ export const useGameLogic = () => {
     if (turnChanged) {
         const nextPersonState = nextOwner === 'PLAYER' ? player : dealer;
         if (nextPersonState.isHandcuffed) {
-             addLog(`${nextOwner} IS CUFFED. SKIPPED.`);
+             const message = `${nextOwner} CUFFED. SKIPPING.`;
+             addLog(message, 'info');
+             setOverlayText(`${nextOwner} CUFFED`);
+             
              // Shake Animation
              setAnim(p => ({ ...p, triggerCuff: p.triggerCuff + 1 }));
              
-             await wait(2000); 
+             await wait(2500); 
+             setOverlayText(null);
+
              if (nextOwner === 'PLAYER') setPlayer(p => ({ ...p, isHandcuffed: false }));
              else setDealer(d => ({ ...d, isHandcuffed: false }));
              

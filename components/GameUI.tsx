@@ -460,7 +460,8 @@ export const GameUI: React.FC<GameUIProps> = ({
              </div>
 
              <div className="flex-1 flex justify-end gap-2 pointer-events-auto h-full items-end">
-                <div className="flex gap-1 md:gap-2 p-2 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[80px] md:min-h-[100px] items-end overflow-x-auto max-w-full">
+                {/* Added 'hide-scrollbar' via utility classes */}
+                <div className="flex gap-1 md:gap-2 p-2 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[80px] md:min-h-[100px] items-end overflow-x-auto max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                     {player.items.map((item, idx) => {
                         const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
                         // Added check to disable cuffs if dealer is already cuffed

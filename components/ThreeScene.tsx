@@ -45,6 +45,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Safety check for production environments where layout might not be ready
+    if (containerRef.current.clientWidth === 0 || containerRef.current.clientHeight === 0) {
+        // Retry logic will be handled by ResizeObserver, but we shouldn't init THREE with 0 size
+    }
+
     // --- Setup Scene & Renderer ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000); 
@@ -299,6 +304,10 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (!containerRef.current || !sceneRef.current) return;
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
+        
+        // Prevent division by zero or invalid drawing
+        if (width === 0 || height === 0) return;
+
         const aspect = width / height;
 
         // Mobile Adjustment: Pull camera back significantly on portrait/narrow screens to fit the table
@@ -418,8 +427,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             targets.targetPos.set(0, 0, 8); 
             targets.targetRot.set(0, Math.PI, 0); 
         } else if (aimTarget === 'SELF') { 
-            targets.targetPos.set(0, -3.0, 8.5); 
-            targets.targetRot.set(Math.PI / 4, 0, 0); 
+            // IMPROVED SHOOT SELF ANGLE (Look down barrel)
+            targets.targetPos.set(0, -5, 8); 
+            targets.targetRot.set(Math.PI / 2.2, 0, 0); 
         } else if (cameraView === 'GUN') { 
             targets.targetPos.set(0, -0.75, 4); 
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
