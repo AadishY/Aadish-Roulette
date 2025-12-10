@@ -145,7 +145,7 @@ export const GameUI: React.FC<GameUIProps> = ({
       {gameState.phase === 'BOOT' && (
         <div className="absolute inset-0 z-[100] bg-black flex flex-col justify-between p-8 md:p-12 font-mono">
             <div className="flex justify-between items-start text-stone-600 text-xs">
-                <span>AADISH_OS v0.9.5</span>
+                <span>AADISH_OS v1.0.0</span>
                 <span>MEM: 65536KB OK</span>
             </div>
             
@@ -289,7 +289,7 @@ export const GameUI: React.FC<GameUIProps> = ({
             </div>
             
             <div className="mt-12 text-stone-800 text-xs font-mono">
-                VER 0.9.5 // WAITING FOR CONNECTION...
+                VER 1.0.0 // WAITING FOR CONNECTION...
             </div>
           </div>
         </div>
