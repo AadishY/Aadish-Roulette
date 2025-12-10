@@ -70,7 +70,7 @@ export const handleSaw = async (
 ) => {
     setIsSawing(true);
     setTriggerSparks(p => p + 1);
-    await wait(600); // FASTER SAW ANIMATION (0.6s)
+    await wait(800); // Increased duration for better feel
     setIsSawing(false);
     
     if (user === 'PLAYER') setPlayer(p => ({ ...p, isSawedActive: true }));

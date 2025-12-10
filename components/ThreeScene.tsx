@@ -166,9 +166,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       gunGroup.rotation.z += (gRot.z - gunGroup.rotation.z) * 0.08;
 
       if (gunGroup.userData.isSawing) {
-          gunGroup.position.x += (Math.random() - 0.5) * 0.3;
-          gunGroup.position.y += (Math.random() - 0.5) * 0.15;
-          gunGroup.rotation.z += (Math.random() - 0.5) * 0.25;
+          // MORE INTENSE SAW ANIMATION
+          gunGroup.position.x += (Math.random() - 0.5) * 0.6;
+          gunGroup.position.y += (Math.random() - 0.5) * 0.4;
+          gunGroup.rotation.z += (Math.random() - 0.5) * 0.5;
+          gunGroup.rotation.y += (Math.random() - 0.5) * 0.2;
       }
 
       // 2. Camera Breathing & Shake
@@ -200,7 +202,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
           scene.userData.cameraShake = shake; 
       }
 
-      if (cameraView === 'DEALER') {
+      // Camera LookAt Logic
+      // If we are shooting ourselves (PLAYER + SELF), we now want to focus on the dealer to build tension
+      if (turnOwner === 'PLAYER' && aimTarget === 'SELF') {
+          camera.lookAt(0, 4, -4); // Look at Dealer's face area
+      } else if (cameraView === 'DEALER') {
           camera.lookAt(0, 5, -14); 
       } else {
           camera.lookAt(0, 1.5, -2); 
@@ -452,6 +458,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     if (!sceneRef.current) return;
     const baseZ = sceneRef.current.scene.userData.baseZ || 14; 
     
+    // When shooting self (PLAYER + SELF), we now override in the animation loop to look at dealer.
+    // However, we still need base targets for transitions.
     const views: Record<CameraView, THREE.Vector3> = {
         'PLAYER': new THREE.Vector3(0, 3.5, baseZ), 
         'DEALER': new THREE.Vector3(0, 4, -4), 
@@ -473,9 +481,10 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             targets.targetPos.set(0, 0, 8); 
             targets.targetRot.set(0, Math.PI, 0); 
         } else if (aimTarget === 'SELF') { 
-            // IMPROVED SHOOT SELF ANGLE (Look down barrel - Lower pos, steep upward angle)
-            targets.targetPos.set(0, -3.5, 8.5); 
-            targets.targetRot.set(Math.PI / 3.5, 0, 0); 
+            // IMPROVED SHOOT SELF ANGLE 
+            // Gun points back at camera/self, but slightly lower
+            targets.targetPos.set(0, -3.0, 7.5); 
+            targets.targetRot.set(Math.PI / 3.0, 0, 0); 
         } else if (cameraView === 'GUN') { 
             targets.targetPos.set(0, -0.75, 4); 
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
