@@ -51,10 +51,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
 
-        // CRITICAL FIX: Do not init if dimensions are 0 (causes black screen/context loss)
         if (width === 0 || height === 0) return;
 
-        // Cleanup existing if react strict mode double-fires
         if (sceneRef.current) {
             sceneRef.current.renderer.dispose();
             if (containerRef.current.contains(sceneRef.current.renderer.domElement)) {
@@ -69,7 +67,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
         camera.position.set(0, 4, 14);
 
-        // Power preference 'default' is safer for mobile/web compatibility than 'high-performance'
         const renderer = new THREE.WebGLRenderer({ 
             antialias: true, 
             powerPreference: 'default',
@@ -77,7 +74,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         });
         
         renderer.setSize(width, height);
-        // Cap pixel ratio to 1.5 to prevent overheating on high-res phones
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -118,7 +114,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const bloodParticles = new THREE.Points(particles, pMat);
         scene.add(bloodParticles);
 
-        // SPARKS
+        // SPARKS (Used for Saw & Muzzle Flash)
         const sparkGeo = new THREE.BufferGeometry();
         const sPos = new Float32Array(30 * 3); 
         const sVel = new Float32Array(30 * 3);
@@ -138,7 +134,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles
         };
         
-        // Force an initial update to set correct aspect ratio
         updateCameraResponsive();
     };
 
@@ -153,7 +148,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       if (!sceneRef.current) return;
       time += 0.01;
       
-      const { gunGroup, camera, dealerGroup, shellCasing, shellVel, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer } = sceneRef.current;
+      const { gunGroup, camera, dealerGroup, shellCasing, shellVel, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash } = sceneRef.current;
 
       // 1. Lerp Gun
       const gunState = gunGroup.userData;
@@ -166,11 +161,10 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       gunGroup.rotation.z += (gRot.z - gunGroup.rotation.z) * 0.08;
 
       if (gunGroup.userData.isSawing) {
-          // MORE INTENSE SAW ANIMATION
-          gunGroup.position.x += (Math.random() - 0.5) * 0.6;
-          gunGroup.position.y += (Math.random() - 0.5) * 0.4;
-          gunGroup.rotation.z += (Math.random() - 0.5) * 0.5;
-          gunGroup.rotation.y += (Math.random() - 0.5) * 0.2;
+          // Rapid vibration for sawing
+          gunGroup.position.x += Math.sin(time * 60) * 0.05;
+          gunGroup.position.y += Math.cos(time * 50) * 0.03;
+          gunGroup.rotation.z += Math.sin(time * 40) * 0.05;
       }
 
       // 2. Camera Breathing & Shake
@@ -203,9 +197,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       }
 
       // Camera LookAt Logic
-      // If we are shooting ourselves (PLAYER + SELF), we now want to focus on the dealer to build tension
+      // Focus on Muzzle when shooting self
       if (turnOwner === 'PLAYER' && aimTarget === 'SELF') {
-          camera.lookAt(0, 4, -4); // Look at Dealer's face area
+          // Intense Look down the barrel:
+          // Gun is at (0, -3.0, 7.5) with Rot (PI/3, 0, 0).
+          // Muzzle tip is roughly at (0, 0, 9.5) or (0, 1, 10) depending on angle.
+          // We want the camera to be VERY close to the muzzle, looking INTO it.
+          camera.lookAt(0, -1.0, 9.5); 
+          // Move camera extremely close to muzzle (Z~10.5)
+          camera.position.lerp(new THREE.Vector3(0, 2.5, 10.5), 0.08);
       } else if (cameraView === 'DEALER') {
           camera.lookAt(0, 5, -14); 
       } else {
@@ -272,6 +272,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
           if(dir) bulletMesh.position.add(dir.clone().multiplyScalar(speed));
           if (bulletMesh.position.distanceTo(new THREE.Vector3(0,0,0)) > 60) bulletMesh.visible = false;
       }
+      
+      // Flash Pulse
+      if ((muzzleFlash.material as THREE.Material).opacity > 0.1) {
+           muzzleFlash.scale.setScalar(1.0 + Math.random() * 0.5);
+      }
 
       // 8. Particles
       const bPos = bloodParticles.geometry.attributes.position.array as Float32Array;
@@ -328,20 +333,17 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
         
-        // Critical for preventing black screen on resize
         if (width === 0 || height === 0) return;
 
         const aspect = width / height;
 
-        // Mobile Adjustment
         let baseZ = 14;
         
-        // Check if likely mobile (width < 768)
+        // Android/Mobile Optimization
         if (width < 768) {
-            if (aspect < 1) baseZ = 22; // Portrait
-            else baseZ = 16; // Landscape Mobile (previously 14 or 18, 16 pushes back slightly more)
+            if (aspect < 1) baseZ = 22; 
+            else baseZ = 16; 
         } else {
-            // Desktop adjustments
             if (aspect < 1.6) baseZ = 16;
         }
         
@@ -352,8 +354,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         sceneRef.current.renderer.setSize(width, height);
     };
 
-    // --- Initial Setup ---
-    // Wait one tick to ensure DOM is ready (Vercel/Production fix)
     const timeout = setTimeout(() => {
         if (containerRef.current && containerRef.current.clientWidth > 0) {
              initThree();
@@ -361,7 +361,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         }
     }, 100);
 
-    // Watch for size changes
     const resizeObserver = new ResizeObserver(() => {
         if (!sceneRef.current) {
              if (containerRef.current && containerRef.current.clientWidth > 0) {
@@ -386,7 +385,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       resizeObserver.disconnect();
       if (sceneRef.current) {
           sceneRef.current.renderer.dispose();
-          // Optional: dispose geometries/materials here for cleaner cleanup
       }
       if (containerRef.current) containerRef.current.innerHTML = '';
     };
@@ -458,8 +456,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     if (!sceneRef.current) return;
     const baseZ = sceneRef.current.scene.userData.baseZ || 14; 
     
-    // When shooting self (PLAYER + SELF), we now override in the animation loop to look at dealer.
-    // However, we still need base targets for transitions.
     const views: Record<CameraView, THREE.Vector3> = {
         'PLAYER': new THREE.Vector3(0, 3.5, baseZ), 
         'DEALER': new THREE.Vector3(0, 4, -4), 
@@ -482,7 +478,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             targets.targetRot.set(0, Math.PI, 0); 
         } else if (aimTarget === 'SELF') { 
             // IMPROVED SHOOT SELF ANGLE 
-            // Gun points back at camera/self, but slightly lower
             targets.targetPos.set(0, -3.0, 7.5); 
             targets.targetRot.set(Math.PI / 3.0, 0, 0); 
         } else if (cameraView === 'GUN') { 
@@ -506,14 +501,19 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     }
   }, [aimTarget, turnOwner, cameraView]); 
 
+  // Gun Sawed Logic
   useEffect(() => {
       if (!sceneRef.current) return;
       const { barrelMesh } = sceneRef.current;
       if (animState.isSawing) {
           barrelMesh.scale.y = 1;
       } else if (isSawed) {
-          barrelMesh.scale.y = 0.5; 
-          barrelMesh.position.z = 4.5 - 1.7; 
+          // Scale down to approx 60% length (0.43 * 7 = ~3)
+          barrelMesh.scale.y = 0.43; 
+          // Adjust Z to align with receiver. 
+          // Orig len 7. Orig Z 4.5. Base at 4.5 - 3.5 = 1.0.
+          // New len ~3. New Base at 1.0. New Center = 1.0 + 1.5 = 2.5.
+          barrelMesh.position.z = 2.5; 
       } else {
           barrelMesh.scale.y = 1;
           barrelMesh.position.z = 4.5;
@@ -522,7 +522,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
   useEffect(() => {
      if (!sceneRef.current) return;
-     const { muzzleLight, muzzleFlash, gunGroup, roomRedLight } = sceneRef.current;
+     const { muzzleLight, muzzleFlash, gunGroup, roomRedLight, sparkParticles } = sceneRef.current;
      muzzleLight.intensity = animState.muzzleFlashIntensity;
      muzzleLight.position.copy(gunGroup.position);
      muzzleLight.position.y += 0.5;
@@ -534,6 +534,25 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             (muzzleFlash.material as THREE.MeshBasicMaterial).color.setHex(0xff3300);
             muzzleLight.color.setHex(0xff4400);
             roomRedLight.intensity = 20;
+
+            // Trigger Burst Spark Effect on fire
+            const pos = sparkParticles.geometry.attributes.position.array as Float32Array;
+            const vel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
+            const count = pos.length / 3;
+            // Use only half the particles for burst, save some for saw
+            for(let i=0; i<30; i++) {
+                const idx = i * 3;
+                pos[idx] = muzzleLight.position.x + (Math.random()-0.5)*0.2;
+                pos[idx+1] = muzzleLight.position.y + (Math.random()-0.5)*0.2;
+                pos[idx+2] = muzzleLight.position.z + (Math.random()-0.5)*0.2;
+                // Blast forward in gun direction
+                const spread = new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), (Math.random()-0.5)).multiplyScalar(0.5);
+                const blast = dir.clone().multiplyScalar(0.8 + Math.random());
+                vel[idx] = blast.x + spread.x;
+                vel[idx+1] = blast.y + spread.y;
+                vel[idx+2] = blast.z + spread.z;
+            }
+            sparkParticles.geometry.attributes.position.needsUpdate = true;
         } else {
             (muzzleFlash.material as THREE.Material).opacity = 0;
             muzzleLight.intensity = 0; roomRedLight.intensity = 0;

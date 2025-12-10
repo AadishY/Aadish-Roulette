@@ -4,7 +4,8 @@ export const setupLighting = (scene: THREE.Scene) => {
   // Setup Fog for atmosphere (starts close, fades to black)
   scene.fog = new THREE.Fog(0x000000, 2, 35);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.1); 
+  // Reduced ambient for darker, grittier feel
+  const ambient = new THREE.AmbientLight(0xffffff, 0.05); 
   scene.add(ambient);
 
   // Overhead Hanging Bulb Light (Point) - The actual "source" feeling
@@ -19,9 +20,9 @@ export const setupLighting = (scene: THREE.Scene) => {
   spot.penumbra = 0.5;
   spot.castShadow = true;
   spot.shadow.bias = -0.0001;
-  // Reduced shadow map size for performance
-  spot.shadow.mapSize.width = 512; 
-  spot.shadow.mapSize.height = 512;
+  // Further reduced shadow map size for performance on mobile
+  spot.shadow.mapSize.width = 256; 
+  spot.shadow.mapSize.height = 256;
   scene.add(spot);
 
   // Table Fill Light - Cool blue to contrast the warm spot
@@ -86,7 +87,7 @@ export const createEnvironment = (scene: THREE.Scene) => {
 };
 
 export const createDust = (scene: THREE.Scene) => {
-    const particleCount = 50; // Significantly reduced for mobile performance
+    const particleCount = 10; // Halved for performance
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);

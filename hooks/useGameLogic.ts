@@ -7,6 +7,7 @@ import * as ItemActions from '../utils/itemActions';
 export const useGameLogic = () => {
   // --- State ---
   const [playerName, setPlayerName] = useState('PLAYER');
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const [gameState, setGameState] = useState<GameState>({
     phase: 'BOOT', // Start with Boot sequence
@@ -120,6 +121,7 @@ export const useGameLogic = () => {
     });
     setCameraView('PLAYER');
     setShowBlood(false);
+    setIsProcessing(false);
     
     if (!toMenu) {
         startRound();
@@ -195,14 +197,19 @@ export const useGameLogic = () => {
 
   // Add functionality to pick up the gun
   const pickupGun = () => {
+      if (isProcessing) return;
       setCameraView('GUN');
   };
 
   const fireShot = async (shooter: TurnOwner, target: TurnOwner) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
     const { chamber, currentShellIndex } = gameState;
     
     if (currentShellIndex >= chamber.length) {
       startRound();
+      setIsProcessing(false);
       return;
     }
 
@@ -302,10 +309,12 @@ export const useGameLogic = () => {
     // Win Check
     if (player.hp - (target === 'PLAYER' ? damage : 0) <= 0) {
       setGameState(prev => ({ ...prev, phase: 'GAME_OVER', winner: 'DEALER' }));
+      setIsProcessing(false);
       return;
     }
     if (dealer.hp - (target === 'DEALER' ? damage : 0) <= 0) {
       setGameState(prev => ({ ...prev, phase: 'GAME_OVER', winner: 'PLAYER' }));
+      setIsProcessing(false);
       return;
     }
 
@@ -322,6 +331,7 @@ export const useGameLogic = () => {
 
     if (remaining === 0) {
       startRound();
+      setIsProcessing(false);
       return;
     }
 
@@ -362,6 +372,7 @@ export const useGameLogic = () => {
     const ownerPhase = nextOwner === 'PLAYER' ? 'PLAYER_TURN' : 'DEALER_TURN';
     setGameState(prev => ({ ...prev, turnOwner: nextOwner, phase: ownerPhase }));
     setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); // Keep view on Player/Table mostly
+    setIsProcessing(false);
   };
 
   // --- Item Logic ---
@@ -425,6 +436,7 @@ export const useGameLogic = () => {
 
   const usePlayerItem = async (index: number) => {
     if (gameState.phase !== 'PLAYER_TURN') return;
+    if (isProcessing) return; // Prevent race conditions
     
     // Prevent item usage if gun is picked up (camera is GUN)
     if (cameraView === 'GUN') {
@@ -437,6 +449,9 @@ export const useGameLogic = () => {
 
     // Special check for Handcuffs legality
     if (item === 'CUFFS' && dealer.isHandcuffed) return; 
+    
+    // Lock interactions
+    setIsProcessing(true);
 
     // Remove item locally first to prevent double click abuse
     const newItems = [...player.items];
@@ -445,6 +460,9 @@ export const useGameLogic = () => {
 
     // Execute Effect
     await processItemEffect('PLAYER', item);
+    
+    // Unlock
+    setIsProcessing(false);
   };
 
   return {
@@ -463,6 +481,7 @@ export const useGameLogic = () => {
     showFlash,
     receivedItems,
     showLootOverlay,
+    isProcessing,
     startGame,
     fireShot,
     usePlayerItem,

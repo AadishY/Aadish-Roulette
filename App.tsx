@@ -47,6 +47,7 @@ export default function App() {
         knownShell={game.knownShell}
         playerName={game.playerName}
         cameraView={game.cameraView}
+        isProcessing={game.isProcessing}
         onStartGame={game.startGame}
         onResetGame={game.resetGame}
         onFireShot={(target) => game.fireShot('PLAYER', target)}
