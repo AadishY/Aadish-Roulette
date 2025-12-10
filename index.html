@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aadish Roulette</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+      
+      body {
+        background-color: #050505;
+        font-family: 'JetBrains Mono', monospace;
+        overflow: hidden;
+        cursor: crosshair;
+      }
+
+      button, .interactive {
+        cursor: pointer;
+      }
+      
+      @keyframes scanline {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 0% 100%; }
+      }
+
+      @keyframes flicker {
+        0% { opacity: 0.97; }
+        5% { opacity: 0.9; }
+        10% { opacity: 0.94; }
+        15% { opacity: 0.8; }
+        20% { opacity: 0.98; }
+        50% { opacity: 0.95; }
+        100% { opacity: 0.97; }
+      }
+
+      @keyframes text-pop {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes glitch {
+        0% { transform: translate(0); }
+        20% { transform: translate(-2px, 2px); }
+        40% { transform: translate(-2px, -2px); }
+        60% { transform: translate(2px, 2px); }
+        80% { transform: translate(2px, -2px); }
+        100% { transform: translate(0); }
+      }
+
+      @keyframes bounce-x {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(5px); }
+      }
+
+      @keyframes flash-bang {
+        0% { background-color: white; opacity: 1; }
+        100% { background-color: transparent; opacity: 0; }
+      }
+      
+      @keyframes blood-pulse {
+        0% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.02); }
+        100% { opacity: 0.4; transform: scale(1); }
+      }
+
+      .flash-screen {
+        animation: flash-bang 0.15s ease-out forwards;
+        pointer-events: none;
+      }
+
+      .text-glitch {
+        animation: glitch 0.2s infinite;
+      }
+      
+      .pop-in {
+        animation: text-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+
+      /* Blood Overlay - Made more visible */
+      .blood-overlay {
+        background: radial-gradient(circle at center, transparent 10%, rgba(180, 0, 0, 0.3) 50%, rgba(130, 0, 0, 0.9) 100%);
+        mix-blend-mode: overlay;
+        box-shadow: inset 0 0 150px rgba(180,0,0,0.8);
+        pointer-events: none;
+        z-index: 40;
+      }
+      
+      .blood-active {
+        animation: blood-pulse 3s infinite;
+      }
+
+      /* CRT Effect */
+      .crt::before {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+        z-index: 50;
+        background-size: 100% 2px, 3px 100%;
+        pointer-events: none;
+        animation: flicker 0.15s infinite;
+      }
+
+      /* Custom Scrollbar for logs */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0c0a09; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #44403c; 
+        border-radius: 2px;
+      }
+      
+      .clip-path-slant {
+        clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%);
+      }
+
+      /* Orientation Warning */
+      #rotate-warning {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        z-index: 9999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        text-align: center;
+        padding: 20px;
+      }
+
+      /* Force landscape on mobile */
+      @media only screen and (orientation: portrait) {
+        #root {
+          display: none;
+        }
+        #rotate-warning {
+          display: flex;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "three": "https://aistudiocdn.com/three@^0.181.2"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="rotate-warning">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3 3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z"/>
+        <path d="M5 8h.01"/>
+        <path d="M19 16v.01"/>
+      </svg>
+      <h1 style="font-size: 1.5rem; margin-top: 1rem; font-weight: 800; color: #ef4444;">ROTATE DEVICE</h1>
+      <p style="font-size: 0.9rem; color: #a8a29e; margin-top: 0.5rem;">LANDSCAPE ORIENTATION REQUIRED</p>
+    </div>
+    <div id="root"></div>
+  </body>
+</html>
