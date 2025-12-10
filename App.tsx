@@ -20,7 +20,8 @@ export default function App() {
   });
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair">
+    // Use h-[100dvh] to ensure dynamic viewport height handling on mobile
+    <div className="relative w-full h-[100dvh] bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair">
       <ThreeScene 
         isSawed={game.player.isSawedActive}
         onGunClick={() => {}}

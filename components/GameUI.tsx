@@ -65,15 +65,23 @@ export const GameUI: React.FC<GameUIProps> = ({
   onPickupGun
 }) => {
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [inputName, setInputName] = useState(playerName || '');
   const [isLogsOpen, setIsLogsOpen] = useState(false); // Collapsed by default
   const [bootLines, setBootLines] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Update input name if playerName prop changes (e.g. from local storage load)
+  // Update input name if playerName prop changes
   useEffect(() => {
     if (playerName) setInputName(playerName);
   }, [playerName]);
+
+  // Auto-focus input on intro
+  useEffect(() => {
+     if (gameState.phase === 'INTRO' && nameInputRef.current) {
+         nameInputRef.current.focus();
+     }
+  }, [gameState.phase]);
 
   // Boot Sequence Effect
   useEffect(() => {
@@ -83,19 +91,19 @@ export const GameUI: React.FC<GameUIProps> = ({
         
         const sequence = [
             { text: "BIOS CHECK...", delay: 100 },
-            { text: "CPU: QUANTUM CORE... OK", delay: 300 },
-            { text: "MEMORY: 64TB... OK", delay: 500 },
-            { text: "LOADING KERNEL...", delay: 800 },
-            { text: "MOUNTING VOLUMES...", delay: 1200 },
-            { text: "  > /DEV/SDA1... OK", delay: 1400 },
-            { text: "  > /DEV/SDA2... OK", delay: 1500 },
-            { text: "LOADING ASSETS:", delay: 1800 },
-            { text: "  > MODELS... OK", delay: 2200 },
-            { text: "  > TEXTURES... OK", delay: 2600 },
-            { text: "  > SOUNDS... OK", delay: 3000 },
-            { text: "INITIALIZING AI DEALER...", delay: 3500 },
-            { text: "ESTABLISHING SECURE CONNECTION...", delay: 4200 },
-            { text: "SYSTEM READY.", delay: 5000 }
+            { text: "CPU: QUANTUM CORE... OK", delay: 200 },
+            { text: "MEMORY: 64TB... OK", delay: 300 },
+            { text: "LOADING KERNEL...", delay: 500 },
+            { text: "MOUNTING VOLUMES...", delay: 800 },
+            { text: "  > /DEV/SDA1... OK", delay: 1000 },
+            { text: "  > /DEV/SDA2... OK", delay: 1100 },
+            { text: "LOADING ASSETS:", delay: 1400 },
+            { text: "  > MODELS... OK", delay: 1600 },
+            { text: "  > TEXTURES... OK", delay: 1800 },
+            { text: "  > SOUNDS... OK", delay: 2000 },
+            { text: "INITIALIZING AI DEALER...", delay: 2200 },
+            { text: "ESTABLISHING SECURE CONNECTION...", delay: 2500 },
+            { text: "SYSTEM READY.", delay: 3000 }
         ];
 
         let timeouts: ReturnType<typeof setTimeout>[] = [];
@@ -113,9 +121,9 @@ export const GameUI: React.FC<GameUIProps> = ({
                     clearInterval(interval);
                     return 100;
                 }
-                return p + Math.random() * 5;
+                return p + Math.random() * 10; // Faster load
             });
-        }, 150);
+        }, 100);
 
         return () => {
             timeouts.forEach(clearTimeout);
@@ -273,6 +281,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                 <div className="flex flex-col gap-2 text-left">
                     <label className="text-stone-500 font-bold tracking-widest text-xs md:text-sm">PLAYER NAME</label>
                     <input 
+                        ref={nameInputRef}
                         type="text" 
                         value={inputName}
                         onChange={(e) => setInputName(e.target.value)}
@@ -460,11 +469,10 @@ export const GameUI: React.FC<GameUIProps> = ({
              </div>
 
              <div className="flex-1 flex justify-end gap-2 pointer-events-auto h-full items-end">
-                {/* Added 'hide-scrollbar' via utility classes */}
-                <div className="flex gap-1 md:gap-2 p-2 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[80px] md:min-h-[100px] items-end overflow-x-auto max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                {/* Added 'hide-scrollbar' via utility classes AND arbitrary properties for Firefox/IE */}
+                <div className="flex gap-1 md:gap-2 p-2 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[80px] md:min-h-[100px] items-end overflow-x-auto max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
                     {player.items.map((item, idx) => {
                         const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
-                        // Added check to disable cuffs if dealer is already cuffed
                         const isUsageDisabled = gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled;
                         
                         return (
