@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView } from '../types';
-import { Zap, Search, Beer, Link, Cigarette, Scissors, ArrowDown, Skull, Users, Home, ChevronDown, ChevronUp, RotateCcw, Power, Hand, Maximize } from 'lucide-react';
-import { ITEM_DESCRIPTIONS } from '../constants';
+import { Users, RotateCcw, Power, ChevronDown, ChevronUp, Skull } from 'lucide-react';
+import { StatusDisplay } from './ui/StatusDisplay';
+import { Inventory } from './ui/Inventory';
+import { Controls } from './ui/Controls';
+import { Icons } from './ui/Icons';
 
 interface GameUIProps {
   gameState: GameState;
@@ -69,81 +72,44 @@ export const GameUI: React.FC<GameUIProps> = ({
   const logsEndRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [inputName, setInputName] = useState(playerName || '');
-  const [isLogsOpen, setIsLogsOpen] = useState(false); // Collapsed by default
+  const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [bootLines, setBootLines] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Update input name if playerName prop changes
-  useEffect(() => {
-    if (playerName) setInputName(playerName);
-  }, [playerName]);
+  useEffect(() => { if (playerName) setInputName(playerName); }, [playerName]);
+  useEffect(() => { if (gameState.phase === 'INTRO' && nameInputRef.current) nameInputRef.current.focus(); }, [gameState.phase]);
 
-  // Auto-focus input on intro
-  useEffect(() => {
-     if (gameState.phase === 'INTRO' && nameInputRef.current) {
-         nameInputRef.current.focus();
-     }
-  }, [gameState.phase]);
-
-  // Handle Fullscreen on Start
   const handleStartGame = () => {
       if (inputName.trim()) {
-          // Attempt fullscreen
           try {
               if (!document.fullscreenElement) {
-                  document.documentElement.requestFullscreen().catch(e => {
-                      console.log("Fullscreen blocked or not supported", e);
-                  });
+                  document.documentElement.requestFullscreen().catch(() => {});
               }
-          } catch (e) {
-              // Ignore errors
-          }
+          } catch (e) {}
           onStartGame(inputName.trim());
       }
   };
 
-  // Boot Sequence Effect
   useEffect(() => {
     if (gameState.phase === 'BOOT') {
         setBootLines([]);
         setLoadingProgress(0);
-        
         const sequence = [
             { text: "BIOS CHECK...", delay: 100 },
             { text: "CPU: QUANTUM CORE... OK", delay: 200 },
             { text: "MEMORY: 64TB... OK", delay: 300 },
             { text: "LOADING KERNEL...", delay: 500 },
             { text: "MOUNTING VOLUMES...", delay: 800 },
-            { text: "  > /DEV/SDA1... OK", delay: 1000 },
-            { text: "  > /DEV/SDA2... OK", delay: 1100 },
-            { text: "LOADING ASSETS:", delay: 1400 },
-            { text: "  > MODELS... OK", delay: 1600 },
-            { text: "  > TEXTURES... OK", delay: 1800 },
-            { text: "  > SOUNDS... OK", delay: 2000 },
-            { text: "INITIALIZING AI DEALER...", delay: 2200 },
-            { text: "ESTABLISHING SECURE CONNECTION...", delay: 2500 },
-            { text: "SYSTEM READY.", delay: 3000 }
+            { text: "INITIALIZING AI DEALER...", delay: 1200 },
+            { text: "SYSTEM READY.", delay: 2000 }
         ];
-
         let timeouts: ReturnType<typeof setTimeout>[] = [];
-        
         sequence.forEach(({ text, delay }) => {
-            const t = setTimeout(() => {
-                setBootLines(prev => [...prev, text]);
-            }, delay);
-            timeouts.push(t);
+            timeouts.push(setTimeout(() => setBootLines(prev => [...prev, text]), delay));
         });
-
         const interval = setInterval(() => {
-            setLoadingProgress(p => {
-                if (p >= 100) {
-                    clearInterval(interval);
-                    return 100;
-                }
-                return p + Math.random() * 10; // Faster load
-            });
+            setLoadingProgress(p => p >= 100 ? 100 : p + 5);
         }, 100);
-
         return () => {
             timeouts.forEach(clearTimeout);
             clearInterval(interval);
@@ -152,17 +118,14 @@ export const GameUI: React.FC<GameUIProps> = ({
   }, [gameState.phase]);
 
   useEffect(() => {
-    if (isLogsOpen && logsEndRef.current) {
-        logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (isLogsOpen && logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [logs, isLogsOpen]);
 
   const [smokeActive, setSmokeActive] = React.useState(false);
   useEffect(() => {
       if (triggerHeal > 0) {
           setSmokeActive(true);
-          const t = setTimeout(() => setSmokeActive(false), 2000);
-          return () => clearTimeout(t);
+          setTimeout(() => setSmokeActive(false), 2000);
       }
   }, [triggerHeal]);
 
@@ -170,69 +133,37 @@ export const GameUI: React.FC<GameUIProps> = ({
   useEffect(() => {
       if (triggerDrink > 0) {
           setDrinkActive(true);
-          const t = setTimeout(() => setDrinkActive(false), 1500);
-          return () => clearTimeout(t);
+          setTimeout(() => setDrinkActive(false), 1500);
       }
   }, [triggerDrink]);
 
-  const isPlayerTurn = gameState.phase === 'PLAYER_TURN';
   const isGunHeld = cameraView === 'GUN';
 
   return (
     <>
-      {/* Boot / Loading Screen */}
       {gameState.phase === 'BOOT' && (
         <div className="absolute inset-0 z-[100] bg-black flex flex-col justify-between p-8 md:p-12 font-mono">
-            <div className="flex justify-between items-start text-stone-600 text-xs">
-                <span>AADISH_OS v1.0.0</span>
-                <span>MEM: 65536KB OK</span>
-            </div>
-            
+            <div className="flex justify-between items-start text-stone-600 text-xs"><span>AADISH_OS v1.0.0</span><span>MEM: 65536KB OK</span></div>
             <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full gap-4">
                  <div className="text-green-500 text-sm md:text-base space-y-1 h-64 overflow-hidden flex flex-col justify-end">
-                    {bootLines.map((line, i) => (
-                        <div key={i} className={`typewriter ${line.includes('DEALER') ? 'text-red-500 font-bold' : ''}`}>
-                            {`> ${line}`}
-                        </div>
-                    ))}
+                    {bootLines.map((line, i) => <div key={i} className="typewriter">{`> ${line}`}</div>)}
                     <div className="text-green-500 animate-pulse">_</div>
                  </div>
-
                  <div className="w-full h-6 bg-stone-900 border border-stone-700 p-1 relative">
-                    <div 
-                        className="h-full bg-green-700 relative overflow-hidden transition-all duration-100 ease-linear"
-                        style={{ width: `${Math.min(100, loadingProgress)}%` }}
-                    >
-                         <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.2)_50%,transparent_100%)] animate-[scanline_1s_infinite]" />
-                    </div>
+                    <div className="h-full bg-green-700 relative overflow-hidden transition-all duration-100 ease-linear" style={{ width: `${Math.min(100, loadingProgress)}%` }} />
                  </div>
-                 <div className="text-right text-green-500 text-xs">{Math.min(100, Math.floor(loadingProgress))}%</div>
-            </div>
-
-            <div className="text-center text-stone-800 text-xs animate-pulse">
-                PLEASE WAIT WHILE WE CONNECT TO THE DARK WEB...
             </div>
         </div>
       )}
 
-      {/* Screen Effects */}
+      {/* FX Layers */}
       <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 z-10 ${overlayColor === 'red' ? 'bg-red-900/40' : overlayColor === 'green' ? 'bg-green-900/20' : ''}`} />
-      
       {showFlash && <div className="absolute inset-0 z-50 flash-screen" />}
-      
-      {smokeActive && (
-          <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle,transparent,rgba(255,255,255,0.2))] animate-[ping_3s_infinite]" />
-              <div className="absolute bottom-0 w-full h-64 bg-gradient-to-t from-gray-500/50 to-transparent animate-pulse" />
-          </div>
-      )}
+      {smokeActive && <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]" />}
+      {drinkActive && <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px]" />}
+      {showBlood && <div className="absolute inset-0 pointer-events-none z-40 animate-[blood-pulse_2s_infinite]"><div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(160,0,0,0.5)_80%,rgba(80,0,0,0.9)_100%)] mix-blend-multiply" /></div>}
 
-      {drinkActive && (
-          <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px] animate-[pulse_1s_ease-in-out]">
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-yellow-900/10 to-transparent" />
-          </div>
-      )}
-
+      {/* Notifications */}
       {knownShell && (
           <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center">
                <div className="text-4xl md:text-7xl font-black tracking-widest bg-black/80 px-4 py-2 md:px-8 md:py-4 border-y-4 border-stone-100 animate-[text-pop_0.3s_ease-out]">
@@ -240,36 +171,18 @@ export const GameUI: React.FC<GameUIProps> = ({
                </div>
           </div>
       )}
-
-      {showBlood && (
-          <div className="absolute inset-0 pointer-events-none z-40 animate-[blood-pulse_2s_infinite]">
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(160,0,0,0.5)_80%,rgba(80,0,0,0.9)_100%)] mix-blend-multiply" />
-          </div>
-      )}
-
-      {player.isHandcuffed && (
-           <div className="absolute top-[60%] left-[20%] z-20 animate-pulse pointer-events-none">
-              <div className="text-xl md:text-2xl font-black text-stone-100 bg-red-600 px-2 py-1 md:px-4 md:py-1 rotate-12 shadow-lg border-2 border-white">
-                  CUFFED
-              </div>
+      {(player.isHandcuffed || dealer.isHandcuffed) && (
+           <div className={`absolute ${player.isHandcuffed ? 'top-[60%] left-[20%]' : 'top-[30%] right-[20%]'} z-20 animate-pulse pointer-events-none`}>
+              <div className="text-xl md:text-2xl font-black text-stone-100 bg-red-600 px-2 py-1 md:px-4 md:py-1 rotate-12 shadow-lg border-2 border-white">CUFFED</div>
            </div>
       )}
-      {dealer.isHandcuffed && (
-           <div className="absolute top-[30%] right-[20%] z-20 animate-pulse pointer-events-none">
-              <div className="text-xl md:text-2xl font-black text-stone-100 bg-red-600 px-2 py-1 md:px-4 md:py-1 -rotate-12 shadow-lg border-2 border-white">
-                  CUFFED
-              </div>
-           </div>
-      )}
-
       {overlayText && (
          <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className={`text-4xl md:text-8xl font-black tracking-tighter text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center px-4 w-full break-words leading-tight`}>
+            <div className="text-4xl md:text-8xl font-black tracking-tighter text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center px-4">
                 <RenderColoredText text={overlayText} />
             </div>
          </div>
       )}
-
       {showLootOverlay && (
          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4">
              <h2 className="text-3xl md:text-4xl font-black mb-8 md:mb-12 tracking-widest text-stone-200 text-glitch">SHIPMENT RECEIVED</h2>
@@ -277,11 +190,11 @@ export const GameUI: React.FC<GameUIProps> = ({
                  {receivedItems.map((item, i) => (
                     <div key={i} className="flex flex-col items-center pop-in" style={{animationDelay: `${i * 0.15}s`}}>
                         <div className="w-16 h-20 md:w-24 md:h-32 bg-stone-950 border border-stone-600 flex items-center justify-center mb-2 md:mb-4 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-                            {item === 'BEER' && <Beer className="text-amber-500" size={28} />}
-                            {item === 'CIGS' && <Cigarette className="text-red-500" size={28} />}
-                            {item === 'GLASS' && <Search className="text-cyan-500" size={28} />}
-                            {item === 'CUFFS' && <Link className="text-stone-400" size={28} />}
-                            {item === 'SAW' && <Scissors className="text-orange-600" size={28} />}
+                            {item === 'BEER' && <Icons.Beer className="text-amber-500" size={28} />}
+                            {item === 'CIGS' && <Icons.Cigs className="text-red-500" size={28} />}
+                            {item === 'GLASS' && <Icons.Glass className="text-cyan-500" size={28} />}
+                            {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400" size={28} />}
+                            {item === 'SAW' && <Icons.Saw className="text-orange-600" size={28} />}
                         </div>
                         <span className="font-bold text-stone-400 text-[10px] md:text-sm tracking-widest">{item}</span>
                     </div>
@@ -290,51 +203,21 @@ export const GameUI: React.FC<GameUIProps> = ({
          </div>
       )}
 
+      {/* Intro Screen */}
       {gameState.phase === 'INTRO' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 overflow-y-auto">
           <div className="text-center max-w-lg w-full p-4 md:p-6 flex flex-col justify-center min-h-[350px]">
             <h1 className="text-5xl md:text-8xl lg:text-9xl font-black mb-6 md:mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br/><span className="text-red-600">ROULETTE</span></h1>
-            
             <div className="flex flex-col gap-4 md:gap-6">
-                <div className="flex flex-col gap-2 text-left">
-                    <label className="text-stone-500 font-bold tracking-widest text-xs md:text-sm">PLAYER NAME</label>
-                    <input 
-                        ref={nameInputRef}
-                        type="text" 
-                        value={inputName}
-                        onChange={(e) => setInputName(e.target.value)}
-                        placeholder="ENTER NAME..."
-                        maxLength={12}
-                        className="bg-stone-900 border-2 border-stone-700 p-3 md:p-4 text-xl md:text-2xl font-black text-white outline-none focus:border-red-600 tracking-widest uppercase placeholder:text-stone-700 transition-colors"
-                    />
-                </div>
-
-                <div className="flex gap-3 md:gap-4 flex-col md:flex-row">
-                    <button 
-                        onClick={handleStartGame}
-                        disabled={!inputName.trim()}
-                        className="w-full md:flex-1 px-6 py-4 md:px-8 md:py-5 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-widest"
-                    >
-                        START GAME
-                    </button>
-                    
-                    <button 
-                        className="w-full md:flex-1 px-6 py-4 md:px-8 md:py-5 bg-stone-900 border-2 border-stone-800 text-stone-600 font-black text-lg md:text-xl cursor-not-allowed opacity-70 tracking-widest flex items-center justify-center gap-2"
-                        title="COMING SOON"
-                    >
-                        <Users size={20} />
-                        MULTIPLAYER
-                    </button>
-                </div>
+                <input ref={nameInputRef} type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="ENTER NAME..." maxLength={12} className="bg-stone-900 border-2 border-stone-700 p-3 md:p-4 text-xl md:text-2xl font-black text-white outline-none focus:border-red-600 tracking-widest uppercase text-center" />
+                <button onClick={handleStartGame} disabled={!inputName.trim()} className="w-full px-6 py-4 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 tracking-widest">START GAME</button>
             </div>
-            
-            <div className="mt-8 md:mt-12 text-stone-800 text-[10px] md:text-xs font-mono">
-                VER 1.0.0 // FULLSCREEN RECOMMENDED
-            </div>
+            <div className="mt-8 md:mt-12 text-stone-800 text-[10px] md:text-xs font-mono">VER 1.0.0 // FULLSCREEN RECOMMENDED</div>
           </div>
         </div>
       )}
 
+      {/* Game Over */}
       {gameState.phase === 'GAME_OVER' && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95">
            <div className="relative mb-8 md:mb-12 text-center">
@@ -345,182 +228,48 @@ export const GameUI: React.FC<GameUIProps> = ({
                   {gameState.winner === 'PLAYER' ? 'PAYOUT PENDING' : 'STATUS: DECEASED'}
                </div>
            </div>
-
            {gameState.winner === 'DEALER' && <Skull size={60} className="md:w-20 md:h-20 text-red-800 mb-8 md:mb-12 animate-pulse" />}
-           
            <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full max-w-xl px-8">
-             <button 
-                onClick={() => onResetGame(false)} 
-                className="flex-1 py-4 md:py-6 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-red-600 hover:text-white transition-all tracking-widest flex items-center justify-center gap-3 group"
-             >
-               <RotateCcw size={20} className="md:w-6 md:h-6 group-hover:-rotate-180 transition-transform duration-500" />
-               RESTART
+             <button onClick={() => onResetGame(false)} className="flex-1 py-4 md:py-6 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-red-600 hover:text-white transition-all tracking-widest flex items-center justify-center gap-3 group">
+               <RotateCcw size={20} className="group-hover:-rotate-180 transition-transform" /> RESTART
              </button>
-             <button 
-                onClick={() => onResetGame(true)} 
-                className="flex-1 py-4 md:py-6 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg md:text-xl hover:bg-stone-800 hover:text-white transition-all tracking-widest flex items-center justify-center gap-3"
-             >
-               <Power size={20} className="md:w-6 md:h-6" />
-               MAIN MENU
+             <button onClick={() => onResetGame(true)} className="flex-1 py-4 md:py-6 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg md:text-xl hover:bg-stone-800 hover:text-white transition-all tracking-widest flex items-center justify-center gap-3">
+               <Power size={20} /> MAIN MENU
              </button>
-           </div>
-           
-           <div className="mt-12 text-stone-800 font-mono text-sm">
-                SESSION ID: {Math.floor(Math.random() * 999999).toString(16).toUpperCase()}
            </div>
         </div>
       )}
 
-      {/* HUD Layer */}
+      {/* Main HUD */}
       {gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && gameState.phase !== 'GAME_OVER' && !showLootOverlay && (
         <div className="absolute inset-0 z-20 p-2 md:p-8 flex flex-col justify-between pointer-events-none">
+          <StatusDisplay player={player} dealer={dealer} playerName={playerName} gameState={gameState} />
           
-          {/* Top: Status & Turn Info */}
-          <div className="flex justify-between items-start w-full">
-             {/* Player Stats */}
-             <div className="flex flex-col items-start w-1/3">
-                <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-stone-500 mb-0.5 md:mb-2 uppercase">{playerName || 'YOU'}</span>
-                <div className="flex gap-0.5 md:gap-2 mb-2">
-                   {[...Array(player.maxHp)].map((_, i) => (
-                      <div key={i} className={`w-1 h-2 md:w-4 md:h-12 flex items-center justify-center transition-all duration-300 ${i < player.hp ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : 'bg-stone-900 border border-stone-800'}`}>
-                        {i >= player.hp && <div className="w-full h-[1px] bg-stone-800 rotate-45" />}
-                      </div>
-                   ))}
-                </div>
-             </div>
-
-             {/* Center Turn Indicator */}
-             <div className="text-center mt-0.5 md:mt-2 flex-1">
-                 <div className={`text-sm md:text-3xl font-black tracking-widest transition-colors duration-500 ${gameState.turnOwner === 'PLAYER' ? 'text-green-500/80 drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'text-red-500/80 drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]'}`}>
-                     {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : 'DEALER TURN'}
-                 </div>
-                 <div className="text-stone-600 text-[8px] md:text-xs mt-0.5 md:mt-2 font-mono tracking-widest">
-                    {gameState.liveCount + gameState.blankCount} ROUNDS
-                 </div>
-             </div>
-
-             {/* Dealer Stats */}
-             <div className="flex flex-col items-end w-1/3">
-                <span className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-stone-500 mb-0.5 md:mb-2">DEALER</span>
-                <div className="flex gap-0.5 md:gap-2 mb-2">
-                   {[...Array(dealer.maxHp)].map((_, i) => (
-                      <div key={i} className={`w-1 h-2 md:w-4 md:h-12 flex items-center justify-center transition-all duration-300 ${i < dealer.hp ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]' : 'bg-stone-900 border border-stone-800'}`}>
-                         {i >= dealer.hp && <div className="w-full h-[1px] bg-stone-800 rotate-45" />}
-                      </div>
-                   ))}
-                </div>
-                <div className="flex gap-1 mt-1 md:mt-4 flex-wrap justify-end max-w-[120px] md:max-w-[200px]">
-                    {dealer.items.map((item, i) => (
-                        <div key={i} className="w-3 h-3 md:w-8 md:h-8 bg-stone-900 border border-stone-700 flex items-center justify-center opacity-70">
-                            {item === 'BEER' && <Beer size={6} className="md:w-3.5 md:h-3.5 text-amber-500" />}
-                            {item === 'CIGS' && <Cigarette size={6} className="md:w-3.5 md:h-3.5 text-red-500" />}
-                            {item === 'GLASS' && <Search size={6} className="md:w-3.5 md:h-3.5 text-cyan-500" />}
-                            {item === 'CUFFS' && <Link size={6} className="md:w-3.5 md:h-3.5 text-stone-400" />}
-                            {item === 'SAW' && <Scissors size={6} className="md:w-3.5 md:h-3.5 text-orange-600" />}
-                        </div>
-                    ))}
-                </div>
-             </div>
-          </div>
-
-          {/* Middle: Controls (Positioned at bottom relative to container on mobile to avoid face overlap) */}
           {gameState.phase === 'PLAYER_TURN' && !overlayText && (
-            <div className="absolute bottom-[20%] md:top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 md:gap-8 pointer-events-auto items-center w-full justify-center px-2 z-50">
-               {/* Gun Pickup Button */}
-               {!isGunHeld && (
-                   <button 
-                        onClick={onPickupGun}
-                        disabled={isProcessing}
-                        className="bg-black/80 border md:border-2 border-stone-500 px-3 py-2 md:px-10 md:py-6 text-stone-200 font-black text-xs md:text-2xl hover:bg-stone-800 hover:text-white hover:border-white transition-all hover:scale-105 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant flex items-center gap-2 md:gap-3 animate-pulse disabled:opacity-50 disabled:cursor-not-allowed"
-                   >
-                        <Hand size={14} className="md:w-6 md:h-6" />
-                        GRAB SHOTGUN
-                   </button>
-               )}
-
-               {/* Shooting Controls */}
-               {isGunHeld && (
-                   <>
-                       <button 
-                          onClick={() => onFireShot('DEALER')}
-                          disabled={isProcessing}
-                          onMouseEnter={() => onHoverTarget('OPPONENT')}
-                          onMouseLeave={() => onHoverTarget('IDLE')}
-                          className="bg-black/80 border md:border-2 border-red-900 px-2 py-2 md:px-8 md:py-5 text-red-500 font-black text-[10px] md:text-xl hover:bg-red-900 hover:text-white transition-all hover:scale-105 hover:border-red-500 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                       >
-                          SHOOT DEALER
-                       </button>
-                       <button 
-                          onClick={() => onFireShot('PLAYER')}
-                          disabled={isProcessing}
-                          onMouseEnter={() => onHoverTarget('SELF')}
-                          onMouseLeave={() => onHoverTarget('IDLE')}
-                          className="bg-black/80 border md:border-2 border-stone-700 px-2 py-2 md:px-8 md:py-5 text-stone-400 font-black text-[10px] md:text-xl hover:bg-stone-800 hover:text-white transition-all hover:scale-105 hover:border-stone-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                       >
-                          SHOOT SELF
-                       </button>
-                   </>
-               )}
-            </div>
+             <Controls isGunHeld={isGunHeld} isProcessing={isProcessing} onPickupGun={onPickupGun} onFireShot={onFireShot} onHoverTarget={onHoverTarget} />
           )}
 
-          {/* Bottom: Logs & Inventory */}
           <div className="flex justify-between items-end mt-auto gap-1 md:gap-4 w-full h-16 md:h-40 pointer-events-none">
-             {/* Collapsible Log Window */}
+             {/* Logs */}
              <div className={`w-1/3 md:w-1/3 transition-all duration-300 flex flex-col pointer-events-auto shadow-lg backdrop-blur-md border border-stone-800 bg-black/80 ${isLogsOpen ? 'h-full' : 'h-5 md:h-10'}`}>
-                <div 
-                    onClick={() => setIsLogsOpen(!isLogsOpen)}
-                    className="flex items-center justify-between p-1 md:p-2 cursor-pointer bg-stone-900 border-b border-stone-800 hover:bg-stone-800 transition-colors"
-                >
+                <div onClick={() => setIsLogsOpen(!isLogsOpen)} className="flex items-center justify-between p-1 md:p-2 cursor-pointer bg-stone-900 border-b border-stone-800 hover:bg-stone-800 transition-colors">
                     <span className="text-[8px] md:text-xs font-bold tracking-widest text-stone-400">LOG</span>
-                    {isLogsOpen ? <ChevronDown size={8} className="md:w-3.5 md:h-3.5" /> : <ChevronUp size={8} className="md:w-3.5 md:h-3.5" />}
+                    {isLogsOpen ? <ChevronDown size={8} /> : <ChevronUp size={8} />}
                 </div>
                 {isLogsOpen && (
                     <div className="flex-1 overflow-y-auto font-mono text-[8px] md:text-sm p-1 md:p-4 flex flex-col justify-end">
                         <div>
                             {logs.map(log => (
-                            <div key={log.id} className={`mb-0.5 md:mb-1 ${log.type === 'danger' ? 'text-red-500' : log.type === 'safe' ? 'text-green-500' : log.type === 'info' ? 'text-cyan-400' : 'text-stone-500'}`}>
-                                {`> ${log.text}`}
-                            </div>
+                                <div key={log.id} className={`mb-0.5 md:mb-1 ${log.type === 'danger' ? 'text-red-500' : log.type === 'safe' ? 'text-green-500' : log.type === 'info' ? 'text-cyan-400' : 'text-stone-500'}`}>{`> ${log.text}`}</div>
                             ))}
                             <div ref={logsEndRef} />
                         </div>
                     </div>
                 )}
              </div>
-
-             <div className="flex-1 flex justify-end gap-1 pointer-events-auto h-full items-end">
-                <div className="flex gap-1 md:gap-2 p-1 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[40px] md:min-h-[100px] items-end overflow-x-auto max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
-                    {player.items.map((item, idx) => {
-                        const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
-                        const isUsageDisabled = gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled || isProcessing;
-                        
-                        return (
-                            <div key={idx} className="group relative shrink-0">
-                                <button
-                                    onClick={() => onUseItem(idx)}
-                                    disabled={isUsageDisabled}
-                                    className={`w-7 h-8 md:w-20 md:h-24 bg-stone-900 border border-stone-700 flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 ${isUsageDisabled ? 'opacity-30' : ''}`}
-                                >
-                                    {item === 'BEER' && <Beer className="text-amber-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                    {item === 'CIGS' && <Cigarette className="text-red-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                    {item === 'GLASS' && <Search className="text-cyan-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                    {item === 'CUFFS' && <Link className="text-stone-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                    {item === 'SAW' && <Scissors className="text-orange-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                    <span className="text-[5px] md:text-[10px] text-stone-500 font-bold tracking-widest hidden md:block">{item}</span>
-                                </button>
-                                {/* Tooltip - HIDDEN ON MOBILE */}
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-32 md:w-48 bg-stone-950 border border-stone-600 p-2 md:p-3 text-[10px] md:text-xs text-center hidden md:group-hover:block z-50 text-stone-200 shadow-xl">
-                                    <div className="font-bold text-white mb-1 tracking-widest">{item}</div>
-                                    {ITEM_DESCRIPTIONS[item]}
-                                    {isCuffDisabled && <div className="text-red-500 mt-1">DEALER IS ALREADY CUFFED</div>}
-                                    {isGunHeld && <div className="text-red-500 mt-1">CANNOT USE WHILE HOLDING GUN</div>}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-             </div>
+             
+             {/* Inventory */}
+             <Inventory player={player} dealer={dealer} gameState={gameState} cameraView={cameraView} isProcessing={isProcessing} onUseItem={onUseItem} />
           </div>
         </div>
       )}
