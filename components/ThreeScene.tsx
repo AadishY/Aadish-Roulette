@@ -327,10 +327,17 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
         const aspect = width / height;
 
-        // Mobile Adjustment: Pull camera back significantly on portrait/narrow screens to fit the table
+        // Mobile Adjustment
         let baseZ = 14;
-        if (aspect < 1) baseZ = 22; // Portrait
-        else if (aspect < 1.6) baseZ = 18; // Narrow landscape
+        
+        // Check if likely mobile (width < 768)
+        if (width < 768) {
+            if (aspect < 1) baseZ = 22; // Portrait
+            else baseZ = 16; // Landscape Mobile (previously 14 or 18, 16 pushes back slightly more)
+        } else {
+            // Desktop adjustments
+            if (aspect < 1.6) baseZ = 16;
+        }
         
         sceneRef.current.scene.userData.baseZ = baseZ; 
         
