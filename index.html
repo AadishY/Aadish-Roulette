@@ -81,7 +81,6 @@
         animation: text-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       }
 
-      /* Blood Overlay - Made more visible */
       .blood-overlay {
         background: radial-gradient(circle at center, transparent 10%, rgba(180, 0, 0, 0.3) 50%, rgba(130, 0, 0, 0.9) 100%);
         mix-blend-mode: overlay;
@@ -94,7 +93,7 @@
         animation: blood-pulse 3s infinite;
       }
 
-      /* CRT Effect */
+      /* CRT Effect Base */
       .crt::before {
         content: " ";
         display: block;
@@ -108,6 +107,28 @@
         background-size: 100% 2px, 3px 100%;
         pointer-events: none;
         animation: flicker 0.15s infinite;
+      }
+
+      /* VHS FILTER OVERRIDE */
+      .vhs-filter {
+        filter: contrast(1.2) brightness(1.1) sepia(0.2) saturate(1.2);
+      }
+      .vhs-filter::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: repeating-linear-gradient(0deg, transparent, transparent 1px, #fff1 2px, transparent 3px);
+        background-size: 100% 100%;
+        pointer-events: none;
+        z-index: 51;
+        opacity: 0.15;
+        animation: scanline 10s linear infinite;
+      }
+      
+      /* Chromatic Aberration Animation for VHS */
+      @keyframes chromatic {
+         0% { text-shadow: 2px 0 0 red, -2px 0 0 blue; }
+         100% { text-shadow: -2px 0 0 red, 2px 0 0 blue; }
       }
 
       /* Custom Scrollbar for logs */

@@ -63,7 +63,7 @@ export const useGameLogic = () => {
       if (gameState.phase === 'BOOT') {
         setTimeout(() => {
             setGameState(prev => ({ ...prev, phase: 'INTRO' }));
-        }, 5500); // Extended slightly for new boot visuals
+        }, 5500); 
       }
   }, []);
 
@@ -90,11 +90,9 @@ export const useGameLogic = () => {
 
   const getRandomItem = (): ItemType => {
       const r = Math.random();
-      // Weighted Probabilities:
-      // Beer: 25%, Cigs: 25%, Glass: 20%, Cuffs: 15%, Saw: 15%
-      if (r < 0.25) return 'BEER';
-      if (r < 0.50) return 'CIGS';
-      if (r < 0.70) return 'GLASS';
+      if (r < 0.20) return 'BEER';
+      if (r < 0.45) return 'CIGS'; // Increased Cigs chance
+      if (r < 0.65) return 'GLASS';
       if (r < 0.85) return 'CUFFS';
       return 'SAW';
   };
@@ -159,7 +157,9 @@ export const useGameLogic = () => {
     setKnownShell(null);
     setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false }));
     setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false }));
-    setAnim({ dealerDropping: false }); // Reset dealer
+    setAnim({ dealerDropping: false }); 
+    
+    // Force TABLE view during loot distribution
     setCameraView('TABLE');
 
     addLog('--- NEW BATCH ---');
@@ -172,21 +172,23 @@ export const useGameLogic = () => {
     await distributeItems();
     
     setGameState(prev => ({ ...prev, phase: 'PLAYER_TURN', turnOwner: 'PLAYER' }));
-    setCameraView('PLAYER');
+    setCameraView('PLAYER'); // Switch to Player view only after items are done
     addLog('YOUR MOVE.');
   };
 
   const distributeItems = async () => {
-    // Generate exactly 3 items per shipment
-    const generateLoot = (count: number) => Array(count).fill(null).map(() => getRandomItem());
+    // Generate exactly 3 items per round as requested
+    const generateLoot = () => {
+        return Array(3).fill(null).map(() => getRandomItem());
+    };
     
-    const pNew = generateLoot(3);
-    const dNew = generateLoot(3);
+    const pNew = generateLoot();
+    const dNew = generateLoot();
 
     setGameState(prev => ({ ...prev, phase: 'LOOTING' }));
     setReceivedItems(pNew);
     setShowLootOverlay(true);
-    await wait(2500);
+    await wait(3500); // Allow time to see items
     
     // Strictly enforce MAX_ITEMS limit (8)
     setPlayer(p => ({ ...p, items: [...p.items, ...pNew].slice(0, MAX_ITEMS) }));
@@ -195,7 +197,6 @@ export const useGameLogic = () => {
     setReceivedItems([]);
   };
 
-  // Add functionality to pick up the gun
   const pickupGun = () => {
       if (isProcessing) return;
       setCameraView('GUN');
@@ -216,11 +217,9 @@ export const useGameLogic = () => {
     setGameState(prev => ({ ...prev, phase: 'RESOLVING' }));
     setCameraView('GUN');
     
-    // Determine Aim Direction relative to shooter
     const isSelf = shooter === target;
     setAimTarget(isSelf ? 'SELF' : 'OPPONENT');
 
-    // Wait a moment for aim animation
     await wait(1000); 
 
     const shell = chamber[currentShellIndex];
@@ -233,11 +232,9 @@ export const useGameLogic = () => {
         muzzleFlashIntensity: isLive ? 100 : 0
     }));
 
-    // Trigger hit animation early to sync with bullet visual speed
     if (isLive && target === 'DEALER') {
         setTimeout(() => {
              setAnim(prev => ({ ...prev, dealerHit: true, dealerDropping: true }));
-             // End hit flash briefly
              setTimeout(() => setAnim(prev => ({ ...prev, dealerHit: false })), 500); 
         }, 100);
     }
@@ -281,19 +278,15 @@ export const useGameLogic = () => {
         setShowBlood(true);
         setTimeout(() => setShowBlood(false), 3500);
       } else {
-        // DEALER DAMAGE LOGIC
         const newHp = Math.max(0, dealer.hp - damage);
         setDealer(p => ({ ...p, hp: newHp }));
-        // Note: dealerDropping is already true from earlier sync
         setOverlayColor('green');
         
-        // Stay down for a bit
         await wait(2000); 
         
-        // If not dead, come back up
         if (newHp > 0) {
             setAnim(prev => ({ ...prev, dealerDropping: false }));
-            await wait(1000); // Time to rise
+            await wait(1000); 
         }
       }
       setTimeout(() => setOverlayColor('none'), 500);
@@ -341,7 +334,6 @@ export const useGameLogic = () => {
 
     if (!isLive && shooter === target) {
       addLog(`${shooter} GOES AGAIN`);
-      // Turn does not change, so cuffs are NOT consumed here.
     } else {
       nextOwner = shooter === 'PLAYER' ? 'DEALER' : 'PLAYER';
       turnChanged = true;
@@ -364,25 +356,21 @@ export const useGameLogic = () => {
              if (nextOwner === 'PLAYER') setPlayer(p => ({ ...p, isHandcuffed: false }));
              else setDealer(d => ({ ...d, isHandcuffed: false }));
              
-             // Keep turn with shooter
              nextOwner = shooter;
         }
     }
 
     const ownerPhase = nextOwner === 'PLAYER' ? 'PLAYER_TURN' : 'DEALER_TURN';
     setGameState(prev => ({ ...prev, turnOwner: nextOwner, phase: ownerPhase }));
-    setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); // Keep view on Player/Table mostly
+    setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); 
     setIsProcessing(false);
   };
 
-  // --- Item Logic ---
   const processItemEffect = async (user: TurnOwner, item: ItemType): Promise<boolean> => {
-    // CUFF CHECK: Can't cuff if already cuffed
     if (item === 'CUFFS') {
         const opponent = user === 'PLAYER' ? dealer : player;
         if (opponent.isHandcuffed) {
              addLog(`${user === 'PLAYER' ? 'DEALER' : 'YOU'} ALREADY CUFFED!`, 'info');
-             // Refund item if player (AI logic handles this differently but this safeguards UI clicks)
              if (user === 'PLAYER') {
                  setPlayer(p => ({ ...p, items: [...p.items, 'CUFFS'] }));
              }
@@ -404,7 +392,7 @@ export const useGameLogic = () => {
                 (v) => setAnim(p => ({...p, triggerRack: typeof v === 'function' ? v(p.triggerRack) : v})),
                 (v) => setAnim(p => ({...p, ejectedShellColor: typeof v === 'function' ? v(p.ejectedShellColor) : v})),
                 (v) => setAnim(p => ({...p, triggerDrink: typeof v === 'function' ? v(p.triggerDrink) : v})),
-                setOverlayText, // Pass setOverlayText to display Beer result
+                setOverlayText,
                 addLog, startRound
             );
             break;
@@ -436,9 +424,8 @@ export const useGameLogic = () => {
 
   const usePlayerItem = async (index: number) => {
     if (gameState.phase !== 'PLAYER_TURN') return;
-    if (isProcessing) return; // Prevent race conditions
+    if (isProcessing) return; 
     
-    // Prevent item usage if gun is picked up (camera is GUN)
     if (cameraView === 'GUN') {
         addLog("CAN'T USE ITEMS WHILE HOLDING GUN", 'info');
         return;
@@ -447,21 +434,16 @@ export const useGameLogic = () => {
     const item = player.items[index];
     if (!item) return;
 
-    // Special check for Handcuffs legality
     if (item === 'CUFFS' && dealer.isHandcuffed) return; 
     
-    // Lock interactions
     setIsProcessing(true);
 
-    // Remove item locally first to prevent double click abuse
     const newItems = [...player.items];
     newItems.splice(index, 1);
     setPlayer(p => ({ ...p, items: newItems }));
 
-    // Execute Effect
     await processItemEffect('PLAYER', item);
     
-    // Unlock
     setIsProcessing(false);
   };
 

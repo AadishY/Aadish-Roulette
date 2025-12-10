@@ -12,22 +12,22 @@ interface ControlsProps {
 
 export const Controls: React.FC<ControlsProps> = ({ isGunHeld, isProcessing, onPickupGun, onFireShot, onHoverTarget }) => {
     return (
-        <div className="absolute bottom-[25%] md:top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-3 md:gap-8 pointer-events-auto items-center w-full justify-center px-4 z-50">
+        <div className="absolute bottom-[20%] md:top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-2 md:gap-8 pointer-events-auto items-center w-full justify-center px-4 z-50">
             {/* Gun Pickup Button */}
             {!isGunHeld && (
                 <button 
                     onClick={onPickupGun}
                     disabled={isProcessing}
-                    className="bg-black/80 border md:border-2 border-stone-500 px-4 py-3 md:px-10 md:py-6 text-stone-200 font-black text-xs md:text-2xl hover:bg-stone-800 hover:text-white hover:border-white transition-all hover:scale-105 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant flex items-center gap-2 md:gap-3 animate-pulse disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-black/80 border md:border-2 border-stone-500 px-3 py-2 md:px-10 md:py-6 text-stone-200 font-black text-[10px] md:text-2xl hover:bg-stone-800 hover:text-white hover:border-white transition-all hover:scale-105 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant flex items-center gap-1 md:gap-3 animate-pulse disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <Hand size={16} className="md:w-6 md:h-6" />
+                    <Hand size={12} className="md:w-6 md:h-6" />
                     GRAB SHOTGUN
                 </button>
             )}
 
             {/* Shooting Controls */}
             {isGunHeld && (
-                <>
+                <div className="flex gap-2 md:gap-8">
                     <button 
                         onClick={() => onFireShot('DEALER')}
                         disabled={isProcessing}
@@ -46,7 +46,7 @@ export const Controls: React.FC<ControlsProps> = ({ isGunHeld, isProcessing, onP
                     >
                         SHOOT SELF
                     </button>
-                </>
+                </div>
             )}
         </div>
     );

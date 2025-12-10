@@ -18,7 +18,7 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
   return (
     <div className="flex-1 flex justify-end gap-1 pointer-events-auto h-full items-end">
         {/* Changed overflow-x-auto to md:overflow-visible to let tooltips pop out on desktop */}
-        <div className="flex gap-1 md:gap-2 p-1 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[50px] md:min-h-[100px] items-end overflow-x-auto md:overflow-visible max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+        <div className="flex gap-1 md:gap-2 p-1 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[40px] md:min-h-[100px] items-end overflow-x-auto md:overflow-visible max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
             {player.items.map((item, idx) => {
                 const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
                 const isUsageDisabled = gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled || isProcessing;
@@ -28,13 +28,13 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
                         <button
                             onClick={() => onUseItem(idx)}
                             disabled={isUsageDisabled}
-                            className={`w-9 h-10 md:w-20 md:h-24 bg-stone-900 border border-stone-700 flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 ${isUsageDisabled ? 'opacity-30' : ''}`}
+                            className={`w-7 h-8 md:w-20 md:h-24 bg-stone-900 border border-stone-700 flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 ${isUsageDisabled ? 'opacity-30' : ''}`}
                         >
-                            {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
-                            {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
-                            {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
-                            {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
-                            {item === 'SAW' && <Icons.Saw className="text-orange-600 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                            {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                            {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                            {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                            {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                            {item === 'SAW' && <Icons.Saw className="text-orange-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                             <span className="text-[6px] md:text-[10px] text-stone-500 font-bold tracking-widest hidden md:block">{item}</span>
                         </button>
                         

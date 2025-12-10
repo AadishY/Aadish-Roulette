@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { CameraView, TurnOwner, AimTarget, AnimationState } from '../types';
+import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings } from '../types';
 import { setupLighting, createTable, createGunModel, createDealerModel, createProjectiles, createEnvironment, createDust } from '../utils/threeHelpers';
 
 interface ThreeSceneProps {
@@ -10,6 +10,7 @@ interface ThreeSceneProps {
   cameraView: CameraView;
   animState: AnimationState;
   turnOwner: TurnOwner;
+  settings: GameSettings;
 }
 
 export const ThreeScene: React.FC<ThreeSceneProps> = ({ 
@@ -18,23 +19,23 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
   aimTarget,
   cameraView,
   animState,
-  turnOwner
+  turnOwner,
+  settings
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Refs to hold latest prop values for the animation loop
   const propsRef = useRef({
       isSawed,
       aimTarget,
       cameraView,
       animState,
-      turnOwner
+      turnOwner,
+      settings
   });
 
-  // Update refs whenever props change
   useEffect(() => {
-      propsRef.current = { isSawed, aimTarget, cameraView, animState, turnOwner };
-  }, [isSawed, aimTarget, cameraView, animState, turnOwner]);
+      propsRef.current = { isSawed, aimTarget, cameraView, animState, turnOwner, settings };
+  }, [isSawed, aimTarget, cameraView, animState, turnOwner, settings]);
 
   const sceneRef = useRef<{
     scene: THREE.Scene;
@@ -45,6 +46,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     muzzleLight: THREE.PointLight;
     roomRedLight: THREE.PointLight;
     bulbLight: THREE.PointLight;
+    gunLight: THREE.PointLight; // Dedicated light for the gun
     bulletMesh: THREE.Mesh;
     dealerGroup: THREE.Group;
     shellCasing: THREE.Mesh;
@@ -55,12 +57,12 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     bloodParticles: THREE.Points;
     sparkParticles: THREE.Points;
     dustParticles: THREE.Points;
+    baseLights: { light: THREE.Light, baseIntensity: number }[];
   } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // --- Init Function ---
     const initThree = () => {
         if (!containerRef.current) return;
         const width = containerRef.current.clientWidth;
@@ -76,30 +78,31 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         }
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000); 
-        scene.fog = new THREE.FogExp2(0x000000, 0.05);
-
+        scene.background = new THREE.Color(0x050505); 
+        
         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
         camera.position.set(0, 4, 14);
 
         const renderer = new THREE.WebGLRenderer({ 
-            antialias: true, 
-            powerPreference: 'default',
+            antialias: false, 
+            powerPreference: 'high-performance',
             alpha: false 
         });
         
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        const pixelScale = propsRef.current.settings.pixelScale || 3;
+        renderer.setSize(width / pixelScale, height / pixelScale, false);
+        renderer.domElement.style.width = '100%';
+        renderer.domElement.style.height = '100%';
+        renderer.domElement.style.imageRendering = 'pixelated';
+
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0;
-        renderer.setClearColor(0x000000);
+        renderer.toneMappingExposure = 1.1;
         
         containerRef.current.appendChild(renderer.domElement);
 
-        // --- Content ---
-        const { muzzleLight, roomRedLight, bulbLight } = setupLighting(scene);
+        const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim } = setupLighting(scene);
         createEnvironment(scene);
         const dustParticles = createDust(scene);
         createTable(scene);
@@ -107,35 +110,43 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const dealerGroup = createDealerModel(scene); 
         const { bulletMesh, shellCasing } = createProjectiles(scene);
 
-        // --- Particles ---
-        const particleCount = 100;
+        // dedicated light on gunGroup for visibility when dealer holds it
+        const gunLight = new THREE.PointLight(0xffaa00, 0, 5);
+        gunLight.position.set(0, 0.5, 0);
+        gunGroup.add(gunLight);
+
+        // Capture base intensities for scaling brightness
+        const baseLights = [
+            { light: bulbLight, baseIntensity: 15.0 },
+            { light: gunSpot, baseIntensity: 800 },
+            { light: tableGlow, baseIntensity: 2.0 },
+            { light: rimLight, baseIntensity: 10 },
+            { light: fillLight, baseIntensity: 0.6 },
+            { light: ambient, baseIntensity: 0.5 },
+            { light: bgRim, baseIntensity: 1.5 },
+        ];
+
+        // Particles setup
+        const particleCount = 150;
         const particles = new THREE.BufferGeometry();
         const pPositions = new Float32Array(particleCount * 3);
         const pVelocities = new Float32Array(particleCount * 3);
         for(let i=0; i<particleCount*3; i++) pPositions[i] = 9999;
-        
         particles.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
         particles.setAttribute('velocity', new THREE.BufferAttribute(pVelocities, 3)); 
-        
         const pMat = new THREE.PointsMaterial({ 
-            color: 0xff0000, 
-            size: 0.6, 
-            transparent: true, 
-            opacity: 0.9,
-            sizeAttenuation: true,
-            depthWrite: false,
-            blending: THREE.NormalBlending 
+            color: 0x880000, size: 0.8, transparent: true, opacity: 0.9, sizeAttenuation: true, depthWrite: false, blending: THREE.NormalBlending 
         });
         const bloodParticles = new THREE.Points(particles, pMat);
         scene.add(bloodParticles);
 
         const sparkGeo = new THREE.BufferGeometry();
-        const sPos = new Float32Array(30 * 3); 
-        const sVel = new Float32Array(30 * 3);
-        for(let i=0; i<90; i++) sPos[i] = 9999;
+        const sPos = new Float32Array(50 * 3); 
+        const sVel = new Float32Array(50 * 3);
+        for(let i=0; i<150; i++) sPos[i] = 9999;
         sparkGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
         sparkGeo.setAttribute('velocity', new THREE.BufferAttribute(sVel, 3));
-        const sMat = new THREE.PointsMaterial({ color: 0xffffaa, size: 0.15, transparent: true, opacity: 1, blending: THREE.AdditiveBlending });
+        const sMat = new THREE.PointsMaterial({ color: 0xffffcc, size: 0.2, transparent: true, opacity: 1, blending: THREE.AdditiveBlending });
         const sparkParticles = new THREE.Points(sparkGeo, sMat);
         scene.add(sparkParticles);
 
@@ -144,110 +155,133 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const shellVel = new THREE.Vector3();
 
         sceneRef.current = {
-            scene, camera, renderer, gunGroup, muzzleFlash, muzzleLight, roomRedLight, bulbLight,
-            bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles
+            scene, camera, renderer, gunGroup, muzzleFlash, muzzleLight, roomRedLight, bulbLight, gunLight,
+            bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles, baseLights
         };
         
         updateCameraResponsive();
     };
 
-    // --- Animation Loop ---
     let frameId = 0;
     let time = 0;
-    
-    // Default Table Position
-    const targetGunPos = new THREE.Vector3(0, -0.9, 2);
-    const targetGunRot = new THREE.Euler(0, Math.PI / 2, 0); 
     
     const animate = () => {
       frameId = requestAnimationFrame(animate);
       if (!sceneRef.current) return;
       time += 0.01;
       
-      const { gunGroup, camera, dealerGroup, shellCasing, shellVel, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash } = sceneRef.current;
-      
-      // Destructure current props from Ref to avoid stale closure
-      const { turnOwner, aimTarget, cameraView } = propsRef.current;
+      const { gunGroup, camera, dealerGroup, shellCasing, shellVel, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight } = sceneRef.current;
+      const { turnOwner, aimTarget, cameraView, settings } = propsRef.current;
 
-      // 1. Update Gun Target based on state
+      // --- BRIGHTNESS & FOV ---
+      const brightnessMult = settings.brightness || 1.0;
+      baseLights.forEach(({ light, baseIntensity }) => {
+          if (light instanceof THREE.PointLight || light instanceof THREE.SpotLight || light instanceof THREE.DirectionalLight || light instanceof THREE.AmbientLight) {
+              light.intensity = baseIntensity * brightnessMult;
+          }
+      });
+      // Bulb Flicker (re-apply on top of brightness)
+      const flicker = (Math.random() > 0.98 ? (Math.random() * 2.0 + 12.0) : THREE.MathUtils.lerp(bulbLight.intensity / brightnessMult, 12.0, 0.1));
+      bulbLight.intensity = flicker * brightnessMult;
+
+      // Fish Eye Effect - Less extreme now
+      const targetFOV = settings.fishEye ? 100 : 45;
+      if (Math.abs(camera.fov - targetFOV) > 0.1) {
+          camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 0.05);
+          camera.updateProjectionMatrix();
+      }
+
+      // --- GUN LOGIC ---
       const targets = gunGroup.userData;
       if (!targets.targetPos) {
           targets.targetPos = new THREE.Vector3();
           targets.targetRot = new THREE.Euler();
       }
 
+      let targetGunLightIntensity = 0;
+
       if (turnOwner === 'PLAYER') {
           if (aimTarget === 'OPPONENT') { 
-              // Aiming at Dealer
               targets.targetPos.set(0, 0, 8); 
               targets.targetRot.set(0, Math.PI, 0); 
           } else if (aimTarget === 'SELF') { 
-              // Aiming at Self (Up at camera)
-              targets.targetPos.set(0, -1, 5); 
-              targets.targetRot.set(-0.2, 0, 0); 
+              targets.targetPos.set(0, -2.5, 7); 
+              targets.targetRot.set(-0.7, 0, 0); 
           } else if (cameraView === 'GUN') { 
-              // Holding gun idle
               targets.targetPos.set(0, -0.75, 4); 
               targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
           } else { 
-              // Table
+              // Table rest
               targets.targetPos.set(0, -0.9, 2);
               targets.targetRot.set(0, Math.PI / 2, 0);
           }
       } else {
           // DEALER TURN
           if (aimTarget === 'SELF') { 
-             // Dealer shooting self
              targets.targetPos.set(0, 3, -11); 
              targets.targetRot.set(-0.5, Math.PI, 0);
+             targetGunLightIntensity = 2.0;
           } else if (aimTarget === 'OPPONENT') { 
-             // Dealer shooting player
              targets.targetPos.set(0, 2, -10); 
-             targets.targetRot.set(0, 0, 0); 
+             targets.targetRot.set(0, 0, 0);
+             targetGunLightIntensity = 2.0; 
           } else {
-             // Dealer holding gun idle (Waiting) - OFF Table
-             targets.targetPos.set(2, 1, -10); 
-             targets.targetRot.set(0, 0, -0.5);
+             // Dealer Holding Gun - ANIMATE PICKUP
+             // This uses LERP, so setting this target will make it slide from table to hand.
+             // Adjusted position to match the Dealer model's right hand area roughly.
+             targets.targetPos.set(3.8, 2.5, -9); 
+             targets.targetRot.set(0, 0, -0.2);
+             targetGunLightIntensity = 3.0;
           }
       }
+      
+      gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 0.1);
 
-      // 2. Lerp Gun
+      // Gun Animation Lerp
       const gPos = targets.targetPos;
       const gRot = targets.targetRot;
-
       gunGroup.position.lerp(gPos, 0.08); 
       gunGroup.rotation.x += (gRot.x - gunGroup.rotation.x) * 0.08;
       gunGroup.rotation.y += (gRot.y - gunGroup.rotation.y) * 0.08;
       gunGroup.rotation.z += (gRot.z - gunGroup.rotation.z) * 0.08;
 
       if (gunGroup.userData.isSawing) {
-          gunGroup.position.x += Math.sin(time * 60) * 0.05;
-          gunGroup.position.y += Math.cos(time * 50) * 0.03;
-          gunGroup.rotation.z += Math.sin(time * 40) * 0.05;
+          gunGroup.position.x += Math.sin(time * 150) * 0.08;
+          gunGroup.position.y += Math.cos(time * 120) * 0.05;
+          gunGroup.rotation.z += Math.sin(time * 80) * 0.1;
       }
 
-      // 3. Camera Logic
+      // --- CAMERA LOGIC ---
       const targetCamPos = new THREE.Vector3(0, 4, 14); // Default Table View
 
-      if (turnOwner === 'PLAYER' && aimTarget === 'SELF') {
-           // LOOK DOWN BARREL INTENSE
-           targetCamPos.set(0, -0.5, 9);
-           camera.lookAt(0, -1, 6); 
-      } else if (cameraView === 'DEALER') {
-           targetCamPos.set(0, 4, -4);
-           camera.lookAt(0, 5, -14); 
-      } else {
-           // Standard breathing
-           camera.lookAt(0, 1.5, -2); 
+      if (cameraView === 'TABLE') {
+          targetCamPos.set(0, 10, 4); 
+          camera.lookAt(0, 0, 0);
+      } else if (turnOwner === 'DEALER') {
+          // STATIC CAMERA FOR DEALER - As requested
+          // Keeps player view watching dealer do actions
+          targetCamPos.set(0, 5, 12); 
+          camera.lookAt(0, 2, -14);
+      } else if (turnOwner === 'PLAYER') {
+          if (aimTarget === 'SELF') {
+               targetCamPos.set(0, 1, 14);
+               camera.lookAt(0, -1, 5); 
+          } else if (aimTarget === 'OPPONENT') {
+               targetCamPos.set(8, 3, 14); 
+               camera.lookAt(0, 4, -14); 
+          } else {
+               targetCamPos.set(0, 4, 14);
+               camera.lookAt(0, 1.5, -2); 
+          }
       }
 
-      // Apply Camera Position
+      // Camera Lerp
       camera.position.x += (targetCamPos.x - camera.position.x) * 0.05;
       camera.position.y += (targetCamPos.y - camera.position.y) * 0.05;
       camera.position.z += (targetCamPos.z - camera.position.z) * 0.05;
 
       // Breathing
-      if (aimTarget !== 'SELF') {
+      if (aimTarget !== 'SELF' && cameraView !== 'TABLE') {
           const breathY = Math.sin(time * 0.5) * 0.05;
           camera.position.y += breathY;
       }
@@ -255,69 +289,49 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       // Shake
       let shake = scene.userData.cameraShake || 0;
       if (shake > 0) {
-          if (scene.userData.isCuffShake) {
-             camera.position.x += (Math.random() - 0.5) * shake * 2;
-             camera.position.y += (Math.random() - 0.5) * shake * 0.5;
-          } else {
-             camera.position.x += (Math.random() - 0.5) * shake;
-             camera.position.y += (Math.random() - 0.5) * shake;
-             camera.position.z += (Math.random() - 0.5) * shake * 0.5;
-          }
-          shake *= 0.9; 
-          if (shake < 0.01) {
-             shake = 0;
-             scene.userData.isCuffShake = false;
-          }
-          scene.userData.cameraShake = shake; 
+         camera.position.x += (Math.random() - 0.5) * shake;
+         camera.position.y += (Math.random() - 0.5) * shake;
+         camera.position.z += (Math.random() - 0.5) * shake * 0.5;
+         
+         shake *= 0.9; 
+         if (shake < 0.01) shake = 0;
+         scene.userData.cameraShake = shake; 
       }
 
-      // 4. Dealer Animation
+      // Dealer Animation
       const dealerTargetY = dealerGroup.userData.targetY ?? (Math.sin(time) * 0.05);
       dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * 0.25;
 
       const headGroup = dealerGroup.getObjectByName("HEAD");
       if (headGroup) {
-        headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.3, 0.05);
-        headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.2, 0.05);
+        headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.2, 0.05);
+        headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.1, 0.05);
       }
 
       const faceLight = dealerGroup.getObjectByName("FACE_LIGHT") as THREE.PointLight;
       if (faceLight) {
           const flicker = Math.random() > 0.9 ? Math.random() * 0.5 + 3.5 : 4;
-          faceLight.intensity = THREE.MathUtils.lerp(faceLight.intensity, flicker, 0.2);
+          faceLight.intensity = THREE.MathUtils.lerp(faceLight.intensity, flicker, 0.2) * brightnessMult;
       }
       
-      if (Math.random() > 0.98) {
-          bulbLight.intensity = Math.random() * 0.5 + 2.0;
-      } else {
-          bulbLight.intensity = THREE.MathUtils.lerp(bulbLight.intensity, 2.5, 0.1);
-      }
-
-      // 5. Dust Animation
+      // Physics & Particles updates
       const dustPos = dustParticles.geometry.attributes.position.array as Float32Array;
       const dustVel = dustParticles.geometry.attributes.velocity.array as Float32Array;
-      const dustCount = dustPos.length / 3;
-      for (let i = 0; i < dustCount; i++) {
+      for (let i = 0; i < dustPos.length/3; i++) {
          const idx = i*3;
-         dustPos[idx] += dustVel[idx];
-         dustPos[idx+1] += dustVel[idx+1];
-         dustPos[idx+2] += dustVel[idx+2];
-
+         dustPos[idx] += dustVel[idx]; dustPos[idx+1] += dustVel[idx+1]; dustPos[idx+2] += dustVel[idx+2];
          if (Math.abs(dustPos[idx]) > 20) dustPos[idx] *= -0.9;
          if (Math.abs(dustPos[idx+1]) > 15) dustPos[idx+1] *= -0.9;
          if (Math.abs(dustPos[idx+2]) > 20) dustPos[idx+2] *= -0.9;
       }
       dustParticles.geometry.attributes.position.needsUpdate = true;
 
-      // 6. Projectile Physics
       if (shellCasing.visible) {
         shellCasing.position.add(shellVel);
         shellVel.y -= 0.035; 
-        shellCasing.rotation.x += 0.25;
-        shellCasing.rotation.z += 0.2;
+        shellCasing.rotation.x += 0.25; shellCasing.rotation.z += 0.2;
         if (shellCasing.position.y < -2) {
-            shellVel.y = -shellVel.y * 0.6;
-            shellVel.x *= 0.8;
+            shellVel.y = -shellVel.y * 0.6; shellVel.x *= 0.8;
             if (Math.abs(shellVel.y) < 0.1) shellCasing.visible = false;
         }
         if (shellCasing.position.y < -8) shellCasing.visible = false;
@@ -334,18 +348,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
            muzzleFlash.scale.setScalar(1.0 + Math.random() * 0.5);
       }
 
-      // 8. Particles
       const bPos = bloodParticles.geometry.attributes.position.array as Float32Array;
       const bVel = bloodParticles.geometry.attributes.velocity.array as Float32Array;
       let activeBlood = false;
-      const bCount = bPos.length / 3;
-      for (let i = 0; i < bCount; i++) {
+      for (let i = 0; i < bPos.length/3; i++) {
         const idx = i * 3;
         if (bPos[idx] < 100) {
             activeBlood = true;
-            bPos[idx] += bVel[idx];
-            bPos[idx+1] += bVel[idx+1];
-            bPos[idx+2] += bVel[idx+2];
+            bPos[idx] += bVel[idx]; bPos[idx+1] += bVel[idx+1]; bPos[idx+2] += bVel[idx+2];
             bVel[idx+1] -= 0.01; 
             if (bPos[idx+1] < -15) bPos[idx+1] = 9999; 
         }
@@ -355,14 +365,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       const sPosArr = sparkParticles.geometry.attributes.position.array as Float32Array;
       const sVelArr = sparkParticles.geometry.attributes.velocity.array as Float32Array;
       let activeSparks = false;
-      const sCount = sPosArr.length / 3;
-      for (let i = 0; i < sCount; i++) {
+      for (let i = 0; i < sPosArr.length/3; i++) {
           const idx = i * 3;
           if (sPosArr[idx] < 100) {
               activeSparks = true;
-              sPosArr[idx] += sVelArr[idx];
-              sPosArr[idx+1] += sVelArr[idx+1];
-              sPosArr[idx+2] += sVelArr[idx+2];
+              sPosArr[idx] += sVelArr[idx]; sPosArr[idx+1] += sVelArr[idx+1]; sPosArr[idx+2] += sVelArr[idx+2];
               sVelArr[idx+1] -= 0.02; 
               if (sPosArr[idx+1] < -2) sPosArr[idx+1] = 9999;
           }
@@ -372,7 +379,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       renderer.render(scene, camera);
     };
 
-    // --- Interaction Handlers ---
+    // --- INPUT & RESIZE HANDLERS ---
     const handleMouseMove = (e: MouseEvent) => {
         if (!containerRef.current || !sceneRef.current) return;
         sceneRef.current.mouse.x = ((e.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
@@ -388,22 +395,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (!containerRef.current || !sceneRef.current) return;
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
-        
         if (width === 0 || height === 0) return;
+        
+        const pixelScale = propsRef.current.settings.pixelScale;
+        sceneRef.current.renderer.setSize(width / pixelScale, height / pixelScale, false);
+
         const aspect = width / height;
-        let baseZ = 14;
-        
-        if (width < 768) {
-            if (aspect < 1) baseZ = 22; 
-            else baseZ = 16; 
-        } else {
-            if (aspect < 1.6) baseZ = 16;
-        }
-        
-        sceneRef.current.scene.userData.baseZ = baseZ; 
         sceneRef.current.camera.aspect = aspect;
         sceneRef.current.camera.updateProjectionMatrix();
-        sceneRef.current.renderer.setSize(width, height);
     };
 
     const timeout = setTimeout(() => {
@@ -416,8 +415,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     const resizeObserver = new ResizeObserver(() => {
         if (!sceneRef.current) {
              if (containerRef.current && containerRef.current.clientWidth > 0) {
-                 initThree();
-                 animate();
+                 initThree(); animate();
              }
         } else {
              updateCameraResponsive();
@@ -435,34 +433,31 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('click', handleClick);
       resizeObserver.disconnect();
-      if (sceneRef.current) {
-          sceneRef.current.renderer.dispose();
-      }
+      if (sceneRef.current) sceneRef.current.renderer.dispose();
       if (containerRef.current) containerRef.current.innerHTML = '';
     };
-  }, []); 
+  }, [settings.pixelScale]); 
 
-  // --- Sync Effects (Gun Model Updates) ---
+  // --- SYNC EFFECTS ---
   useEffect(() => {
       if (!sceneRef.current) return;
       const { sparkParticles, gunGroup } = sceneRef.current;
-      gunGroup.userData.isSawing = propsRef.current.animState.isSawing; // Use ref or prop? Sync effect uses prop is fine usually, but let's stick to prop for logic
-      // Actually sync effects run on prop change, so 'animState.isSawing' is fresh here.
+      gunGroup.userData.isSawing = propsRef.current.animState.isSawing;
+      
       if (animState.triggerSparks > 0) {
+          sceneRef.current.scene.userData.cameraShake = 0.6;
           const pos = sparkParticles.geometry.attributes.position.array as Float32Array;
           const vel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
-          const count = pos.length / 3;
-          for(let i=0; i<count; i++) {
+          for(let i=0; i<pos.length/3; i++) {
               const idx = i * 3;
               pos[idx] = gunGroup.position.x + (Math.random()-0.5)*0.5;
               pos[idx+1] = gunGroup.position.y + 0.3;
               pos[idx+2] = gunGroup.position.z + 4.5;
-              vel[idx] = (Math.random()-0.5) * 0.5;
-              vel[idx+1] = Math.random() * 0.3;
-              vel[idx+2] = (Math.random()-0.5) * 0.2;
+              vel[idx] = (Math.random()-0.5) * 0.8; 
+              vel[idx+1] = Math.random() * 0.5;
+              vel[idx+2] = (Math.random()-0.5) * 0.4;
           }
           sparkParticles.geometry.attributes.position.needsUpdate = true;
-          sceneRef.current.scene.userData.cameraShake = 0.4;
       }
   }, [animState.triggerSparks, animState.isSawing]);
 
@@ -473,10 +468,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
   useEffect(() => {
      if (animState.dealerHit && sceneRef.current) {
         const { bloodParticles } = sceneRef.current;
-        const count = bloodParticles.geometry.attributes.position.count;
         const positions = bloodParticles.geometry.attributes.position.array as Float32Array;
         const velocities = bloodParticles.geometry.attributes.velocity.array as Float32Array;
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < positions.length/3; i++) {
             const idx = i * 3;
             positions[idx] = 0 + (Math.random() - 0.5) * 2.0;
             positions[idx+1] = 5.5 + (Math.random() - 0.5) * 1.5;
@@ -492,7 +486,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
   useEffect(() => {
     if (animState.triggerCuff > 0 && sceneRef.current) {
         sceneRef.current.scene.userData.cameraShake = 0.8;
-        sceneRef.current.scene.userData.isCuffShake = true; 
     }
   }, [animState.triggerCuff]);
 
@@ -506,7 +499,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       if (!sceneRef.current) return;
       const { barrelMesh } = sceneRef.current;
       if (animState.isSawing) {
-          barrelMesh.scale.y = 1;
+          barrelMesh.scale.y = 1; 
       } else if (isSawed) {
           barrelMesh.scale.y = 0.43; 
           barrelMesh.position.z = 2.5; 

@@ -43,3 +43,11 @@ export interface AnimationState {
     dealerHit: boolean;
     dealerDropping: boolean;
 }
+
+export interface GameSettings {
+    pixelScale: number;
+    brightness: number;
+    uiScale: number;
+    fishEye: boolean;
+    vhsFilter: boolean;
+}
