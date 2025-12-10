@@ -19,8 +19,9 @@ export const setupLighting = (scene: THREE.Scene) => {
   spot.penumbra = 0.5;
   spot.castShadow = true;
   spot.shadow.bias = -0.0001;
-  spot.shadow.mapSize.width = 1024; // Optimized shadow map
-  spot.shadow.mapSize.height = 1024;
+  // Reduced shadow map size for performance
+  spot.shadow.mapSize.width = 512; 
+  spot.shadow.mapSize.height = 512;
   scene.add(spot);
 
   // Table Fill Light - Cool blue to contrast the warm spot
@@ -85,7 +86,7 @@ export const createEnvironment = (scene: THREE.Scene) => {
 };
 
 export const createDust = (scene: THREE.Scene) => {
-    const particleCount = 200;
+    const particleCount = 50; // Significantly reduced for mobile performance
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
@@ -226,61 +227,81 @@ export const createDealerModel = (scene: THREE.Scene) => {
   const HEAD_Y = 5.5; 
   const Z_POS = -14; 
 
-  // 1. HEAD
+  // --- HEAD GROUP START ---
+  // Create a separate group for the head to handle rotation easily
+  const headGroup = new THREE.Group();
+  headGroup.name = "HEAD";
+  headGroup.position.set(0, HEAD_Y, Z_POS);
+  
+  // Head Mesh (Relative to headGroup 0,0,0)
   const headGeo = new THREE.SphereGeometry(2.0, 32, 32);
   headGeo.scale(0.9, 1.3, 1.0); 
   const head = new THREE.Mesh(headGeo, skinMat);
-  head.name = "HEAD"; // NAMED FOR TRACKING
-  head.position.set(0, HEAD_Y, Z_POS);
   head.castShadow = true;
+  headGroup.add(head);
 
-  // 2. FACE (Hollows)
+  // Face (Hollows) relative positions
   const socketGeo = new THREE.SphereGeometry(0.5, 16, 16);
   const lSocket = new THREE.Mesh(socketGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  lSocket.position.set(-0.8, HEAD_Y + 0.3, Z_POS + 1.6);
+  lSocket.position.set(-0.8, 0.3, 1.6);
   lSocket.scale.z = 0.5;
+  headGroup.add(lSocket);
   
   const rSocket = lSocket.clone();
-  rSocket.position.set(0.8, HEAD_Y + 0.3, Z_POS + 1.6);
+  rSocket.position.set(0.8, 0.3, 1.6);
+  headGroup.add(rSocket);
 
   // Pupils (Small intense dots) + Actual LIGHTS
   const pupilGeo = new THREE.SphereGeometry(0.12);
   
   const lPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
-  lPupil.position.set(-0.8, HEAD_Y + 0.3, Z_POS + 2.0);
+  lPupil.position.set(-0.8, 0.3, 2.0);
   
   // Left Eye Light
   const lEyeLight = new THREE.PointLight(0xff0000, 2.0, 4);
   lEyeLight.name = "EYE_L";
   lEyeLight.position.set(0, 0, 0.5); 
   lPupil.add(lEyeLight);
+  headGroup.add(lPupil);
   
-  const rPupil = lPupil.clone();
-  rPupil.position.set(0.8, HEAD_Y + 0.3, Z_POS + 2.0);
-  // Need to add light to right eye manually since deep clone of children isn't automatic in this concise way
+  const rPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
+  rPupil.position.set(0.8, 0.3, 2.0);
+  // Need to add light to right eye manually
   const rEyeLight = new THREE.PointLight(0xff0000, 2.0, 4);
   rEyeLight.name = "EYE_R";
   rEyeLight.position.set(0, 0, 0.5);
   rPupil.add(rEyeLight);
+  headGroup.add(rPupil);
 
   // Mouth (Jagged Grin)
   const mouthGeo = new THREE.BoxGeometry(2.2, 0.4, 0.5);
   const mouth = new THREE.Mesh(mouthGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  mouth.position.set(0, HEAD_Y - 1.2, Z_POS + 1.6);
+  mouth.position.set(0, -1.2, 1.6);
   mouth.rotation.x = -0.2;
+  headGroup.add(mouth);
 
   // Teeth
   const teethGroup = new THREE.Group();
   for(let i=0; i<12; i++) {
      const t = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
-     t.position.set((i - 5.5) * 0.18, HEAD_Y - 1.1, Z_POS + 1.9);
+     t.position.set((i - 5.5) * 0.18, -1.1, 1.9);
      t.rotation.x = Math.PI;
      teethGroup.add(t);
      const t2 = t.clone();
-     t2.position.set((i - 5.5) * 0.18, HEAD_Y - 1.4, Z_POS + 1.8);
+     t2.position.set((i - 5.5) * 0.18, -1.4, 1.8);
      t2.rotation.x = 0;
      teethGroup.add(t2);
   }
+  headGroup.add(teethGroup);
+  
+  // Add Face Light to Head Group so it moves with head
+  const faceLight = new THREE.PointLight(0xff0000, 3, 10);
+  faceLight.name = "FACE_LIGHT";
+  faceLight.position.set(0, -3, 4);
+  headGroup.add(faceLight);
+
+  dealerGroup.add(headGroup);
+  // --- HEAD GROUP END ---
 
   // 3. TORSO
   const torsoGeo = new THREE.BoxGeometry(6.5, 7, 3);
@@ -325,13 +346,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
       lHand.add(f.clone()); rHand.add(f.clone());
   }
 
-  dealerGroup.add(head, lSocket, rSocket, lPupil, rPupil, mouth, teethGroup, torso, collar, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
-  
-  // Face under-light
-  const faceLight = new THREE.PointLight(0xff0000, 3, 10);
-  faceLight.name = "FACE_LIGHT";
-  faceLight.position.set(0, HEAD_Y - 3, Z_POS + 4);
-  dealerGroup.add(faceLight);
+  dealerGroup.add(torso, collar, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
 
   scene.add(dealerGroup);
   return dealerGroup;

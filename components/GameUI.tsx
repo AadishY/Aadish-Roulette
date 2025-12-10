@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType } from '../types';
-import { Zap, Crosshair, RefreshCcw, ShieldAlert, Heart, Hammer, ArrowDown, Skull, Users, Home, ChevronDown, ChevronUp, RotateCcw, Power } from 'lucide-react';
+import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView } from '../types';
+import { Zap, Crosshair, RefreshCcw, ShieldAlert, Heart, Hammer, ArrowDown, Skull, Users, Home, ChevronDown, ChevronUp, RotateCcw, Power, Hand } from 'lucide-react';
 import { ITEM_DESCRIPTIONS } from '../constants';
 
 interface GameUIProps {
@@ -18,11 +18,13 @@ interface GameUIProps {
   knownShell: ShellType | null;
   receivedItems: ItemType[];
   playerName: string;
+  cameraView: CameraView;
   onStartGame: (name: string) => void;
   onResetGame: (toMenu: boolean) => void;
   onFireShot: (target: TurnOwner) => void;
   onUseItem: (index: number) => void;
   onHoverTarget: (target: AimTarget) => void;
+  onPickupGun: () => void;
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -54,11 +56,13 @@ export const GameUI: React.FC<GameUIProps> = ({
   knownShell,
   receivedItems,
   playerName,
+  cameraView,
   onStartGame,
   onResetGame,
   onFireShot,
   onUseItem,
-  onHoverTarget
+  onHoverTarget,
+  onPickupGun
 }) => {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [inputName, setInputName] = useState(playerName || '');
@@ -138,6 +142,9 @@ export const GameUI: React.FC<GameUIProps> = ({
           return () => clearTimeout(t);
       }
   }, [triggerDrink]);
+
+  const isPlayerTurn = gameState.phase === 'PLAYER_TURN';
+  const isGunHeld = cameraView === 'GUN';
 
   return (
     <>
@@ -386,22 +393,38 @@ export const GameUI: React.FC<GameUIProps> = ({
           {/* Middle: Controls */}
           {gameState.phase === 'PLAYER_TURN' && !overlayText && (
             <div className="absolute top-[60%] md:top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-4 md:gap-8 pointer-events-auto items-center w-full justify-center px-4">
-               <button 
-                  onClick={() => onFireShot('DEALER')}
-                  onMouseEnter={() => onHoverTarget('OPPONENT')}
-                  onMouseLeave={() => onHoverTarget('IDLE')}
-                  className="bg-black/80 border-2 border-red-900 px-4 py-3 md:px-8 md:py-5 text-red-500 font-black text-base md:text-xl hover:bg-red-900 hover:text-white transition-all hover:scale-105 hover:border-red-500 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant whitespace-nowrap"
-               >
-                  SHOOT DEALER
-               </button>
-               <button 
-                  onClick={() => onFireShot('PLAYER')}
-                  onMouseEnter={() => onHoverTarget('SELF')}
-                  onMouseLeave={() => onHoverTarget('IDLE')}
-                  className="bg-black/80 border-2 border-stone-700 px-4 py-3 md:px-8 md:py-5 text-stone-400 font-black text-base md:text-xl hover:bg-stone-800 hover:text-white transition-all hover:scale-105 hover:border-stone-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest whitespace-nowrap"
-               >
-                  SHOOT SELF
-               </button>
+               {/* Gun Pickup Button */}
+               {!isGunHeld && (
+                   <button 
+                        onClick={onPickupGun}
+                        className="bg-black/80 border-2 border-stone-500 px-6 py-4 md:px-10 md:py-6 text-stone-200 font-black text-xl md:text-2xl hover:bg-stone-800 hover:text-white hover:border-white transition-all hover:scale-105 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant flex items-center gap-3 animate-pulse"
+                   >
+                        <Hand size={24} />
+                        GRAB SHOTGUN
+                   </button>
+               )}
+
+               {/* Shooting Controls */}
+               {isGunHeld && (
+                   <>
+                       <button 
+                          onClick={() => onFireShot('DEALER')}
+                          onMouseEnter={() => onHoverTarget('OPPONENT')}
+                          onMouseLeave={() => onHoverTarget('IDLE')}
+                          className="bg-black/80 border-2 border-red-900 px-4 py-3 md:px-8 md:py-5 text-red-500 font-black text-base md:text-xl hover:bg-red-900 hover:text-white transition-all hover:scale-105 hover:border-red-500 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant whitespace-nowrap"
+                       >
+                          SHOOT DEALER
+                       </button>
+                       <button 
+                          onClick={() => onFireShot('PLAYER')}
+                          onMouseEnter={() => onHoverTarget('SELF')}
+                          onMouseLeave={() => onHoverTarget('IDLE')}
+                          className="bg-black/80 border-2 border-stone-700 px-4 py-3 md:px-8 md:py-5 text-stone-400 font-black text-base md:text-xl hover:bg-stone-800 hover:text-white transition-all hover:scale-105 hover:border-stone-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest whitespace-nowrap"
+                       >
+                          SHOOT SELF
+                       </button>
+                   </>
+               )}
             </div>
           )}
 
@@ -434,12 +457,14 @@ export const GameUI: React.FC<GameUIProps> = ({
                 <div className="flex gap-1 md:gap-2 p-2 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[80px] md:min-h-[100px] items-end overflow-x-auto max-w-full">
                     {player.items.map((item, idx) => {
                         const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
+                        const isUsageDisabled = gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled;
+                        
                         return (
                             <div key={idx} className="group relative shrink-0">
                                 <button
                                     onClick={() => onUseItem(idx)}
-                                    disabled={gameState.phase !== 'PLAYER_TURN' || isCuffDisabled}
-                                    className={`w-14 h-16 md:w-20 md:h-24 bg-stone-900 border border-stone-700 flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 ${isCuffDisabled ? 'opacity-30' : ''}`}
+                                    disabled={isUsageDisabled}
+                                    className={`w-14 h-16 md:w-20 md:h-24 bg-stone-900 border border-stone-700 flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 ${isUsageDisabled ? 'opacity-30' : ''}`}
                                 >
                                     {item === 'BEER' && <RefreshCcw className="text-amber-500 mb-1 md:mb-2" size={24} />}
                                     {item === 'CIGS' && <Heart className="text-red-500 mb-1 md:mb-2" size={24} />}
@@ -452,6 +477,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     <div className="font-bold text-white mb-1 tracking-widest">{item}</div>
                                     {ITEM_DESCRIPTIONS[item]}
                                     {isCuffDisabled && <div className="text-red-500 mt-1">DEALER IS CUFFED</div>}
+                                    {isGunHeld && <div className="text-red-500 mt-1">CANNOT USE WHILE HOLDING GUN</div>}
                                 </div>
                             </div>
                         );

@@ -175,12 +175,11 @@ export const useGameLogic = () => {
   };
 
   const distributeItems = async () => {
-    // Generate exactly 2-4 items per shipment based on round progress (optional complexity, kept simple for now)
-    // Fixed: 3 items per drop
+    // Generate exactly 3 items per shipment
     const generateLoot = (count: number) => Array(count).fill(null).map(() => getRandomItem());
     
-    const pNew = generateLoot(randomInt(2, 4));
-    const dNew = generateLoot(randomInt(2, 4));
+    const pNew = generateLoot(3);
+    const dNew = generateLoot(3);
 
     setGameState(prev => ({ ...prev, phase: 'LOOTING' }));
     setReceivedItems(pNew);
@@ -192,6 +191,11 @@ export const useGameLogic = () => {
     setDealer(d => ({ ...d, items: [...d.items, ...dNew].slice(0, MAX_ITEMS) }));
     setShowLootOverlay(false);
     setReceivedItems([]);
+  };
+
+  // Add functionality to pick up the gun
+  const pickupGun = () => {
+      setCameraView('GUN');
   };
 
   const fireShot = async (shooter: TurnOwner, target: TurnOwner) => {
@@ -209,7 +213,8 @@ export const useGameLogic = () => {
     const isSelf = shooter === target;
     setAimTarget(isSelf ? 'SELF' : 'OPPONENT');
 
-    await wait(1200); 
+    // Wait a moment for aim animation
+    await wait(1000); 
 
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';
@@ -416,6 +421,12 @@ export const useGameLogic = () => {
   const usePlayerItem = async (index: number) => {
     if (gameState.phase !== 'PLAYER_TURN') return;
     
+    // Prevent item usage if gun is picked up (camera is GUN)
+    if (cameraView === 'GUN') {
+        addLog("CAN'T USE ITEMS WHILE HOLDING GUN", 'info');
+        return;
+    }
+
     const item = player.items[index];
     if (!item) return;
 
@@ -454,6 +465,7 @@ export const useGameLogic = () => {
     setCameraView,
     setDealer,
     processItemEffect,
-    resetGame
+    resetGame,
+    pickupGun
   };
 };

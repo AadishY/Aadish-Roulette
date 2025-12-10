@@ -57,6 +57,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
+    // Limit pixel ratio for mobile performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -74,7 +76,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     const { bulletMesh, shellCasing } = createProjectiles(scene);
 
     // --- Particles ---
-    const particleCount = 600;
+    // Reduced particle count for performance
+    const particleCount = 100; // Further reduced
     const particles = new THREE.BufferGeometry();
     const pPositions = new Float32Array(particleCount * 3);
     const pVelocities = new Float32Array(particleCount * 3);
@@ -97,9 +100,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     // SPARKS
     const sparkGeo = new THREE.BufferGeometry();
-    const sPos = new Float32Array(50 * 3);
-    const sVel = new Float32Array(50 * 3);
-    for(let i=0; i<150; i++) sPos[i] = 9999;
+    const sPos = new Float32Array(30 * 3); 
+    const sVel = new Float32Array(30 * 3);
+    for(let i=0; i<90; i++) sPos[i] = 9999;
     sparkGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
     sparkGeo.setAttribute('velocity', new THREE.BufferAttribute(sVel, 3));
     const sMat = new THREE.PointsMaterial({ color: 0xffffaa, size: 0.15, transparent: true, opacity: 1, blending: THREE.AdditiveBlending });
@@ -172,32 +175,17 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       const dealerTargetY = dealerGroup.userData.targetY ?? (Math.sin(time) * 0.05);
       dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * 0.25;
 
-      const head = dealerGroup.getObjectByName("HEAD");
-      if (head) {
-        // Inverse Kinematics for Head Look
-        // Map mouse (-1 to 1) to a world target
-        const lookX = mouse.x * 5;
-        const lookY = mouse.y * 5 + 5; // Look roughly at height 5
-        const currentLook = head.rotation.clone();
-        
-        // Use lookAt with a dummy target or math
-        // Simple approach: look at point in space
-        const targetLook = new THREE.Vector3(lookX, lookY, 10); // Look towards player side
-        const dummy = new THREE.Object3D();
-        dummy.position.copy(head.position);
-        dummy.lookAt(targetLook);
-        
-        // Slerp rotation manually or just lerp lookAt point (ThreeJS lookAt is instant)
-        // We'll just set lookAt for now, dampened?
-        // Actually, let's just rotate head group slightly based on mouse
-        head.rotation.y = THREE.MathUtils.lerp(head.rotation.y, -mouse.x * 0.3, 0.05);
-        head.rotation.x = THREE.MathUtils.lerp(head.rotation.x, mouse.y * 0.2, 0.05);
+      const headGroup = dealerGroup.getObjectByName("HEAD");
+      if (headGroup) {
+        // Smooth head tracking
+        // Rotate the Head GROUP, not just a mesh, so eyes/mouth follow
+        headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.3, 0.05);
+        headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.2, 0.05);
       }
 
-      // Flicker Eyes
+      // Flicker Eyes - Get lights from within Head Group
       const faceLight = dealerGroup.getObjectByName("FACE_LIGHT") as THREE.PointLight;
       if (faceLight) {
-          // Random flickering intensity
           const flicker = Math.random() > 0.9 ? Math.random() * 0.5 + 3.5 : 4;
           faceLight.intensity = THREE.MathUtils.lerp(faceLight.intensity, flicker, 0.2);
       }
@@ -211,7 +199,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       // 5. Dust Animation
       const dustPos = dustParticles.geometry.attributes.position.array as Float32Array;
       const dustVel = dustParticles.geometry.attributes.velocity.array as Float32Array;
-      for (let i = 0; i < 200; i++) {
+      const dustCount = dustPos.length / 3;
+      for (let i = 0; i < dustCount; i++) {
          const idx = i*3;
          dustPos[idx] += dustVel[idx];
          dustPos[idx+1] += dustVel[idx+1];
@@ -250,7 +239,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       const bPos = bloodParticles.geometry.attributes.position.array as Float32Array;
       const bVel = bloodParticles.geometry.attributes.velocity.array as Float32Array;
       let activeBlood = false;
-      for (let i = 0; i < 600; i++) {
+      const bCount = bPos.length / 3;
+      for (let i = 0; i < bCount; i++) {
         const idx = i * 3;
         if (bPos[idx] < 100) {
             activeBlood = true;
@@ -266,7 +256,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       const sPosArr = sparkParticles.geometry.attributes.position.array as Float32Array;
       const sVelArr = sparkParticles.geometry.attributes.velocity.array as Float32Array;
       let activeSparks = false;
-      for (let i = 0; i < 50; i++) {
+      const sCount = sPosArr.length / 3;
+      for (let i = 0; i < sCount; i++) {
           const idx = i * 3;
           if (sPosArr[idx] < 100) {
               activeSparks = true;
@@ -328,7 +319,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       if (animState.triggerSparks > 0) {
           const pos = sparkParticles.geometry.attributes.position.array as Float32Array;
           const vel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
-          for(let i=0; i<50; i++) {
+          const count = pos.length / 3;
+          for(let i=0; i<count; i++) {
               const idx = i * 3;
               pos[idx] = gunGroup.position.x + (Math.random()-0.5)*0.5;
               pos[idx+1] = gunGroup.position.y + 0.3;
@@ -402,11 +394,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             targets.targetPos.set(0, 0, 8); 
             targets.targetRot.set(0, Math.PI, 0); 
         } else if (aimTarget === 'SELF') { 
-            targets.targetPos.set(0, -2, 7); 
-            targets.targetRot.set(Math.PI / 3, 0, 0); 
-        } else {
+            // IMPROVED SELF-AIM ANGLE (Steeper, more under-chin)
+            targets.targetPos.set(0, -3.0, 8.5); 
+            targets.targetRot.set(Math.PI / 4, 0, 0); 
+        } else if (cameraView === 'GUN') { // Aim Ready Phase
             targets.targetPos.set(0, -0.75, 4); 
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
+        } else { // Table Phase (Idle)
+            targets.targetPos.set(0, -0.9, 2);
+            targets.targetRot.set(0, Math.PI / 2, 0);
         }
     } else {
         if (aimTarget === 'SELF') { 
@@ -420,7 +416,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
            targets.targetRot.set(0, Math.PI / 2, -Math.PI / 2);
         }
     }
-  }, [aimTarget, turnOwner]);
+  }, [aimTarget, turnOwner, cameraView]); 
 
   useEffect(() => {
       if (!sceneRef.current) return;
