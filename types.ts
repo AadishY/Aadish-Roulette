@@ -13,6 +13,7 @@ export interface GameState {
   currentShellIndex: number;
   liveCount: number;
   blankCount: number;
+  lastTurnWasSkipped?: boolean;
 }
 
 export interface PlayerState {
@@ -30,24 +31,68 @@ export interface LogEntry {
 }
 
 export interface AnimationState {
-    triggerRecoil: number;
-    triggerRack: number;
-    triggerSparks: number; // Saw
-    triggerHeal: number; // Cigs
-    triggerDrink: number; // Beer
-    triggerCuff: number; // Cuffs
-    isSawing: boolean; // Continuous saw state
-    ejectedShellColor: 'red' | 'blue';
-    muzzleFlashIntensity: number;
-    isLiveShot: boolean;
-    dealerHit: boolean;
-    dealerDropping: boolean;
+  triggerRecoil: number;
+  triggerRack: number;
+  triggerSparks: number; // Saw
+  triggerHeal: number; // Cigs
+  triggerDrink: number; // Beer
+  triggerCuff: number; // Cuffs
+  isSawing: boolean; // Continuous saw state
+  ejectedShellColor: 'red' | 'blue';
+  muzzleFlashIntensity: number;
+  isLiveShot: boolean;
+  dealerHit: boolean;
+  dealerDropping: boolean;
+  playerHit: boolean;
 }
 
 export interface GameSettings {
-    pixelScale: number;
-    brightness: number;
-    uiScale: number;
-    fishEye: boolean;
-    vhsFilter: boolean;
+  pixelScale: number;
+  brightness: number;
+  uiScale: number;
+  fishEye: boolean;
+  fov: number;
+}
+
+export interface SceneContext {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer;
+  gunGroup: THREE.Group;
+  muzzleFlash: THREE.Group;
+  muzzleLight: THREE.PointLight;
+  roomRedLight: THREE.PointLight;
+  bulbLight: THREE.PointLight;
+  gunLight: THREE.PointLight;
+  bulletMesh: THREE.Mesh;
+  dealerGroup: THREE.Group;
+  shellCasing: THREE.Mesh;
+  shellVel: THREE.Vector3;
+  mouse: THREE.Vector2;
+  raycaster: THREE.Raycaster;
+  barrelMesh: THREE.Mesh;
+  bloodParticles: THREE.Points;
+  sparkParticles: THREE.Points;
+  dustParticles: THREE.Points;
+  baseLights: { light: THREE.Light, baseIntensity: number }[];
+}
+
+export interface SceneProps {
+  isSawed: boolean;
+  aimTarget: AimTarget;
+  cameraView: CameraView;
+  animState: AnimationState;
+  turnOwner: TurnOwner;
+  settings: GameSettings;
+  players?: MPPlayer[]; // Added for multiplayer
+  playerId?: string; // Added for multiplayer
+  messages?: any[]; // Added for multiplayer chat
+  targetPlayerId?: string;
+}
+
+export interface MPPlayer {
+  id: string;
+  name: string;
+  ready: boolean;
+  isHost: boolean;
 }

@@ -1,63 +1,73 @@
 import * as THREE from 'three';
 
 export const setupLighting = (scene: THREE.Scene) => {
-  // Linear Fog to fade background but keep props visible
-  scene.fog = new THREE.Fog(0x020202, 12, 65);
+    // Linear Fog to fade background but keep props visible. Darker fog for mood.
+    scene.fog = new THREE.Fog(0x050505, 10, 50);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5); 
-  scene.add(ambient);
+    // Reduced ambient for more contrasty look
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
 
-  // Main Hanging Bulb
-  const bulbLight = new THREE.PointLight(0xffaa00, 15.0, 50); 
-  bulbLight.position.set(0, 9, 0); 
-  bulbLight.castShadow = true;
-  bulbLight.shadow.bias = -0.0001;
-  bulbLight.shadow.mapSize.width = 1024;
-  bulbLight.shadow.mapSize.height = 1024;
-  scene.add(bulbLight);
+    // Main Hanging Bulb - Warmer and moodier
+    const bulbLight = new THREE.PointLight(0xffaa55, 30.0, 50);
+    bulbLight.position.set(0, 9, 0);
+    bulbLight.castShadow = true;
+    bulbLight.shadow.bias = -0.0001;
+    bulbLight.shadow.mapSize.width = 1024;
+    bulbLight.shadow.mapSize.height = 1024;
+    scene.add(bulbLight);
 
-  // Front Fill Light (Player side)
-  const playerFill = new THREE.DirectionalLight(0x8899aa, 0.6);
-  playerFill.position.set(0, 2, 10);
-  scene.add(playerFill);
+    // Front Fill Light - Reduced blue tint, more neutral/dark
+    const playerFill = new THREE.DirectionalLight(0x556677, 0.4);
+    playerFill.position.set(2, 2, 10);
+    scene.add(playerFill);
 
-  // Background Blue Rim (Cinematic depth)
-  const bgRim = new THREE.DirectionalLight(0x446688, 1.5);
-  bgRim.position.set(-10, 5, -20);
-  bgRim.target.position.set(0, 0, -10);
-  scene.add(bgRim);
-  scene.add(bgRim.target);
+    // Background Blue Rim (Cinematic depth) - Slightly stronger and cooler
+    const bgRim = new THREE.DirectionalLight(0x224466, 2.0);
+    bgRim.position.set(-10, 5, -20);
+    bgRim.target.position.set(0, 0, -10);
+    scene.add(bgRim);
+    scene.add(bgRim.target);
 
-  // Spot Light focused on Table Gun area
-  const gunSpot = new THREE.SpotLight(0xffeeb0, 800); 
-  gunSpot.position.set(0, 12, 1);
-  gunSpot.target.position.set(0, -1, 4);
-  gunSpot.angle = 0.6; 
-  gunSpot.penumbra = 0.5;
-  gunSpot.castShadow = true;
-  scene.add(gunSpot);
-  scene.add(gunSpot.target);
+    // Strong Back Rim Light for Dealer silhouette
+    const dealerRim = new THREE.SpotLight(0xaaccff, 20);
+    dealerRim.position.set(5, 8, -20);
+    dealerRim.target.position.set(0, 5, -14); // Aim at Dealer Head
+    dealerRim.angle = 0.5;
+    dealerRim.penumbra = 1;
+    scene.add(dealerRim);
+    scene.add(dealerRim.target);
 
-  // Rim Light (Back)
-  const rimLight = new THREE.SpotLight(0x445566, 10);
-  rimLight.position.set(0, 10, -25);
-  rimLight.lookAt(0, 5, -14);
-  scene.add(rimLight);
+    // Spot Light focused on Table Gun area
+    const gunSpot = new THREE.SpotLight(0xffeeb0, 1000);
+    gunSpot.position.set(0, 12, 1);
+    gunSpot.target.position.set(0, -1, 4);
+    gunSpot.angle = 0.6;
+    gunSpot.penumbra = 0.4;
+    gunSpot.castShadow = true;
+    scene.add(gunSpot);
+    scene.add(gunSpot.target);
 
-  // Table Glow
-  const tableGlow = new THREE.PointLight(0xff6600, 2.0, 8);
-  tableGlow.position.set(0, 1, 3);
-  scene.add(tableGlow);
+    // Rim Light (General Back)
+    const rimLight = new THREE.SpotLight(0x334455, 5);
+    rimLight.position.set(0, 10, -25);
+    rimLight.lookAt(0, 5, -14);
+    scene.add(rimLight);
 
-  // Dynamic Lights (Muzzle & Room Red)
-  const muzzleLight = new THREE.PointLight(0xffaa00, 0, 15);
-  scene.add(muzzleLight);
+    // Table Glow
+    const tableGlow = new THREE.PointLight(0xff6600, 1.5, 8);
+    tableGlow.position.set(0, 1, 3);
+    scene.add(tableGlow);
 
-  const roomRedLight = new THREE.PointLight(0xff0000, 0, 50);
-  roomRedLight.position.set(0, 10, 0);
-  scene.add(roomRedLight);
+    // Dynamic Lights (Muzzle & Room Red)
+    const muzzleLight = new THREE.PointLight(0xffaa00, 0, 15);
+    scene.add(muzzleLight);
 
-  return { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight: playerFill, ambient, bgRim };
+    const roomRedLight = new THREE.PointLight(0xff0000, 0, 50);
+    roomRedLight.position.set(0, 10, 0);
+    scene.add(roomRedLight);
+
+    return { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight: playerFill, ambient, bgRim, dealerRim };
 };
 
 export const createEnvironment = (scene: THREE.Scene) => {
@@ -72,7 +82,7 @@ export const createEnvironment = (scene: THREE.Scene) => {
     scene.add(floor);
 
     const crateMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
-    
+
     // Background Stacks (Fill the void)
     const makeStack = (x: number, z: number, y: number, r: number) => {
         const box = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), crateMat);
@@ -101,34 +111,60 @@ export const createEnvironment = (scene: THREE.Scene) => {
     scene.add(shelf);
 
     // Hanging wire
-    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 10), new THREE.MeshBasicMaterial({color: 0x111111}));
-    wire.position.set(0, 10, 0); 
-    
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 10), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+    wire.position.set(0, 10, 0);
+
     // Bulb Mesh
     const bulb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.35, 32, 32), 
-        new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, 
-            emissive: 0xffaa00, 
-            emissiveIntensity: 2.0, 
-            toneMapped: false 
+        new THREE.SphereGeometry(0.35, 32, 32),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xffaa00,
+            emissiveIntensity: 2.0,
+            toneMapped: false
         })
     );
-    bulb.position.set(0, 9, 0); 
+    bulb.position.set(0, 9, 0);
 
     // Fake Volumetric Glow Sprite
-    const spriteMat = new THREE.SpriteMaterial({ 
-        map: generateGlowTexture(), 
-        color: 0xffaa00, 
-        transparent: true, 
-        opacity: 0.4, 
-        blending: THREE.AdditiveBlending 
+    const spriteMat = new THREE.SpriteMaterial({
+        map: generateGlowTexture(),
+        color: 0xffaa00,
+        transparent: true,
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending
     });
     const glowSprite = new THREE.Sprite(spriteMat);
     glowSprite.scale.set(6, 6, 1);
     bulb.add(glowSprite);
 
     scene.add(wire, bulb);
+
+
+
+    // --- ENHANCED BACKGROUND PROPS ---
+    const boxGeo = new THREE.BoxGeometry(3, 3, 3);
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x443322, roughness: 0.9 });
+
+    // Left Stack Clutter
+    const clutter1 = new THREE.Mesh(boxGeo, boxMat); clutter1.position.set(-8, -6.5, -24); clutter1.rotation.y = 0.5; scene.add(clutter1);
+    const clutter1b = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), boxMat); clutter1b.position.set(-6, -7.5, -22); clutter1b.rotation.y = -0.2; scene.add(clutter1b);
+
+    // Right Stack Clutter
+    const clutter2 = new THREE.Mesh(boxGeo, boxMat); clutter2.position.set(12, -6.5, -22); clutter2.rotation.y = -0.3; scene.add(clutter2);
+    const clutter3 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 2), boxMat); clutter3.position.set(10, -5, -23); clutter3.rotation.y = 0.4; scene.add(clutter3);
+
+    // Center Back - Metal Drum / Barrel
+    const drumGeo = new THREE.CylinderGeometry(1.5, 1.5, 4, 16);
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.7, metalness: 0.6 });
+    const drum = new THREE.Mesh(drumGeo, drumMat);
+    drum.position.set(2, -6, -26);
+    scene.add(drum);
+
+    // Background point lights for ominous depth
+    const clutterLight = new THREE.PointLight(0x445566, 2, 25);
+    clutterLight.position.set(0, 0, -20);
+    scene.add(clutterLight);
 };
 
 function generateGlowTexture() {
@@ -148,15 +184,15 @@ function generateGlowTexture() {
 }
 
 export const createDust = (scene: THREE.Scene) => {
-    const particleCount = 20; 
+    const particleCount = 20;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
 
     for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * 30;     
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 20 + 5; 
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 30; 
+        positions[i * 3] = (Math.random() - 0.5) * 30;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 20 + 5;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
         velocities[i * 3] = (Math.random() - 0.5) * 0.02;
         velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
         velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
@@ -174,168 +210,267 @@ export const createDust = (scene: THREE.Scene) => {
 };
 
 export const createTable = (scene: THREE.Scene) => {
-  const tableMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, metalness: 0.5 });
-  const table = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 22), tableMat);
-  table.position.y = -1; table.receiveShadow = true; table.castShadow = true;
-  scene.add(table);
+    const tableMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, metalness: 0.5 });
+    const table = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 22), tableMat);
+    table.position.y = -1; table.receiveShadow = true; table.castShadow = true;
+    scene.add(table);
 
-  const legGeo = new THREE.BoxGeometry(1.5, 10, 1.5);
-  const leg1 = new THREE.Mesh(legGeo, tableMat); leg1.position.set(-11, -5.5, -9);
-  const leg2 = new THREE.Mesh(legGeo, tableMat); leg2.position.set(11, -5.5, -9);
-  const leg3 = new THREE.Mesh(legGeo, tableMat); leg3.position.set(-11, -5.5, 9);
-  const leg4 = new THREE.Mesh(legGeo, tableMat); leg4.position.set(11, -5.5, 9);
-  scene.add(leg1, leg2, leg3, leg4);
-  return table;
+    const legGeo = new THREE.BoxGeometry(1.5, 10, 1.5);
+    const leg1 = new THREE.Mesh(legGeo, tableMat); leg1.position.set(-11, -5.5, -9);
+    const leg2 = new THREE.Mesh(legGeo, tableMat); leg2.position.set(11, -5.5, -9);
+    const leg3 = new THREE.Mesh(legGeo, tableMat); leg3.position.set(-11, -5.5, 9);
+    const leg4 = new THREE.Mesh(legGeo, tableMat); leg4.position.set(11, -5.5, 9);
+    scene.add(leg1, leg2, leg3, leg4);
+    return table;
 };
 
 export const createGunModel = (scene: THREE.Scene) => {
-  const gunGroup = new THREE.Group();
-  
-  const metalMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
-  const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.6 }); 
-  const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.6, roughness: 0.5 });
+    const gunGroup = new THREE.Group();
 
-  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 2.8), metalMat); receiver.castShadow = true;
-  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 3.8), woodMat); stock.position.z = -3.2; stock.position.y = -0.15; stock.castShadow = true;
-  
-  const barrelGeo = new THREE.CylinderGeometry(0.13, 0.13, 7, 24);
-  const barrelMesh = new THREE.Mesh(barrelGeo, metalMat);
-  barrelMesh.rotation.x = Math.PI / 2; barrelMesh.position.set(0, 0.25, 4.5); barrelMesh.castShadow = true;
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.6 });
+    const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.6, roughness: 0.5 });
 
-  const pump = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 2.8, 16), woodMat);
-  pump.rotation.x = Math.PI / 2; pump.position.set(0, -0.2, 4.0); pump.castShadow = true;
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 2.8), metalMat); receiver.castShadow = true;
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 3.8), woodMat); stock.position.z = -3.2; stock.position.y = -0.15; stock.castShadow = true;
 
-  const magTube = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 5.5, 16), darkMetalMat);
-  magTube.rotation.x = Math.PI / 2; magTube.position.set(0, -0.25, 3.8); magTube.castShadow = true;
+    // 12-Gauge Barrel
+    const barrelGeo = new THREE.CylinderGeometry(0.24, 0.24, 9, 24);
+    const barrelMesh = new THREE.Mesh(barrelGeo, metalMat);
+    barrelMesh.rotation.x = Math.PI / 2; barrelMesh.position.set(0, 0.35, 5.0); barrelMesh.castShadow = true;
 
-  const guardGeo = new THREE.TorusGeometry(0.25, 0.05, 8, 16, Math.PI);
-  const guard = new THREE.Mesh(guardGeo, darkMetalMat);
-  guard.rotation.z = Math.PI; guard.position.set(0, -0.55, 0.5);
+    // Pump mechanism
+    const pumpGeo = new THREE.CylinderGeometry(0.35, 0.4, 3.5, 16);
+    const pump = new THREE.Mesh(pumpGeo, woodMat);
+    pump.rotation.x = Math.PI / 2; pump.position.set(0, -0.3, 4.5); pump.castShadow = true;
 
-  const sight = new THREE.Mesh(new THREE.SphereGeometry(0.08), new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x888888}));
-  sight.position.set(0, 0.38, 7.9);
+    // Mag Tube
+    const magTube = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 8, 16), darkMetalMat);
+    magTube.rotation.x = Math.PI / 2; magTube.position.set(0, -0.3, 4.0); magTube.castShadow = true;
 
-  gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight);
-  
-  const hitbox = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 10), new THREE.MeshBasicMaterial({ visible: false }));
-  hitbox.userData = { type: 'GUN' }; gunGroup.add(hitbox);
+    const guardGeo = new THREE.TorusGeometry(0.25, 0.05, 8, 16, Math.PI);
+    const guard = new THREE.Mesh(guardGeo, darkMetalMat);
+    guard.rotation.z = Math.PI; guard.position.set(0, -0.55, 0.5);
 
-  scene.add(gunGroup);
+    const sight = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.1), new THREE.MeshStandardMaterial({ color: 0xcccccc }));
+    sight.position.set(0, 0.55, 9.5);
 
-  const flashGeo = new THREE.ConeGeometry(0.8, 5, 16, 1, true);
-  const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-  const muzzleFlash = new THREE.Mesh(flashGeo, flashMat);
-  muzzleFlash.rotation.x = Math.PI / 2; muzzleFlash.position.set(0, 0.25, 10.0);
-  gunGroup.add(muzzleFlash);
+    // Dynamic Muzzle Flash (Multi-plane Star)
+    const flashGeo = new THREE.PlaneGeometry(3.5, 3.5); // Bigger for Shotgun
+    const flashMat = new THREE.MeshBasicMaterial({
+        color: 0xffdd88, side: THREE.DoubleSide, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const f1 = new THREE.Mesh(flashGeo, flashMat);
+    const f2 = new THREE.Mesh(flashGeo, flashMat); f2.rotation.z = Math.PI / 4;
+    const f3 = new THREE.Mesh(flashGeo, flashMat); f3.rotation.z = -Math.PI / 4;
+    const muzzleFlash = new THREE.Group();
+    muzzleFlash.add(f1, f2, f3);
+    muzzleFlash.position.set(0, 0.35, 10.0); // End of barrel (roughly)
+    muzzleFlash.visible = false;
+    gunGroup.add(muzzleFlash);
 
-  return { gunGroup, barrelMesh, muzzleFlash };
+    gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight);
+
+    const hitbox = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 10), new THREE.MeshBasicMaterial({ visible: false }));
+    hitbox.userData = { type: 'GUN' }; gunGroup.add(hitbox);
+
+    scene.add(gunGroup);
+
+    return { gunGroup, barrelMesh, muzzleFlash };
 };
 
+
 export const createDealerModel = (scene: THREE.Scene) => {
-  const dealerGroup = new THREE.Group();
-  
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.5, metalness: 0.1 });
-  const suitMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
-  const toothMat = new THREE.MeshStandardMaterial({ color: 0xccccaa, roughness: 0.2, metalness: 0.1 });
+    const dealerGroup = new THREE.Group();
 
-  const HEAD_Y = 5.5; 
-  const Z_POS = -14; 
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.9 }); // Paler skin
+    const suitMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
+    const toothMat = new THREE.MeshStandardMaterial({ color: 0xeeeeaa, roughness: 0.4, metalness: 0.1 });
 
-  const headGroup = new THREE.Group();
-  headGroup.name = "HEAD";
-  headGroup.position.set(0, HEAD_Y, Z_POS);
-  
-  const headGeo = new THREE.SphereGeometry(2.0, 32, 32);
-  headGeo.scale(0.85, 1.2, 0.9); 
-  const head = new THREE.Mesh(headGeo, skinMat);
-  head.castShadow = true;
-  headGroup.add(head);
+    const HEAD_Y = 5.5;
+    const Z_POS = -14;
 
-  const socketGeo = new THREE.SphereGeometry(0.45, 16, 16);
-  const lSocket = new THREE.Mesh(socketGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  lSocket.position.set(-0.8, 0.3, 1.6); lSocket.scale.z = 0.5;
-  headGroup.add(lSocket);
-  
-  const rSocket = lSocket.clone();
-  rSocket.position.set(0.8, 0.3, 1.6);
-  headGroup.add(rSocket);
+    const headGroup = new THREE.Group();
+    headGroup.name = "HEAD";
+    headGroup.position.set(0, HEAD_Y, Z_POS);
 
-  const pupilGeo = new THREE.SphereGeometry(0.08);
-  const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-  
-  const lPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
-  lPupil.position.set(-0.8, 0.3, 1.8);
-  headGroup.add(lPupil);
-  
-  const rPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
-  rPupil.position.set(0.8, 0.3, 1.8);
-  headGroup.add(rPupil);
+    // Deformed Head Shape
+    const headGeo = new THREE.SphereGeometry(2.0, 32, 32);
+    // Flattened top, elongated jaw
+    headGeo.scale(0.9, 1.1, 1.0);
+    const head = new THREE.Mesh(headGeo, skinMat);
+    head.castShadow = true;
+    headGroup.add(head);
 
-  const mouthVoid = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 0.5), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  mouthVoid.position.set(0, -1.2, 1.6); mouthVoid.rotation.x = -0.1;
-  headGroup.add(mouthVoid);
+    // Deep Eye Sockets (Subtraction via black meshes)
+    const socketGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    const socketMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
-  const teethGroup = new THREE.Group();
-  for(let i=0; i<14; i++) {
-     const t = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.4, 6), toothMat);
-     const x = (i - 6.5) * 0.14;
-     const z = 1.9 - Math.abs(x)*0.2;
-     t.position.set(x, -0.9, z);
-     t.rotation.x = Math.PI; 
-     teethGroup.add(t);
-  }
-  for(let i=0; i<14; i++) {
-     const t = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.4, 6), toothMat);
-     const x = (i - 6.5) * 0.14;
-     const z = 1.8 - Math.abs(x)*0.2;
-     t.position.set(x, -1.5, z);
-     teethGroup.add(t);
-  }
-  headGroup.add(teethGroup);
-  
-  const faceLight = new THREE.PointLight(0xff0000, 1.0, 6);
-  faceLight.name = "FACE_LIGHT";
-  faceLight.position.set(0, -1, 3);
-  headGroup.add(faceLight);
+    const lSocket = new THREE.Mesh(socketGeo, socketMat);
+    lSocket.position.set(-0.8, 0.2, 1.75);
+    lSocket.scale.set(1.2, 0.8, 0.5);
+    headGroup.add(lSocket);
 
-  dealerGroup.add(headGroup);
+    const rSocket = lSocket.clone();
+    rSocket.position.set(0.8, 0.2, 1.75);
+    headGroup.add(rSocket);
 
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(6.5, 7, 3), suitMat);
-  torso.position.set(0, HEAD_Y - 4.5, Z_POS - 0.5); torso.rotation.x = 0.15; torso.castShadow = true;
+    // Tiny Glowing Pupils
+    const pupilGeo = new THREE.SphereGeometry(0.06);
+    const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
-  const collar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.8, 2.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
-  collar.position.set(0, HEAD_Y - 1.5, Z_POS); collar.rotation.x = 0.15;
+    const lPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
+    lPupil.position.set(-0.8, 0.2, 1.95);
+    headGroup.add(lPupil);
 
-  const shoulderGeo = new THREE.SphereGeometry(1.6);
-  const lShoulder = new THREE.Mesh(shoulderGeo, suitMat); lShoulder.position.set(-3.5, HEAD_Y - 2, Z_POS - 0.5);
-  const rShoulder = new THREE.Mesh(shoulderGeo, suitMat); rShoulder.position.set(3.5, HEAD_Y - 2, Z_POS - 0.5);
+    // Left Eye Light
+    const lEyeLight = new THREE.PointLight(0xff0000, 2, 4);
+    lEyeLight.position.set(-0.8, 0.2, 2.2);
+    headGroup.add(lEyeLight);
 
-  const armGeo = new THREE.CylinderGeometry(0.7, 0.5, 9);
-  const lArm = new THREE.Mesh(armGeo, suitMat); lArm.position.set(-4, HEAD_Y - 5, Z_POS + 3); lArm.rotation.x = 0.9; lArm.rotation.z = -0.2; lArm.castShadow = true;
-  const rArm = new THREE.Mesh(armGeo, suitMat); rArm.position.set(4, HEAD_Y - 5, Z_POS + 3); rArm.rotation.x = 0.9; rArm.rotation.z = 0.2; rArm.castShadow = true;
+    const rPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
+    rPupil.position.set(0.8, 0.2, 1.95);
+    headGroup.add(rPupil);
 
-  const handGeo = new THREE.BoxGeometry(1.8, 0.6, 2.2);
-  const lHand = new THREE.Mesh(handGeo, skinMat); lHand.position.set(-3.5, 0, -10.5); lHand.rotation.y = 0.3;
-  const rHand = new THREE.Mesh(handGeo, skinMat); rHand.position.set(3.5, 0, -10.5); rHand.rotation.y = -0.3;
+    // Right Eye Light
+    const rEyeLight = new THREE.PointLight(0xff0000, 2, 4);
+    rEyeLight.position.set(0.8, 0.2, 2.2);
+    headGroup.add(rEyeLight);
 
-  dealerGroup.add(torso, collar, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
+    // Wide Grin (Black Void)
+    const mouthGeo = new THREE.BoxGeometry(2.2, 0.8, 0.8);
+    const mouthVoid = new THREE.Mesh(mouthGeo, socketMat);
+    mouthVoid.position.set(0, -1.0, 1.7);
+    mouthVoid.rotation.x = 0.1;
+    headGroup.add(mouthVoid);
 
-  scene.add(dealerGroup);
-  return dealerGroup;
+    // Teeth (Jagged Array)
+    const teethGroup = new THREE.Group();
+    for (let i = 0; i < 16; i++) {
+        // Random jaggedness
+        const height = 0.3 + Math.random() * 0.3;
+        const t = new THREE.Mesh(new THREE.ConeGeometry(0.08, height, 5), toothMat);
+
+        // Top Row
+        const x = (i - 7.5) * 0.16;
+        t.position.set(x, -0.7, 2.1);
+        t.rotation.x = Math.PI; // Point down
+        teethGroup.add(t);
+
+        // Bottom Row
+        const b = t.clone();
+        b.position.set(x, -1.3, 2.05);
+        b.rotation.x = 0; // Point up
+        // Offset randomness
+        b.scale.y = 0.8 + Math.random() * 0.4;
+        teethGroup.add(b);
+    }
+    headGroup.add(teethGroup);
+
+    const faceLight = new THREE.PointLight(0xff0000, 1.0, 6);
+    faceLight.name = "FACE_LIGHT";
+    faceLight.position.set(0, -1, 3);
+    headGroup.add(faceLight);
+
+    dealerGroup.add(headGroup);
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(6.5, 7, 3), suitMat);
+    torso.position.set(0, HEAD_Y - 4.5, Z_POS - 0.5); torso.rotation.x = 0.15; torso.castShadow = true;
+
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.8, 2.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
+    collar.position.set(0, HEAD_Y - 1.5, Z_POS); collar.rotation.x = 0.15;
+
+    const shoulderGeo = new THREE.SphereGeometry(1.6);
+    const lShoulder = new THREE.Mesh(shoulderGeo, suitMat); lShoulder.position.set(-3.5, HEAD_Y - 2, Z_POS - 0.5);
+    const rShoulder = new THREE.Mesh(shoulderGeo, suitMat); rShoulder.position.set(3.5, HEAD_Y - 2, Z_POS - 0.5);
+
+    const armGeo = new THREE.CylinderGeometry(0.7, 0.5, 9);
+    const lArm = new THREE.Mesh(armGeo, suitMat); lArm.position.set(-4, HEAD_Y - 5, Z_POS + 3); lArm.rotation.x = 0.9; lArm.rotation.z = -0.2; lArm.castShadow = true;
+    const rArm = new THREE.Mesh(armGeo, suitMat); rArm.position.set(4, HEAD_Y - 5, Z_POS + 3); rArm.rotation.x = 0.9; rArm.rotation.z = 0.2; rArm.castShadow = true;
+
+    const handGeo = new THREE.BoxGeometry(1.8, 0.6, 2.2);
+    const lHand = new THREE.Mesh(handGeo, skinMat); lHand.position.set(-3.5, 0, -10.5); lHand.rotation.y = 0.3;
+    const rHand = new THREE.Mesh(handGeo, skinMat); rHand.position.set(3.5, 0, -10.5); rHand.rotation.y = -0.3;
+
+    dealerGroup.add(torso, collar, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
+
+    scene.add(dealerGroup);
+    return dealerGroup;
 };
 
 export const createProjectiles = (scene: THREE.Scene) => {
-  const bulletGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.5);
-  const bulletMat = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffaa00, emissiveIntensity: 5 });
-  const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
-  bulletMesh.rotation.x = Math.PI / 2; bulletMesh.visible = false;
-  scene.add(bulletMesh);
+    const bulletGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.5);
+    const bulletMat = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffaa00, emissiveIntensity: 5 });
+    const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
+    bulletMesh.rotation.x = Math.PI / 2; bulletMesh.visible = false;
+    scene.add(bulletMesh);
 
-  const shellCasing = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.45, 12), new THREE.MeshStandardMaterial({ color: 0xb91c1c })); 
-  const shellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.125, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8 })); 
-  shellBase.position.y = -0.22; shellCasing.add(shellBase);
-  shellCasing.rotation.z = Math.PI / 2; shellCasing.visible = false;
-  scene.add(shellCasing);
+    const shellCasing = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.45, 12), new THREE.MeshStandardMaterial({ color: 0xb91c1c }));
+    const shellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.125, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8 }));
+    shellBase.position.y = -0.22; shellCasing.add(shellBase);
+    shellCasing.rotation.z = Math.PI / 2; shellCasing.visible = false;
+    scene.add(shellCasing);
 
-  return { bulletMesh, shellCasing };
+    return { bulletMesh, shellCasing };
+};
+
+export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string) => {
+    const avatarGroup = new THREE.Group();
+    avatarGroup.name = 'PLAYER_' + name;
+    avatarGroup.position.copy(position);
+    avatarGroup.rotation.y = rotationY;
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.5 });
+    const suitMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+
+    // Body (Similar to Dealer but smaller/normal)
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), suitMat);
+    torso.position.set(0, 3, 0);
+    avatarGroup.add(torso);
+
+    // Head (Normal Sphere)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), skinMat);
+    head.position.set(0, 7.5, 0);
+    avatarGroup.add(head);
+
+    // Sunglasses / Eyes
+    const glasses = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    glasses.position.set(0, 7.6, 1.3);
+    avatarGroup.add(glasses);
+
+    // Arms
+    const lArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
+    lArm.position.set(-3, 3, 0); lArm.rotation.z = 0.2;
+    avatarGroup.add(lArm);
+    const rArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
+    rArm.position.set(3, 3, 0); rArm.rotation.z = -0.2;
+    avatarGroup.add(rArm);
+
+    // Name Tag (Canvas Sprite)
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, 256, 64);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 30px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(name, 128, 32);
+    }
+    const nameTex = new THREE.CanvasTexture(canvas);
+    const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true }));
+    nameSprite.position.set(0, 10, 0);
+    nameSprite.scale.set(4, 1, 1);
+    avatarGroup.add(nameSprite);
+
+    // Chat Bubble Group (Empty initially)
+    const chatGroup = new THREE.Group();
+    chatGroup.position.set(0, 11, 0);
+    avatarGroup.add(chatGroup);
+    avatarGroup.userData = { chatGroup };
+
+    scene.add(avatarGroup);
+    return avatarGroup;
 };
