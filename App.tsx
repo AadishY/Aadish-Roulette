@@ -21,41 +21,38 @@ export default function App() {
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair">
-      {/* Mobile Scaling Wrapper */}
-      <div className="absolute inset-0 w-full h-full origin-top-left md:scale-100 scale-[0.85] w-[117%] h-[117%] md:w-full md:h-full">
-          <ThreeScene 
-            isSawed={game.player.isSawedActive}
-            onGunClick={() => {}}
-            aimTarget={game.aimTarget}
-            cameraView={game.cameraView}
-            animState={game.animState}
-            turnOwner={game.gameState.turnOwner} 
-          />
+      <ThreeScene 
+        isSawed={game.player.isSawedActive}
+        onGunClick={() => {}}
+        aimTarget={game.aimTarget}
+        cameraView={game.cameraView}
+        animState={game.animState}
+        turnOwner={game.gameState.turnOwner} 
+      />
 
-          <GameUI 
-            gameState={game.gameState}
-            player={game.player}
-            dealer={game.dealer}
-            logs={game.logs}
-            overlayText={game.overlayText}
-            overlayColor={game.overlayColor}
-            showBlood={game.showBlood}
-            showFlash={game.showFlash}
-            showLootOverlay={game.showLootOverlay}
-            receivedItems={game.receivedItems}
-            triggerHeal={game.animState.triggerHeal}
-            triggerDrink={game.animState.triggerDrink}
-            knownShell={game.knownShell}
-            playerName={game.playerName}
-            cameraView={game.cameraView}
-            onStartGame={game.startGame}
-            onResetGame={game.resetGame}
-            onFireShot={(target) => game.fireShot('PLAYER', target)}
-            onUseItem={game.usePlayerItem}
-            onHoverTarget={game.setAimTarget}
-            onPickupGun={game.pickupGun}
-          />
-      </div>
+      <GameUI 
+        gameState={game.gameState}
+        player={game.player}
+        dealer={game.dealer}
+        logs={game.logs}
+        overlayText={game.overlayText}
+        overlayColor={game.overlayColor}
+        showBlood={game.showBlood}
+        showFlash={game.showFlash}
+        showLootOverlay={game.showLootOverlay}
+        receivedItems={game.receivedItems}
+        triggerHeal={game.animState.triggerHeal}
+        triggerDrink={game.animState.triggerDrink}
+        knownShell={game.knownShell}
+        playerName={game.playerName}
+        cameraView={game.cameraView}
+        onStartGame={game.startGame}
+        onResetGame={game.resetGame}
+        onFireShot={(target) => game.fireShot('PLAYER', target)}
+        onUseItem={game.usePlayerItem}
+        onHoverTarget={game.setAimTarget}
+        onPickupGun={game.pickupGun}
+      />
     </div>
   );
 }

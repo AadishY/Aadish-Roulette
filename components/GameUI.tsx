@@ -70,6 +70,11 @@ export const GameUI: React.FC<GameUIProps> = ({
   const [bootLines, setBootLines] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
+  // Update input name if playerName prop changes (e.g. from local storage load)
+  useEffect(() => {
+    if (playerName) setInputName(playerName);
+  }, [playerName]);
+
   // Boot Sequence Effect
   useEffect(() => {
     if (gameState.phase === 'BOOT') {
@@ -232,7 +237,8 @@ export const GameUI: React.FC<GameUIProps> = ({
 
       {overlayText && (
          <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className={`text-6xl md:text-8xl font-black tracking-tighter text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center px-4`}>
+            {/* Reduced text size for mobile fit */}
+            <div className={`text-5xl md:text-8xl font-black tracking-tighter text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center px-4 w-full break-words leading-tight`}>
                 <RenderColoredText text={overlayText} />
             </div>
          </div>
@@ -457,6 +463,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                 <div className="flex gap-1 md:gap-2 p-2 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[80px] md:min-h-[100px] items-end overflow-x-auto max-w-full">
                     {player.items.map((item, idx) => {
                         const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
+                        // Added check to disable cuffs if dealer is already cuffed
                         const isUsageDisabled = gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled;
                         
                         return (
@@ -476,7 +483,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                 <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-48 bg-stone-950 border border-stone-600 p-3 text-xs text-center hidden group-hover:block z-50 text-stone-200 shadow-xl">
                                     <div className="font-bold text-white mb-1 tracking-widest">{item}</div>
                                     {ITEM_DESCRIPTIONS[item]}
-                                    {isCuffDisabled && <div className="text-red-500 mt-1">DEALER IS CUFFED</div>}
+                                    {isCuffDisabled && <div className="text-red-500 mt-1">DEALER IS ALREADY CUFFED</div>}
                                     {isGunHeld && <div className="text-red-500 mt-1">CANNOT USE WHILE HOLDING GUN</div>}
                                 </div>
                             </div>

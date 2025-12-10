@@ -53,11 +53,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     scene.fog = new THREE.FogExp2(0x000000, 0.05);
 
     const camera = new THREE.PerspectiveCamera(45, containerRef.current.clientWidth / containerRef.current.clientHeight, 0.1, 100);
+    // Initial position set by updateCameraResponsive
     camera.position.set(0, 4, 14);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    // Limit pixel ratio for mobile performance
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -76,8 +76,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     const { bulletMesh, shellCasing } = createProjectiles(scene);
 
     // --- Particles ---
-    // Reduced particle count for performance
-    const particleCount = 100; // Further reduced
+    const particleCount = 100;
     const particles = new THREE.BufferGeometry();
     const pPositions = new Float32Array(particleCount * 3);
     const pVelocities = new Float32Array(particleCount * 3);
@@ -146,29 +145,43 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
           gunGroup.rotation.z += (Math.random() - 0.5) * 0.25;
       }
 
-      // 2. Camera Breathing
+      // 2. Camera Breathing & Shake
       const camState = scene.userData; 
       const targetPos = camState.targetPos || new THREE.Vector3(0, 4, 14);
-      // Subtle breath
-      const breathY = Math.sin(time * 0.5) * 0.05;
+      
+      // Smooth movement
       camera.position.x += (targetPos.x - camera.position.x) * 0.04;
-      camera.position.y += (targetPos.y + breathY - camera.position.y) * 0.04;
+      camera.position.y += (targetPos.y - camera.position.y) * 0.04;
       camera.position.z += (targetPos.z - camera.position.z) * 0.04;
+
+      // Add Breath
+      const breathY = Math.sin(time * 0.5) * 0.05;
+      camera.position.y += breathY;
+
+      // Apply Shake
+      let shake = scene.userData.cameraShake || 0;
+      if (shake > 0) {
+          // Horizontal shake for "NO/CUFFED" effect
+          if (scene.userData.isCuffShake) {
+             camera.position.x += (Math.random() - 0.5) * shake * 2;
+             camera.position.y += (Math.random() - 0.5) * shake * 0.5;
+          } else {
+             camera.position.x += (Math.random() - 0.5) * shake;
+             camera.position.y += (Math.random() - 0.5) * shake;
+             camera.position.z += (Math.random() - 0.5) * shake * 0.5;
+          }
+          shake *= 0.9; 
+          if (shake < 0.01) {
+             shake = 0;
+             scene.userData.isCuffShake = false;
+          }
+          scene.userData.cameraShake = shake; 
+      }
 
       if (cameraView === 'DEALER') {
           camera.lookAt(0, 5, -14); 
       } else {
           camera.lookAt(0, 1.5, -2); 
-      }
-
-      // 3. Shake
-      let shake = scene.userData.cameraShake || 0;
-      if (shake > 0) {
-          camera.position.x += (Math.random() - 0.5) * shake;
-          camera.position.y += (Math.random() - 0.5) * shake;
-          camera.position.z += (Math.random() - 0.5) * shake * 0.5;
-          shake *= 0.9; 
-          scene.userData.cameraShake = shake; 
       }
 
       // 4. Dealer Animation (Head Tracking + Eye Flicker)
@@ -177,18 +190,17 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
       const headGroup = dealerGroup.getObjectByName("HEAD");
       if (headGroup) {
-        // Smooth head tracking
-        // Rotate the Head GROUP, not just a mesh, so eyes/mouth follow
         headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.3, 0.05);
         headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.2, 0.05);
       }
 
-      // Flicker Eyes - Get lights from within Head Group
+      // Flicker Eyes
       const faceLight = dealerGroup.getObjectByName("FACE_LIGHT") as THREE.PointLight;
       if (faceLight) {
           const flicker = Math.random() > 0.9 ? Math.random() * 0.5 + 3.5 : 4;
           faceLight.intensity = THREE.MathUtils.lerp(faceLight.intensity, flicker, 0.2);
       }
+      
       // Bulb Flicker
       if (Math.random() > 0.98) {
           bulbLight.intensity = Math.random() * 0.5 + 2.0;
@@ -206,14 +218,13 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
          dustPos[idx+1] += dustVel[idx+1];
          dustPos[idx+2] += dustVel[idx+2];
 
-         // Wrap around room
          if (Math.abs(dustPos[idx]) > 20) dustPos[idx] *= -0.9;
          if (Math.abs(dustPos[idx+1]) > 15) dustPos[idx+1] *= -0.9;
          if (Math.abs(dustPos[idx+2]) > 20) dustPos[idx+2] *= -0.9;
       }
       dustParticles.geometry.attributes.position.needsUpdate = true;
 
-      // 6. Shell Physics
+      // 6. Projectile Physics
       if (shellCasing.visible) {
         shellCasing.position.add(shellVel);
         shellVel.y -= 0.035; 
@@ -227,7 +238,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (shellCasing.position.y < -8) shellCasing.visible = false;
       }
 
-      // 7. Bullet Physics
       if (bulletMesh.visible) {
           const speed = 5.0;
           const dir = bulletMesh.userData.velocity; 
@@ -285,19 +295,31 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const intersects = sceneRef.current.raycaster.intersectObjects(sceneRef.current.gunGroup.children);
         if (intersects.find(i => i.object.userData.type === 'GUN')) onGunClick();
     }
-    const handleResize = () => {
+    const updateCameraResponsive = () => {
         if (!containerRef.current || !sceneRef.current) return;
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
-        sceneRef.current.camera.aspect = width / height;
+        const aspect = width / height;
+
+        // Mobile Adjustment: Pull camera back significantly on portrait/narrow screens to fit the table
+        let baseZ = 14;
+        if (aspect < 1) baseZ = 22; // Portrait
+        else if (aspect < 1.6) baseZ = 18; // Narrow landscape
+        
+        sceneRef.current.scene.userData.baseZ = baseZ; 
+        
+        sceneRef.current.camera.aspect = aspect;
         sceneRef.current.camera.updateProjectionMatrix();
         sceneRef.current.renderer.setSize(width, height);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('click', handleClick);
-    const resizeObserver = new ResizeObserver(() => handleResize());
+    const resizeObserver = new ResizeObserver(() => updateCameraResponsive());
     resizeObserver.observe(containerRef.current);
+    
+    // Initial call
+    updateCameraResponsive();
 
     return () => {
       cancelAnimationFrame(frameId);
@@ -309,13 +331,12 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     };
   }, []); 
 
-  // --- Sync Effects (Same as before) ---
+  // --- Sync Effects ---
 
   useEffect(() => {
       if (!sceneRef.current) return;
       const { sparkParticles, gunGroup } = sceneRef.current;
       gunGroup.userData.isSawing = animState.isSawing;
-
       if (animState.triggerSparks > 0) {
           const pos = sparkParticles.geometry.attributes.position.array as Float32Array;
           const vel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
@@ -335,9 +356,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
   }, [animState.triggerSparks, animState.isSawing]);
 
   useEffect(() => {
-     if(sceneRef.current) {
-         sceneRef.current.dealerGroup.userData.targetY = animState.dealerDropping ? -15 : null; 
-     }
+     if(sceneRef.current) sceneRef.current.dealerGroup.userData.targetY = animState.dealerDropping ? -15 : null; 
   }, [animState.dealerDropping]);
 
   useEffect(() => {
@@ -359,9 +378,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
      }
   }, [animState.dealerHit]);
 
+  // Handle Cuff Shake specifically
   useEffect(() => {
     if (animState.triggerCuff > 0 && sceneRef.current) {
-        sceneRef.current.scene.userData.cameraShake = 1.0;
+        sceneRef.current.scene.userData.cameraShake = 0.8;
+        sceneRef.current.scene.userData.isCuffShake = true; 
     }
   }, [animState.triggerCuff]);
 
@@ -371,16 +392,19 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       if (animState.triggerHeal > 0) sceneRef.current.scene.userData.cameraShake = 0.3;
   }, [animState.triggerDrink, animState.triggerHeal]);
   
+  // Responsive Camera Views
   useEffect(() => {
     if (!sceneRef.current) return;
+    const baseZ = sceneRef.current.scene.userData.baseZ || 14; 
+    
     const views: Record<CameraView, THREE.Vector3> = {
-        'PLAYER': new THREE.Vector3(0, 3.5, 13), 
+        'PLAYER': new THREE.Vector3(0, 3.5, baseZ), 
         'DEALER': new THREE.Vector3(0, 4, -4), 
         'GUN': new THREE.Vector3(1.5, 1.5, 6),   
         'TABLE': new THREE.Vector3(0, 12, 4),    
     };
     sceneRef.current.scene.userData.targetPos = views[cameraView];
-  }, [cameraView]);
+  }, [cameraView, sceneRef.current?.scene.userData.baseZ]); 
 
   useEffect(() => {
     if (!sceneRef.current) return;
@@ -394,13 +418,12 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             targets.targetPos.set(0, 0, 8); 
             targets.targetRot.set(0, Math.PI, 0); 
         } else if (aimTarget === 'SELF') { 
-            // IMPROVED SELF-AIM ANGLE (Steeper, more under-chin)
             targets.targetPos.set(0, -3.0, 8.5); 
             targets.targetRot.set(Math.PI / 4, 0, 0); 
-        } else if (cameraView === 'GUN') { // Aim Ready Phase
+        } else if (cameraView === 'GUN') { 
             targets.targetPos.set(0, -0.75, 4); 
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
-        } else { // Table Phase (Idle)
+        } else { 
             targets.targetPos.set(0, -0.9, 2);
             targets.targetRot.set(0, Math.PI / 2, 0);
         }
