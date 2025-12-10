@@ -220,6 +220,15 @@ export const useGameLogic = () => {
         triggerRecoil: prev.triggerRecoil + 1,
         muzzleFlashIntensity: isLive ? 100 : 0
     }));
+
+    // Trigger hit animation early to sync with bullet visual speed
+    if (isLive && target === 'DEALER') {
+        setTimeout(() => {
+             setAnim(prev => ({ ...prev, dealerHit: true, dealerDropping: true }));
+             // End hit flash briefly
+             setTimeout(() => setAnim(prev => ({ ...prev, dealerHit: false })), 500); 
+        }, 100);
+    }
     
     if (isLive) {
         setShowFlash(true);
@@ -263,17 +272,15 @@ export const useGameLogic = () => {
         // DEALER DAMAGE LOGIC
         const newHp = Math.max(0, dealer.hp - damage);
         setDealer(p => ({ ...p, hp: newHp }));
-        setAnim({ dealerHit: true, dealerDropping: true }); // Drop on EVERY hit
+        // Note: dealerDropping is already true from earlier sync
         setOverlayColor('green');
         
-        setTimeout(() => setAnim({ dealerHit: false }), 500);
-
         // Stay down for a bit
         await wait(2000); 
         
         // If not dead, come back up
         if (newHp > 0) {
-            setAnim({ dealerDropping: false });
+            setAnim(prev => ({ ...prev, dealerDropping: false }));
             await wait(1000); // Time to rise
         }
       }
@@ -319,19 +326,27 @@ export const useGameLogic = () => {
 
     if (!isLive && shooter === target) {
       addLog(`${shooter} GOES AGAIN`);
+      // Turn does not change, so cuffs are NOT consumed here.
     } else {
       nextOwner = shooter === 'PLAYER' ? 'DEALER' : 'PLAYER';
       turnChanged = true;
     }
 
-    // Handle Handcuffs
-    const nextPersonState = nextOwner === 'PLAYER' ? player : dealer;
-    if (turnChanged && nextPersonState.isHandcuffed) {
-         addLog(`${nextOwner} IS CUFFED. SKIPPED.`);
-         await wait(2000); // Longer pause for effect
-         if (nextOwner === 'PLAYER') setPlayer(p => ({ ...p, isHandcuffed: false }));
-         else setDealer(d => ({ ...d, isHandcuffed: false }));
-         nextOwner = shooter;
+    // Handle Handcuffs Logic
+    if (turnChanged) {
+        const nextPersonState = nextOwner === 'PLAYER' ? player : dealer;
+        if (nextPersonState.isHandcuffed) {
+             addLog(`${nextOwner} IS CUFFED. SKIPPED.`);
+             // Shake Animation
+             setAnim(p => ({ ...p, triggerCuff: p.triggerCuff + 1 }));
+             
+             await wait(2000); 
+             if (nextOwner === 'PLAYER') setPlayer(p => ({ ...p, isHandcuffed: false }));
+             else setDealer(d => ({ ...d, isHandcuffed: false }));
+             
+             // Keep turn with shooter
+             nextOwner = shooter;
+        }
     }
 
     const ownerPhase = nextOwner === 'PLAYER' ? 'PLAYER_TURN' : 'DEALER_TURN';
@@ -368,6 +383,7 @@ export const useGameLogic = () => {
                 (v) => setAnim(p => ({...p, triggerRack: typeof v === 'function' ? v(p.triggerRack) : v})),
                 (v) => setAnim(p => ({...p, ejectedShellColor: typeof v === 'function' ? v(p.ejectedShellColor) : v})),
                 (v) => setAnim(p => ({...p, triggerDrink: typeof v === 'function' ? v(p.triggerDrink) : v})),
+                setOverlayText, // Pass setOverlayText to display Beer result
                 addLog, startRound
             );
             break;

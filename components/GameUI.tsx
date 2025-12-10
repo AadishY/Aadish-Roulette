@@ -62,7 +62,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 }) => {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [inputName, setInputName] = useState(playerName || '');
-  const [isLogsOpen, setIsLogsOpen] = useState(true); 
+  const [isLogsOpen, setIsLogsOpen] = useState(false); // Collapsed by default
   const [bootLines, setBootLines] = useState<string[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
@@ -252,34 +252,34 @@ export const GameUI: React.FC<GameUIProps> = ({
       )}
 
       {gameState.phase === 'INTRO' && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95">
-          <div className="text-center max-w-lg w-full p-6">
-            <h1 className="text-6xl md:text-9xl font-black mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br/><span className="text-red-600">ROULETTE</span></h1>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 overflow-y-auto">
+          <div className="text-center max-w-lg w-full p-4 md:p-6 flex flex-col justify-center min-h-[350px]">
+            <h1 className="text-5xl md:text-8xl lg:text-9xl font-black mb-6 md:mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br/><span className="text-red-600">ROULETTE</span></h1>
             
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 md:gap-6">
                 <div className="flex flex-col gap-2 text-left">
-                    <label className="text-stone-500 font-bold tracking-widest text-sm">PLAYER NAME</label>
+                    <label className="text-stone-500 font-bold tracking-widest text-xs md:text-sm">PLAYER NAME</label>
                     <input 
                         type="text" 
                         value={inputName}
                         onChange={(e) => setInputName(e.target.value)}
                         placeholder="ENTER NAME..."
                         maxLength={12}
-                        className="bg-stone-900 border-2 border-stone-700 p-4 text-2xl font-black text-white outline-none focus:border-red-600 tracking-widest uppercase placeholder:text-stone-700 transition-colors"
+                        className="bg-stone-900 border-2 border-stone-700 p-3 md:p-4 text-xl md:text-2xl font-black text-white outline-none focus:border-red-600 tracking-widest uppercase placeholder:text-stone-700 transition-colors"
                     />
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-3 md:gap-4 flex-col md:flex-row">
                     <button 
                         onClick={() => inputName.trim() && onStartGame(inputName.trim())}
                         disabled={!inputName.trim()}
-                        className="flex-1 px-8 py-5 bg-stone-100 text-black font-black text-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-widest"
+                        className="w-full md:flex-1 px-6 py-4 md:px-8 md:py-5 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed tracking-widest"
                     >
                         START GAME
                     </button>
                     
                     <button 
-                        className="flex-1 px-8 py-5 bg-stone-900 border-2 border-stone-800 text-stone-600 font-black text-xl cursor-not-allowed opacity-70 tracking-widest flex items-center justify-center gap-2"
+                        className="w-full md:flex-1 px-6 py-4 md:px-8 md:py-5 bg-stone-900 border-2 border-stone-800 text-stone-600 font-black text-lg md:text-xl cursor-not-allowed opacity-70 tracking-widest flex items-center justify-center gap-2"
                         title="COMING SOON"
                     >
                         <Users size={20} />
@@ -288,7 +288,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                 </div>
             </div>
             
-            <div className="mt-12 text-stone-800 text-xs font-mono">
+            <div className="mt-8 md:mt-12 text-stone-800 text-[10px] md:text-xs font-mono">
                 VER 1.0.0 // WAITING FOR CONNECTION...
             </div>
           </div>
@@ -385,12 +385,12 @@ export const GameUI: React.FC<GameUIProps> = ({
 
           {/* Middle: Controls */}
           {gameState.phase === 'PLAYER_TURN' && !overlayText && (
-            <div className="absolute top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-8 pointer-events-auto items-center">
+            <div className="absolute top-[60%] md:top-2/3 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-4 md:gap-8 pointer-events-auto items-center w-full justify-center px-4">
                <button 
                   onClick={() => onFireShot('DEALER')}
                   onMouseEnter={() => onHoverTarget('OPPONENT')}
                   onMouseLeave={() => onHoverTarget('IDLE')}
-                  className="bg-black/80 border-2 border-red-900 px-6 py-4 md:px-8 md:py-5 text-red-500 font-black text-lg md:text-xl hover:bg-red-900 hover:text-white transition-all hover:scale-105 hover:border-red-500 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant"
+                  className="bg-black/80 border-2 border-red-900 px-4 py-3 md:px-8 md:py-5 text-red-500 font-black text-base md:text-xl hover:bg-red-900 hover:text-white transition-all hover:scale-105 hover:border-red-500 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest clip-path-slant whitespace-nowrap"
                >
                   SHOOT DEALER
                </button>
@@ -398,7 +398,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                   onClick={() => onFireShot('PLAYER')}
                   onMouseEnter={() => onHoverTarget('SELF')}
                   onMouseLeave={() => onHoverTarget('IDLE')}
-                  className="bg-black/80 border-2 border-stone-700 px-6 py-4 md:px-8 md:py-5 text-stone-400 font-black text-lg md:text-xl hover:bg-stone-800 hover:text-white transition-all hover:scale-105 hover:border-stone-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest"
+                  className="bg-black/80 border-2 border-stone-700 px-4 py-3 md:px-8 md:py-5 text-stone-400 font-black text-base md:text-xl hover:bg-stone-800 hover:text-white transition-all hover:scale-105 hover:border-stone-400 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-sm tracking-widest whitespace-nowrap"
                >
                   SHOOT SELF
                </button>

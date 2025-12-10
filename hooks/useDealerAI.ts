@@ -30,18 +30,11 @@ export const useDealerAI = ({
   const [aiTick, setAiTick] = useState(0); 
 
   useEffect(() => {
-      // Reset memory if chamber shuffled or phase changed significantly
-      if (gameState.phase !== 'DEALER_TURN' && gameState.phase !== 'RESOLVING') {
-          // If we are not in dealer turn, maybe reset memory if round changed?
-          // We'll rely on index check.
+      // Reset memory if chamber shuffled
+      if (gameState.phase === 'LOAD') {
+          aiKnownShell.current = null;
       }
   }, [gameState.phase]);
-
-  useEffect(() => {
-    // If index changed (shot fired), the memory of 'current' shell is invalid for the new current
-    // But logically, if we just shot, the index moved.
-    // We should clear memory when the turn ends or shot resolves.
-  }, [gameState.currentShellIndex]);
 
   useEffect(() => {
     if (gameState.phase === 'DEALER_TURN' && !isAITurnInProgress.current) {
@@ -58,48 +51,70 @@ export const useDealerAI = ({
             const total = lives + blanks;
             const liveProb = total > 0 ? lives / total : 0;
             
-            // Check memory validity (basic sync check)
-            // In a real complex app we'd track shell IDs, but here we assume if we used Glass, we know THIS shell.
-            // If the index moved since we used Glass, we'd need to clear it, but the AI loop re-runs immediately.
+            // Sync AI memory with global known shell (e.g. if player used glass and game exposes it publicly - 
+            // though in this game player glass is private, but logically if dealer uses glass, aiKnownShell is set)
+            let currentKnowledge = aiKnownShell.current;
+            if (knownShell) currentKnowledge = knownShell; // If game makes it public
 
             let itemToUse: ItemType | null = null;
             let itemIndex = -1;
 
-            // 1. HEAL
+            // --- STRATEGY PHASE ---
+
+            // 1. KNOWS NEXT IS LIVE
+            if (currentKnowledge === 'LIVE') {
+                // If damage needed to win is high, use saw
+                if (!itemToUse && dealer.items.includes('SAW') && !dealer.isSawedActive && player.hp > 1) {
+                    itemIndex = dealer.items.indexOf('SAW');
+                    itemToUse = 'SAW';
+                }
+                // If shooting opponent will pass turn, try to cuff to keep turn?
+                // Actually, shooting live passes turn. So cuffing prevents them from retaliating.
+                if (!itemToUse && dealer.items.includes('CUFFS') && !player.isHandcuffed) {
+                    itemIndex = dealer.items.indexOf('CUFFS');
+                    itemToUse = 'CUFFS';
+                }
+            }
+
+            // 2. KNOWS NEXT IS BLANK
+            if (currentKnowledge === 'BLANK') {
+                 // Free turn by shooting self, but maybe use beer to cycle if we want to get to a live one faster?
+                 // Generally shooting self is better as it saves items.
+                 // But if we have beer, we might use it if we just want to clear chamber? 
+                 // Actually, shooting self with blank is always free.
+            }
+
+            // 3. LOW HP / GENERAL UTILITY
             if (!itemToUse && dealer.hp < 3 && dealer.items.includes('CIGS')) {
                 itemIndex = dealer.items.indexOf('CIGS');
                 itemToUse = 'CIGS';
             }
 
-            // 2. CUFFS
-            if (!itemToUse && dealer.items.includes('CUFFS') && !player.isHandcuffed && total >= 2) {
-                 itemIndex = dealer.items.indexOf('CUFFS');
-                 itemToUse = 'CUFFS';
-            }
-
-            // 3. SAW (Aggressive)
-            if (!itemToUse && dealer.items.includes('SAW') && !dealer.isSawedActive) {
-                // Use saw if we KNOW it's live, or prob is high
-                if (aiKnownShell.current === 'LIVE' || knownShell === 'LIVE' || liveProb === 1 || (liveProb > 0.6 && lives > 1)) {
-                    itemIndex = dealer.items.indexOf('SAW');
-                    itemToUse = 'SAW';
+            // 4. UNKNOWN SHELL - GATHER INFO OR MANIPULATE
+            if (!currentKnowledge) {
+                // Use GLASS if available
+                if (dealer.items.includes('GLASS') && total > 1) {
+                    itemIndex = dealer.items.indexOf('GLASS');
+                    itemToUse = 'GLASS';
+                }
+                // Use BEER if likely blank to cycle? Or if 50/50?
+                else if (dealer.items.includes('BEER') && liveProb < 0.5) {
+                     itemIndex = dealer.items.indexOf('BEER');
+                     itemToUse = 'BEER';
+                }
+                // Use CUFFS if we are going to take a risky shot at opponent
+                else if (dealer.items.includes('CUFFS') && !player.isHandcuffed && liveProb >= 0.5) {
+                    itemIndex = dealer.items.indexOf('CUFFS');
+                    itemToUse = 'CUFFS';
                 }
             }
 
-            // 4. GLASS (Info)
-            if (!itemToUse && dealer.items.includes('GLASS') && total > 1 && !aiKnownShell.current && liveProb !== 1 && liveProb !== 0) {
-                 itemIndex = dealer.items.indexOf('GLASS');
-                 itemToUse = 'GLASS';
+            // 5. SAW USAGE (Fallback)
+            if (!itemToUse && dealer.items.includes('SAW') && !dealer.isSawedActive && liveProb > 0.6) {
+                itemIndex = dealer.items.indexOf('SAW');
+                itemToUse = 'SAW';
             }
 
-            // 5. BEER (Cycle)
-            if (!itemToUse && dealer.items.includes('BEER')) {
-                 // Use beer if we KNOW it's blank or want to skip
-                 if (aiKnownShell.current === 'BLANK' || knownShell === 'BLANK' || liveProb < 0.4) {
-                    itemIndex = dealer.items.indexOf('BEER');
-                    itemToUse = 'BEER';
-                 }
-            }
 
             // --- EXECUTE ITEM ---
             if (itemToUse) {
@@ -132,10 +147,10 @@ export const useDealerAI = ({
             await wait(500); 
             let target: TurnOwner = 'PLAYER';
 
-            // Decision Matrix
+            // Decision Matrix for Shooting
             // 1. Certainty
-            if (aiKnownShell.current === 'LIVE' || knownShell === 'LIVE') target = 'PLAYER';
-            else if (aiKnownShell.current === 'BLANK' || knownShell === 'BLANK') target = 'DEALER';
+            if (currentKnowledge === 'LIVE') target = 'PLAYER';
+            else if (currentKnowledge === 'BLANK') target = 'DEALER'; // Shoot self for free turn
             // 2. Probability
             else if (liveProb === 1) target = 'PLAYER';
             else if (liveProb === 0) target = 'DEALER';

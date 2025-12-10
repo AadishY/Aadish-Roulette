@@ -11,6 +11,7 @@ export const handleBeer = async (
   setTriggerRack: StateSetter<number>,
   setEjectedShellColor: StateSetter<'red' | 'blue'>,
   setTriggerDrink: StateSetter<number>,
+  setOverlayText: StateSetter<string | null>,
   addLog: (text: string, type: LogEntry['type']) => void,
   startRound: () => void
 ): Promise<boolean> => {
@@ -22,7 +23,11 @@ export const handleBeer = async (
     setTriggerRack(p => p + 1);
     addLog(`RACKED: ${shell}`, shell === 'LIVE' ? 'danger' : 'safe');
     
+    // Show overlay text for Beer result
+    setOverlayText(`WAS ${shell}`);
+    
     await wait(1500);
+    setOverlayText(null);
     
     const isLive = shell === 'LIVE';
     let roundEnded = false;
@@ -67,12 +72,6 @@ export const handleSaw = async (
     setTriggerSparks(p => p + 1);
     await wait(600); // FASTER SAW ANIMATION (0.6s)
     setIsSawing(false);
-    
-    // State update happens after animation, but since inputs are blocked by phase or handled via async queue in real logic,
-    // this is fine. If user shoots *while* animation plays, the `isSawedActive` might not be true yet.
-    // However, in our GameUI, we don't block input. 
-    // To fix "click shoot while animation is going on", we set the state immediately? 
-    // No, visually it makes sense to wait. But for mechanics, let's set it after.
     
     if (user === 'PLAYER') setPlayer(p => ({ ...p, isSawedActive: true }));
     else setDealer(d => ({ ...d, isSawedActive: true }));
