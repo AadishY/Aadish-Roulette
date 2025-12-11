@@ -19,6 +19,7 @@ class AudioManager {
 
         const soundFiles = {
             grab: '/sound/grab1.ogg',
+            click: '/sound/grab1.ogg',
             blankshell: '/sound/blankshellshoot.wav',
             liveshell: '/sound/liveshellshoot.mp3',
         };
@@ -56,35 +57,36 @@ class AudioManager {
                 ...Object.values(this.music)
             ];
 
-            const unlockPromises = allAudio.map(s => {
+            const results = await Promise.allSettled(allAudio.map(s => {
                 s.volume = 0;
-                const p = s.play();
-                if (p) {
-                    return p.then(() => {
-                        s.pause();
-                        s.currentTime = 0;
-                    }).catch(() => { }); // Ignore errors
+                return s.play().then(() => {
+                    s.pause();
+                    s.currentTime = 0;
+                });
+            }));
+
+            // If ALL failed, we are still locked.
+            const anySuccess = results.some(r => r.status === 'fulfilled');
+
+            if (anySuccess) {
+                this.initialized = true;
+                console.log("Audio Initialized");
+
+                // Restore music
+                if (this.currentMusic && this.music[this.currentMusic]) {
+                    const music = this.music[this.currentMusic];
+                    music.volume = this.musicVolume;
+                    music.play().catch(() => { });
                 }
-                return Promise.resolve();
-            });
-
-            await Promise.allSettled(unlockPromises);
-
-            // Also unlock current music if pending
-            if (this.currentMusic && this.music[this.currentMusic]) {
-                const music = this.music[this.currentMusic];
-                music.volume = this.musicVolume; // Restore volume
-                music.play().catch(e => console.warn("Music resume failed", e));
+            } else {
+                console.log("Audio Autoplay Blocked - Waiting for User Interaction");
             }
-
-            this.initialized = true;
-            console.log("Audio Initialized");
         } catch (e) {
             console.warn("Audio initialization failed", e);
         }
     }
 
-    public playSound(key: string) {
+    public playSound(key: string, options?: { volume?: number, playbackRate?: number }) {
         // If not initialized, we shouldn't crash, but we might not hear it yet depending on browser.
         // Better: Try to play.
         const original = this.sounds[key];
@@ -98,11 +100,25 @@ class AudioManager {
         const boostMap: { [key: string]: number } = {
             'liveshell': 1.5,
             'blankshell': 1.5,
-            'grab': 1.5
+            'grab': 1.5,
+            'click': 0.8 // Slightly quieter
         };
         const boost = boostMap[key] || 1.0;
 
-        sound.volume = Math.min(1.0, this.sfxVolume * boost);
+        // Handle aliases
+        if (key === 'click' && sound.src.includes('grab1.ogg') === false) {
+            // We need to support alias or just manually map 'click' to 'grab' asset in loadAssets?
+            // Easier: just map it in loadAssets.
+        }
+
+        let finalVolume = this.sfxVolume * boost;
+        if (options?.volume) finalVolume *= options.volume;
+        sound.volume = Math.min(1.0, finalVolume);
+
+        if (options?.playbackRate) {
+            sound.preservesPitch = false;
+            sound.playbackRate = options.playbackRate;
+        }
 
         const playPromise = sound.play();
         if (playPromise !== undefined) {

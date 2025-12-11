@@ -1,6 +1,7 @@
 import React from 'react';
 import { AimTarget, TurnOwner } from '../../types';
 import { Hand, Target, User } from 'lucide-react';
+import { audioManager } from '../../utils/audioManager';
 import { GameStateData } from '../../hooks/useSocket';
 
 interface ControlsProps {
@@ -56,7 +57,10 @@ export const Controls: React.FC<ControlsProps> = ({
                 {/* Grab Gun */}
                 {!isGunHeld && (
                     <button
-                        onClick={onPickupGun}
+                        onClick={() => {
+                            audioManager.playSound('click');
+                            onPickupGun();
+                        }}
                         disabled={isProcessing}
                         className="bg-black/90 border border-stone-500 px-4 py-3 md:px-8 md:py-5 text-stone-200 font-black text-xs md:text-xl hover:bg-stone-800 hover:text-white hover:border-white transition-all active:scale-95 shadow-lg tracking-wider flex items-center gap-2 animate-pulse disabled:opacity-50"
                     >
@@ -72,7 +76,10 @@ export const Controls: React.FC<ControlsProps> = ({
                             mpOpponents.map((opp) => (
                                 <button
                                     key={opp.id}
-                                    onClick={() => handleShootOpponent(opp.id)}
+                                    onClick={() => {
+                                        audioManager.playSound('click');
+                                        handleShootOpponent(opp.id);
+                                    }}
                                     disabled={isProcessing}
                                     onMouseEnter={() => onHoverTarget('OPPONENT')}
                                     onMouseLeave={() => onHoverTarget('IDLE')}
@@ -84,7 +91,10 @@ export const Controls: React.FC<ControlsProps> = ({
                             ))
                         ) : (
                             <button
-                                onClick={() => handleShootOpponent()}
+                                onClick={() => {
+                                    audioManager.playSound('click');
+                                    handleShootOpponent();
+                                }}
                                 disabled={isProcessing}
                                 onMouseEnter={() => onHoverTarget('OPPONENT')}
                                 onMouseLeave={() => onHoverTarget('IDLE')}
@@ -96,7 +106,10 @@ export const Controls: React.FC<ControlsProps> = ({
                         )}
 
                         <button
-                            onClick={handleShootSelf}
+                            onClick={() => {
+                                audioManager.playSound('click');
+                                handleShootSelf();
+                            }}
                             disabled={isProcessing}
                             onMouseEnter={() => onHoverTarget('SELF')}
                             onMouseLeave={() => onHoverTarget('IDLE')}

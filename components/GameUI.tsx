@@ -301,7 +301,10 @@ export const GameUI: React.FC<GameUIProps> = ({
                             ) : (
                                 <StatusDisplay player={player} dealer={dealer} playerName={playerName} gameState={gameState} />
                             )}
-                            <button onClick={onOpenSettings} className="pointer-events-auto p-1 md:p-2 text-stone-600 hover:text-white transition-colors shrink-0">
+                            <button onClick={() => {
+                                audioManager.playSound('click');
+                                onOpenSettings();
+                            }} className="pointer-events-auto p-1 md:p-2 text-stone-600 hover:text-white transition-colors shrink-0">
                                 <SettingsIcon size={18} className="md:w-5 md:h-5" />
                             </button>
                         </div>

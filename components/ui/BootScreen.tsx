@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { audioManager } from '../../utils/audioManager';
 
 export const BootScreen: React.FC = () => {
     const [bootLines, setBootLines] = useState<string[]>([]);
@@ -18,7 +19,11 @@ export const BootScreen: React.FC = () => {
         ];
         let timeouts: ReturnType<typeof setTimeout>[] = [];
         sequence.forEach(({ text, delay }) => {
-            timeouts.push(setTimeout(() => setBootLines(prev => [...prev, text]), delay));
+            timeouts.push(setTimeout(() => {
+                setBootLines(prev => [...prev, text]);
+                // Subtle BIOS beep
+                audioManager.playSound('blankshell', { volume: 0.2, playbackRate: 3.0 });
+            }, delay));
         });
         const interval = setInterval(() => {
             setLoadingProgress(p => p >= 100 ? 100 : p + 5);

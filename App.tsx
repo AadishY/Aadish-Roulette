@@ -20,6 +20,11 @@ type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOBBY' | 'LOADING_GAME' 
 export default function App() {
   const spGame = useGameLogic();
   const [appState, setAppState] = useState<AppState>('MENU');
+
+  // Try to initialize audio ASAP (will only succeed if browser allows)
+  useEffect(() => {
+    audioManager.initialize().catch(() => { });
+  }, []);
   const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
 
   const handleConnect = useCallback(() => { }, []);
