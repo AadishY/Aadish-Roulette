@@ -47,6 +47,7 @@ export const useGameLogic = () => {
     triggerHeal: 0,
     triggerDrink: 0,
     triggerCuff: 0,
+    triggerGlass: 0,
     isSawing: false,
     ejectedShellColor: 'red',
     muzzleFlashIntensity: 0,
@@ -127,7 +128,18 @@ export const useGameLogic = () => {
     setIsProcessing(false);
 
     if (!toMenu) {
-      startRound();
+      // If restarting immediately, we must ensure item state is clear.
+      // startRound() will be called, which calls distributeItems().
+      // distributeItems uses setPlayer(prev => ... items: [...prev.items, ...new]).
+      // Because of React batching, if we call setPlayer(reset) here, then startRound() calls setPlayer(append) in the SAME batch,
+      // the 'prev' in append might be the *old* state if not handled carefully, OR
+      // more likely, the logic in distributeItems might be running twice or assuming persistent items.
+      // Actually, distributeItems uses `prev.items`. 
+      // If we want to guarantee empty start in startRound, we should maybe pass a flag to startRound or distributeItems.
+      // Or simply delay startRound slightly to let state settle? No, that's hacky.
+      // Better: startRound calls `distributeItems` which appends.
+      // We can pass `resetItems: true` to distributeItems?
+      startRound(true);
     }
   };
 
@@ -136,10 +148,10 @@ export const useGameLogic = () => {
     localStorage.setItem('aadish_roulette_name', name);
     setPlayerName(name);
     setGameState(prev => ({ ...prev, phase: 'LOAD' }));
-    startRound();
+    startRound(true);
   };
 
-  const startRound = async () => {
+  const startRound = async (resetItems: boolean = false) => {
     const total = randomInt(2, 8);
     const lives = Math.max(1, Math.floor(total / 2));
     const blanks = total - lives;
@@ -157,13 +169,13 @@ export const useGameLogic = () => {
       currentShellIndex: 0,
       liveCount: lives,
       blankCount: blanks,
-      roundCount: prev.roundCount + 1,
+      roundCount: resetItems ? 1 : prev.roundCount + 1, // Reset round count if new game
       phase: 'LOAD'
     }));
 
     setKnownShell(null);
-    setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false }));
-    setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false }));
+    setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, items: resetItems ? [] : p.items }));
+    setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, items: resetItems ? [] : d.items }));
     setAnim({ dealerDropping: false, playerHit: false });
 
     // Force TABLE view during loot distribution
@@ -176,18 +188,18 @@ export const useGameLogic = () => {
     await wait(3000);
     setOverlayText(null);
 
-    await distributeItems();
+    await distributeItems(resetItems);
 
     setGameState(prev => ({ ...prev, phase: 'PLAYER_TURN', turnOwner: 'PLAYER' }));
     setCameraView('PLAYER'); // Switch to Player view only after items are done
     addLog('YOUR MOVE.');
   };
 
-  const distributeItems = async () => {
+  const distributeItems = async (forceClear: boolean = false) => {
     // Generate items based on round count
     // The state update is async, so 'gameState.roundCount' is likely still the OLD value here (0 at start).
     // So roundNum will be 1 at start.
-    const roundNum = gameState.roundCount + 1;
+    const roundNum = forceClear ? 1 : gameState.roundCount + 1;
 
     let amount = 2; // Default start with 2 items
     if (roundNum === 1) amount = 2;
@@ -207,8 +219,16 @@ export const useGameLogic = () => {
     await wait(3500); // Allow time to see items
 
     // Strictly enforce MAX_ITEMS limit (8)
-    setPlayer(p => ({ ...p, items: [...p.items, ...pNew].slice(0, MAX_ITEMS) }));
-    setDealer(d => ({ ...d, items: [...d.items, ...dNew].slice(0, MAX_ITEMS) }));
+    // If forceClear is true, we ignore previous items (though they should be empty from startRound)
+    // but just to be safe, we use the flag.
+    setPlayer(p => {
+      const baseItems = forceClear ? [] : p.items;
+      return { ...p, items: [...baseItems, ...pNew].slice(0, MAX_ITEMS) };
+    });
+    setDealer(d => {
+      const baseItems = forceClear ? [] : d.items;
+      return { ...d, items: [...baseItems, ...dNew].slice(0, MAX_ITEMS) };
+    });
     setShowLootOverlay(false);
     setReceivedItems([]);
   };
@@ -373,8 +393,8 @@ export const useGameLogic = () => {
         addLog(message, 'info');
         setOverlayText(`${nextOwner} CUFFED`);
 
-        // Shake Animation
-        setAnim(p => ({ ...p, triggerCuff: p.triggerCuff + 1 }));
+        // Shake Animation - Just text/overlay handles this now
+        // setAnim(p => ({ ...p, triggerCuff: p.triggerCuff + 1 }));
 
         await wait(2800); // Slower
         setOverlayText(null);
@@ -445,7 +465,10 @@ export const useGameLogic = () => {
         break;
 
       case 'GLASS':
-        await ItemActions.handleGlass(user, gameState, setKnownShell, addLog);
+        await ItemActions.handleGlass(user, gameState, setKnownShell,
+          (v) => setAnim(p => ({ ...p, triggerGlass: typeof v === 'function' ? v(p.triggerGlass) : v })),
+          addLog
+        );
         break;
     }
 

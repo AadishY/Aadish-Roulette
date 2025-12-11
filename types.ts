@@ -38,6 +38,7 @@ export interface AnimationState {
   triggerHeal: number; // Cigs
   triggerDrink: number; // Beer
   triggerCuff: number; // Cuffs
+  triggerGlass: number; // Magnifying Glass
   isSawing: boolean; // Continuous saw state
   ejectedShellColor: 'red' | 'blue';
   muzzleFlashIntensity: number;
@@ -77,6 +78,13 @@ export interface SceneContext {
   dustParticles: THREE.Points;
   baseLights: { light: THREE.Light, baseIntensity: number }[];
   underLight?: THREE.PointLight;
+  itemsGroup?: {
+    itemBeer: THREE.Group;
+    itemCigs: THREE.Group;
+    itemSaw: THREE.Group;
+    itemCuffs: THREE.Group;
+    itemGlass: THREE.Group;
+  };
 }
 
 export interface SceneProps {
@@ -85,7 +93,9 @@ export interface SceneProps {
   cameraView: CameraView;
   animState: AnimationState;
   turnOwner: TurnOwner;
+  isPlayerCuffed?: boolean;
   settings: GameSettings;
+  knownShell: ShellType | null;
   players?: MPPlayer[]; // Added for multiplayer
   playerId?: string; // Added for multiplayer
   messages?: any[]; // Added for multiplayer chat

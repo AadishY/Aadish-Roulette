@@ -176,6 +176,8 @@ export default function App() {
       {/* 3D Scene */}
       <ThreeScene
         isSawed={game.player.isSawedActive}
+        isPlayerCuffed={game.player.isHandcuffed}
+        knownShell={game.knownShell}
         onGunClick={() => { }}
         aimTarget={game.aimTarget}
         cameraView={game.cameraView}

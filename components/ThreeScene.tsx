@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext } from '../types';
-import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust } from '../utils/threeHelpers';
+import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass } from '../utils/threeHelpers';
 import { updateScene } from '../utils/sceneLogic';
 
 interface ThreeSceneProps {
     isSawed: boolean;
+    isPlayerCuffed?: boolean;
     onGunClick: () => void;
     aimTarget: AimTarget;
     cameraView: CameraView;
@@ -15,10 +16,12 @@ interface ThreeSceneProps {
     players?: any[];
     playerId?: string;
     messages?: any[];
+    knownShell?: any; // ShellType | null
 }
 
 export const ThreeScene: React.FC<ThreeSceneProps> = ({
     isSawed,
+    isPlayerCuffed,
     onGunClick,
     aimTarget,
     cameraView,
@@ -27,12 +30,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     settings,
     players,
     playerId,
-    messages
+    messages,
+    knownShell
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
     const propsRef = useRef({
         isSawed,
+        isPlayerCuffed,
         aimTarget,
         cameraView,
         animState,
@@ -40,12 +45,13 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         settings,
         players,
         playerId,
-        messages
+        messages,
+        knownShell
     });
 
     useEffect(() => {
-        propsRef.current = { isSawed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages };
-    }, [isSawed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages]);
+        propsRef.current = { isSawed, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell };
+    }, [isSawed, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell]);
 
     const sceneRef = useRef<SceneContext | null>(null);
 
@@ -99,6 +105,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             createTable(scene);
             const { gunGroup, barrelMesh, muzzleFlash } = createGunModel(scene);
             const { bulletMesh, shellCasing } = createProjectiles(scene);
+
+            // === ITEM MODELS ===
+            const itemBeer = createBeerCan(); itemBeer.visible = false; scene.add(itemBeer);
+            const itemCigs = createCigarette(); itemCigs.visible = false; scene.add(itemCigs);
+            const itemSaw = createSaw(); itemSaw.visible = false; scene.add(itemSaw);
+            const itemCuffs = createHandcuffs(); itemCuffs.visible = false; scene.add(itemCuffs);
+            const itemGlass = createMagnifyingGlass(); itemGlass.visible = false; scene.add(itemGlass);
+            const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass };
 
             // === MULTIPLAYER AVATAR LOGIC ===
             let dealerGroup = new THREE.Group();
@@ -192,7 +206,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             // Let's force it.
             sceneRef.current = {
                 scene, camera, renderer, gunGroup, muzzleFlash, muzzleLight, roomRedLight, bulbLight, gunLight,
-                bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles, baseLights, underLight
+                bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles, baseLights, underLight,
+                itemsGroup // Add to context
             };
 
             updateCameraResponsive();

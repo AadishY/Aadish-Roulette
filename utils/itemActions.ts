@@ -6,14 +6,14 @@ import { wait } from './gameUtils';
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 
 export const handleBeer = async (
-  gameState: GameState,
-  setGameState: StateSetter<GameState>,
-  setTriggerRack: StateSetter<number>,
-  setEjectedShellColor: StateSetter<'red' | 'blue'>,
-  setTriggerDrink: StateSetter<number>,
-  setOverlayText: StateSetter<string | null>,
-  addLog: (text: string, type: LogEntry['type']) => void,
-  startRound: () => void
+    gameState: GameState,
+    setGameState: StateSetter<GameState>,
+    setTriggerRack: StateSetter<number>,
+    setEjectedShellColor: StateSetter<'red' | 'blue'>,
+    setTriggerDrink: StateSetter<number>,
+    setOverlayText: StateSetter<string | null>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    startRound: () => void
 ): Promise<boolean> => {
     setTriggerDrink(p => p + 1); // Visual cue
     await wait(1000);
@@ -22,13 +22,13 @@ export const handleBeer = async (
     setEjectedShellColor(shell === 'LIVE' ? 'red' : 'blue');
     setTriggerRack(p => p + 1);
     addLog(`RACKED: ${shell}`, shell === 'LIVE' ? 'danger' : 'safe');
-    
+
     // Show overlay text for Beer result
     setOverlayText(`WAS ${shell}`);
-    
+
     await wait(1500);
     setOverlayText(null);
-    
+
     const isLive = shell === 'LIVE';
     let roundEnded = false;
 
@@ -71,9 +71,9 @@ export const handleSaw = async (
     setIsSawing(true);
     setTriggerSparks(p => p + 1);
     // Reduced wait time for a snappier feel
-    await wait(500); 
+    await wait(500);
     setIsSawing(false);
-    
+
     if (user === 'PLAYER') setPlayer(p => ({ ...p, isSawedActive: true }));
     else setDealer(d => ({ ...d, isSawedActive: true }));
 };
@@ -93,10 +93,17 @@ export const handleGlass = async (
     user: TurnOwner,
     gameState: GameState,
     setKnownShell: StateSetter<ShellType | null>,
+    setTriggerGlass: StateSetter<number>,
     addLog: (text: string, type: LogEntry['type']) => void
 ) => {
+    // 1. Instant Animation Trigger
+    setTriggerGlass(p => p + 1);
+
+    // 2. Delay for lift up
+    await wait(600);
+
     const nextShell = gameState.chamber[gameState.currentShellIndex];
-    
+
     if (user === 'PLAYER') {
         setKnownShell(nextShell);
         addLog(`IT IS ${nextShell}`, 'info');
