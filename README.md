@@ -32,7 +32,8 @@
 | 🌟 **Atmospheric Visuals** | Dynamic lighting, dust particles, CRT effects, volumetric fog |
 | 🤖 **Smart AI** | Dealer remembers revealed shells and uses items strategically |
 | 🌐 **Multiplayer** | Play against real opponents online |
-| 📱 **Mobile Ready** | Optimized for Android and iOS (landscape mode) |
+| 📱 **Mobile Optimized** | 30 FPS cap, reduced effects, touch-friendly UI for Android/iOS |
+| 🎬 **Smooth Animations** | Sequential item animations with proper timing and feedback |
 
 ---
 
@@ -47,19 +48,20 @@ Use items strategically to gain an advantage:
 | 🚬 **Cigarettes** | Restores 1 HP |
 | 🔗 **Handcuffs** | Skips opponent's next turn |
 | ✂️ **Hand Saw** | Doubles damage of next shot (2 damage) |
-| 📞 **Burner Phone** | Reveals a random future shell position |
+| 📞 **Burner Phone** | Reveals a random future shell position (95% accuracy) |
 | 🔄 **Inverter** | Swaps current shell (LIVE ↔ BLANK) |
-| 💉 **Adrenaline** | Steal and immediately use opponent's item |
+| 💉 **Adrenaline** | Steal and immediately use opponent's item (cannot steal Adrenaline) |
 
 ---
 
 ## 🎮 How to Play
 
-1. **Take Turns** - You and the dealer alternate turns
-2. **Grab the Gun** - Pick up the shotgun when it's your turn
-3. **Choose Your Target** - Shoot opponent (1 damage if LIVE) or yourself (if BLANK, get extra turn!)
-4. **Use Items** - Strategic item use before shooting can change everything
-5. **Survive** - Reduce opponent's HP to zero to win!
+1. **Enter Your Name** - Type your name at the start screen
+2. **Take Turns** - You and the dealer alternate turns
+3. **Grab the Gun** - Pick up the shotgun when it's your turn
+4. **Choose Your Target** - Shoot opponent (1 damage if LIVE) or yourself (if BLANK, get extra turn!)
+5. **Use Items** - Strategic item use before shooting can change everything
+6. **Survive** - Reduce opponent's HP to zero to win!
 
 ### Controls
 
@@ -128,6 +130,9 @@ AadishRoulette/
 │   ├── useDealerAI.ts  # AI opponent logic
 │   └── useSocket.ts    # Multiplayer connection
 ├── utils/              # Utility functions
+│   ├── itemActions.ts  # Item effect handlers
+│   ├── sceneLogic.ts   # 3D animation logic
+│   └── threeHelpers.ts # 3D object creation
 ├── image/              # Assets (favicon, preview images)
 ├── App.tsx             # Main application
 ├── index.html          # Entry HTML with SEO
@@ -169,7 +174,7 @@ This project is for educational and entertainment purposes. The original Bucksho
 
 **Made with ❤️ by [Aadish](https://github.com/AadishY)**
 
-*Version 1.0.4 • 2024*
+*Version 1.0.5 • 2025*
 
 [![GitHub Stars](https://img.shields.io/github/stars/AadishY/Aadish-Roulette?style=social)](https://github.com/AadishY/Aadish-Roulette)
 

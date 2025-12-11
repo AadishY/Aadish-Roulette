@@ -342,15 +342,18 @@ export const createGunModel = (scene: THREE.Scene) => {
     const barrelGeo = new THREE.CylinderGeometry(0.24, 0.24, 9, 24);
     const barrelMesh = new THREE.Mesh(barrelGeo, metalMat);
     barrelMesh.rotation.x = Math.PI / 2; barrelMesh.position.set(0, 0.35, 5.0); barrelMesh.castShadow = true;
+    barrelMesh.name = 'BARREL';
 
-    // Pump mechanism
+    // Pump mechanism (the wooden foregrip - gets cut too)
     const pumpGeo = new THREE.CylinderGeometry(0.35, 0.4, 3.5, 16);
     const pump = new THREE.Mesh(pumpGeo, woodMat);
     pump.rotation.x = Math.PI / 2; pump.position.set(0, -0.3, 4.5); pump.castShadow = true;
+    pump.name = 'PUMP';
 
-    // Mag Tube
+    // Mag Tube (also gets cut with saw)
     const magTube = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 8, 16), darkMetalMat);
     magTube.rotation.x = Math.PI / 2; magTube.position.set(0, -0.3, 4.0); magTube.castShadow = true;
+    magTube.name = 'MAG_TUBE';
 
     const guardGeo = new THREE.TorusGeometry(0.25, 0.05, 8, 16, Math.PI);
     const guard = new THREE.Mesh(guardGeo, darkMetalMat);
@@ -364,7 +367,6 @@ export const createGunModel = (scene: THREE.Scene) => {
     port.position.set(0.26, 0.2, 3.5);
     receiver.add(port);
 
-    // Bolts/Screws
     // Bolts/Screws - No Shadows for perf
     const boltGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.1);
     const boltMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
@@ -374,7 +376,6 @@ export const createGunModel = (scene: THREE.Scene) => {
     receiver.add(b1, b2, b3);
 
     // Trigger (Curved)
-    const triggerCurve = new THREE.CurvePath();
     const triggerGeo = new THREE.TorusGeometry(0.15, 0.04, 8, 8, Math.PI / 2);
     const trigger = new THREE.Mesh(triggerGeo, darkMetalMat);
     trigger.rotation.z = Math.PI; trigger.rotation.y = Math.PI / 2;
@@ -382,7 +383,7 @@ export const createGunModel = (scene: THREE.Scene) => {
 
     gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight, trigger);
 
-    // Dynamic Muzzle Flash (Multi-plane Star) -- Re-added
+    // Dynamic Muzzle Flash (Multi-plane Star)
     const flashGeo = new THREE.PlaneGeometry(3.5, 3.5);
     const flashMat = new THREE.MeshBasicMaterial({
         color: 0xffdd88, side: THREE.DoubleSide, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
@@ -398,16 +399,30 @@ export const createGunModel = (scene: THREE.Scene) => {
 
     scene.add(gunGroup);
 
-    return { gunGroup, barrelMesh, muzzleFlash };
+    return { gunGroup, barrelMesh, muzzleFlash, pump, magTube };
 };
 
 
 export const createDealerModel = (scene: THREE.Scene) => {
     const dealerGroup = new THREE.Group();
 
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.9 }); // Paler skin
-    const suitMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 });
-    const toothMat = new THREE.MeshStandardMaterial({ color: 0xeeeeaa, roughness: 0.4, metalness: 0.1 });
+    // Enhanced materials with subsurface light-like effect
+    const skinMat = new THREE.MeshStandardMaterial({
+        color: 0xccbbbb, // Slightly pinker, more corpse-like
+        roughness: 0.85,
+        metalness: 0.05
+    });
+    const suitMat = new THREE.MeshStandardMaterial({
+        color: 0x0a0a0a, // Darker
+        roughness: 0.6,
+        metalness: 0.1
+    });
+    const toothMat = new THREE.MeshStandardMaterial({
+        color: 0xffffcc, // Yellower teeth
+        roughness: 0.3,
+        metalness: 0.2
+    });
+    const veinMat = new THREE.MeshBasicMaterial({ color: 0x330033 }); // Purple veins
 
     const HEAD_Y = 5.5;
     const Z_POS = -14;
@@ -416,124 +431,192 @@ export const createDealerModel = (scene: THREE.Scene) => {
     headGroup.name = "HEAD";
     headGroup.position.set(0, HEAD_Y, Z_POS);
 
-    // Deformed Head Shape
-    const headGeo = new THREE.SphereGeometry(2.0, 32, 32);
-    // Flattened top, elongated jaw
-    headGeo.scale(0.9, 1.1, 1.0);
+    // Deformed Head Shape - More angular and unsettling
+    const headGeo = new THREE.SphereGeometry(2.2, 32, 32);
+    // Flattened top, elongated jaw, narrowed temples
+    headGeo.scale(0.85, 1.15, 0.95);
     const head = new THREE.Mesh(headGeo, skinMat);
     head.castShadow = true;
     headGroup.add(head);
 
-    // Deep Eye Sockets (Subtraction via black meshes)
-    const socketGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    // Cheekbones (angular protrusions)
+    const cheekGeo = new THREE.BoxGeometry(0.8, 0.5, 0.8);
+    const lCheek = new THREE.Mesh(cheekGeo, skinMat);
+    lCheek.position.set(-1.3, -0.3, 1.2);
+    lCheek.rotation.set(0.2, 0.3, 0.1);
+    headGroup.add(lCheek);
+    const rCheek = lCheek.clone();
+    rCheek.position.set(1.3, -0.3, 1.2);
+    rCheek.rotation.set(0.2, -0.3, -0.1);
+    headGroup.add(rCheek);
+
+    // Brow Ridge (makes eyes look more sunken)
+    const browGeo = new THREE.BoxGeometry(2.4, 0.4, 0.6);
+    const brow = new THREE.Mesh(browGeo, skinMat);
+    brow.position.set(0, 0.7, 1.6);
+    brow.rotation.x = 0.3;
+    headGroup.add(brow);
+
+    // Deep Eye Sockets (Darker, deeper)
+    const socketGeo = new THREE.SphereGeometry(0.55, 16, 16);
     const socketMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
     const lSocket = new THREE.Mesh(socketGeo, socketMat);
-    lSocket.position.set(-0.8, 0.2, 1.75);
-    lSocket.scale.set(1.2, 0.8, 0.5);
+    lSocket.position.set(-0.75, 0.15, 1.7);
+    lSocket.scale.set(1.3, 0.9, 0.6);
     headGroup.add(lSocket);
 
     const rSocket = lSocket.clone();
-    rSocket.position.set(0.8, 0.2, 1.75);
+    rSocket.position.set(0.75, 0.15, 1.7);
     headGroup.add(rSocket);
 
-    // Tiny Glowing Pupils
-    const pupilGeo = new THREE.SphereGeometry(0.06);
-    const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Glowing RED Pupils - Bigger and brighter
+    const pupilGeo = new THREE.SphereGeometry(0.2, 12, 12);
+    const eyeGlowMat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Pure RED
 
     const lPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
-    lPupil.position.set(-0.8, 0.2, 1.95);
+    lPupil.position.set(-0.75, 0.15, 2.1); // More forward
+    lPupil.name = 'LEFT_PUPIL';
     headGroup.add(lPupil);
 
-    // Left Eye Light
-    const lEyeLight = new THREE.PointLight(0xff0000, 2, 4);
-    lEyeLight.position.set(-0.8, 0.2, 2.2);
+    // Left Eye Light - Behind pupil for glow effect
+    const lEyeLight = new THREE.PointLight(0xff0000, 5, 6);
+    lEyeLight.position.set(-0.75, 0.15, 2.3);
     headGroup.add(lEyeLight);
 
     const rPupil = new THREE.Mesh(pupilGeo, eyeGlowMat);
-    rPupil.position.set(0.8, 0.2, 1.95);
+    rPupil.position.set(0.75, 0.15, 2.1); // More forward
+    rPupil.name = 'RIGHT_PUPIL';
     headGroup.add(rPupil);
 
     // Right Eye Light
-    const rEyeLight = new THREE.PointLight(0xff0000, 2, 4);
-    rEyeLight.position.set(0.8, 0.2, 2.2);
+    const rEyeLight = new THREE.PointLight(0xff0000, 5, 6);
+    rEyeLight.position.set(0.75, 0.15, 2.3);
     headGroup.add(rEyeLight);
 
-    // Wide Grin (Black Void)
-    const mouthGeo = new THREE.BoxGeometry(2.2, 0.8, 0.8);
+    // Wide Grin (Black Void) - Larger
+    const mouthGeo = new THREE.BoxGeometry(2.4, 0.9, 0.9);
     const mouthVoid = new THREE.Mesh(mouthGeo, socketMat);
-    mouthVoid.position.set(0, -1.0, 1.7);
-    mouthVoid.rotation.x = 0.1;
+    mouthVoid.position.set(0, -1.1, 1.65);
+    mouthVoid.rotation.x = 0.15;
     headGroup.add(mouthVoid);
 
-    // Teeth (Jagged Array)
+    // Teeth (More Jagged, Varied Sizes)
     const teethGroup = new THREE.Group();
-    for (let i = 0; i < 16; i++) {
-        // Random jaggedness
-        const height = 0.3 + Math.random() * 0.3;
-        const t = new THREE.Mesh(new THREE.ConeGeometry(0.08, height, 5), toothMat);
+    for (let i = 0; i < 18; i++) {
+        // More random jaggedness
+        const height = 0.25 + Math.random() * 0.4;
+        const width = 0.06 + Math.random() * 0.04;
+        const t = new THREE.Mesh(new THREE.ConeGeometry(width, height, 4), toothMat);
 
-        // Top Row
-        const x = (i - 7.5) * 0.16;
-        t.position.set(x, -0.7, 2.1);
+        // Top Row - More teeth, irregular spacing
+        const x = (i - 8.5) * 0.145;
+        t.position.set(x + (Math.random() - 0.5) * 0.03, -0.7, 2.1);
         t.rotation.x = Math.PI; // Point down
+        t.rotation.z = (Math.random() - 0.5) * 0.2; // Slight random tilt
         t.castShadow = false; t.receiveShadow = false;
         teethGroup.add(t);
 
         // Bottom Row
         const b = t.clone();
-        b.position.set(x, -1.3, 2.05);
+        b.position.set(x + (Math.random() - 0.5) * 0.03, -1.4, 2.0);
         b.rotation.x = 0; // Point up
-        // Offset randomness
-        b.scale.y = 0.8 + Math.random() * 0.4;
+        b.rotation.z = (Math.random() - 0.5) * 0.15;
+        b.scale.y = 0.7 + Math.random() * 0.5;
         b.castShadow = false; b.receiveShadow = false;
         teethGroup.add(b);
     }
     headGroup.add(teethGroup);
 
-    const faceLight = new THREE.PointLight(0xff0000, 1.0, 6);
+    // Neck with visible veins
+    const neckGeo = new THREE.CylinderGeometry(0.9, 1.1, 2.5, 16);
+    const neck = new THREE.Mesh(neckGeo, skinMat);
+    neck.position.set(0, -2.5, 0);
+    headGroup.add(neck);
+
+    // Veins on neck
+    for (let i = 0; i < 4; i++) {
+        const veinGeo = new THREE.CylinderGeometry(0.05, 0.03, 2.0, 8);
+        const vein = new THREE.Mesh(veinGeo, veinMat);
+        const angle = (i / 4) * Math.PI * 2;
+        vein.position.set(Math.sin(angle) * 0.85, -2.5, Math.cos(angle) * 0.85);
+        vein.rotation.z = (Math.random() - 0.5) * 0.2;
+        headGroup.add(vein);
+    }
+
+    // Face Light - Creepy red glow from mouth
+    const faceLight = new THREE.PointLight(0xff2200, 1.5, 7);
     faceLight.name = "FACE_LIGHT";
-    faceLight.position.set(0, -1, 3);
+    faceLight.position.set(0, -1, 3.5);
     headGroup.add(faceLight);
+
+    // Inner mouth glow
+    const innerGlow = new THREE.PointLight(0xff0033, 2, 3);
+    innerGlow.position.set(0, -1.1, 1.0);
+    headGroup.add(innerGlow);
 
     dealerGroup.add(headGroup);
 
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(6.5, 7, 3), suitMat);
-    torso.position.set(0, HEAD_Y - 4.5, Z_POS - 0.5); torso.rotation.x = 0.15; torso.castShadow = true;
+    // Torso - Larger, more imposing
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(7, 8, 3.5), suitMat);
+    torso.position.set(0, HEAD_Y - 5, Z_POS - 0.5);
+    torso.rotation.x = 0.12;
+    torso.castShadow = true;
 
-    const collar = new THREE.Mesh(new THREE.BoxGeometry(3, 0.8, 2.5), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
-    collar.position.set(0, HEAD_Y - 1.5, Z_POS); collar.rotation.x = 0.15;
+    // Collar with tie detail
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.9, 2.8), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
+    collar.position.set(0, HEAD_Y - 1.8, Z_POS);
+    collar.rotation.x = 0.12;
 
-    const shoulderGeo = new THREE.SphereGeometry(1.6);
-    const lShoulder = new THREE.Mesh(shoulderGeo, suitMat); lShoulder.position.set(-3.5, HEAD_Y - 2, Z_POS - 0.5);
-    const rShoulder = new THREE.Mesh(shoulderGeo, suitMat); rShoulder.position.set(3.5, HEAD_Y - 2, Z_POS - 0.5);
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.6, 4, 0.3), new THREE.MeshStandardMaterial({ color: 0x220000 }));
+    tie.position.set(0, HEAD_Y - 4, Z_POS + 0.3);
+    tie.rotation.x = 0.15;
 
-    const armGeo = new THREE.CylinderGeometry(0.7, 0.5, 9);
-    const lArm = new THREE.Mesh(armGeo, suitMat); lArm.position.set(-4, HEAD_Y - 5, Z_POS + 3); lArm.rotation.x = 0.9; lArm.rotation.z = -0.2; lArm.castShadow = true;
-    const rArm = new THREE.Mesh(armGeo, suitMat); rArm.position.set(4, HEAD_Y - 5, Z_POS + 3); rArm.rotation.x = 0.9; rArm.rotation.z = 0.2; rArm.castShadow = true;
+    // Shoulders - More defined
+    const shoulderGeo = new THREE.SphereGeometry(1.8);
+    const lShoulder = new THREE.Mesh(shoulderGeo, suitMat);
+    lShoulder.position.set(-4, HEAD_Y - 2.5, Z_POS - 0.5);
+    const rShoulder = new THREE.Mesh(shoulderGeo, suitMat);
+    rShoulder.position.set(4, HEAD_Y - 2.5, Z_POS - 0.5);
 
-    const handGeo = new THREE.BoxGeometry(1.2, 1.5, 0.4);
-    const fingerGeo = new THREE.BoxGeometry(0.25, 0.6, 0.25);
+    // Arms - Extended for card dealing pose
+    const armGeo = new THREE.CylinderGeometry(0.8, 0.55, 10);
+    const lArm = new THREE.Mesh(armGeo, suitMat);
+    lArm.position.set(-4.5, HEAD_Y - 5.5, Z_POS + 3.5);
+    lArm.rotation.x = 0.85;
+    lArm.rotation.z = -0.15;
+    lArm.castShadow = true;
+    const rArm = new THREE.Mesh(armGeo, suitMat);
+    rArm.position.set(4.5, HEAD_Y - 5.5, Z_POS + 3.5);
+    rArm.rotation.x = 0.85;
+    rArm.rotation.z = 0.15;
+    rArm.castShadow = true;
 
-    // Left Hand
+    const handGeo = new THREE.BoxGeometry(1.3, 1.6, 0.45);
+    const fingerGeo = new THREE.BoxGeometry(0.23, 0.65, 0.23);
+
+    // Left Hand - More detailed
     const lHand = new THREE.Group();
-    lHand.position.set(-3.5, 0, -10.5); // Resting on table
-    lHand.rotation.x = -0.3; lHand.rotation.z = -0.3;
+    lHand.position.set(-3.5, 0, -10.5);
+    lHand.rotation.x = -0.35; lHand.rotation.z = -0.25;
     const lhPalm = new THREE.Mesh(handGeo, skinMat); lHand.add(lhPalm);
     for (let i = 0; i < 4; i++) {
         const f = new THREE.Mesh(fingerGeo, skinMat);
-        f.position.set(0.4 - i * 0.27, -0.9, 0.1); f.rotation.z = 0.1 * (i - 1.5);
+        f.position.set(0.42 - i * 0.28, -0.95, 0.12);
+        f.rotation.z = 0.08 * (i - 1.5);
         lHand.add(f);
     }
-    const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.3), skinMat);
-    lThumb.position.set(0.7, -0.3, 0.2); lThumb.rotation.z = -0.6; lHand.add(lThumb);
+    const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.55, 0.3), skinMat);
+    lThumb.position.set(0.75, -0.35, 0.2);
+    lThumb.rotation.z = -0.55;
+    lHand.add(lThumb);
 
     // Right Hand
     const rHand = lHand.clone();
     rHand.position.set(3.5, 0, -10.5);
-    rHand.rotation.set(-0.3, 0, 0.3);
+    rHand.rotation.set(-0.35, 0, 0.25);
 
-    dealerGroup.add(torso, collar, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
+    dealerGroup.add(torso, collar, tie, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
 
     scene.add(dealerGroup);
     return dealerGroup;
@@ -546,14 +629,42 @@ export const createProjectiles = (scene: THREE.Scene) => {
     bulletMesh.rotation.x = Math.PI / 2; bulletMesh.visible = false;
     scene.add(bulletMesh);
 
-    const shellCasing = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.45, 12), new THREE.MeshStandardMaterial({ color: 0xb91c1c }));
-    const shellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.125, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8 }));
-    shellBase.position.y = -0.22; shellCasing.add(shellBase);
-    shellCasing.rotation.z = Math.PI / 2; shellCasing.visible = false;
-    scene.add(shellCasing);
+    // Create 3 shell casings for multi-shell system
+    const shellCasings: THREE.Mesh[] = [];
+    const shellVelocities: THREE.Vector3[] = [];
 
-    return { bulletMesh, shellCasing };
+    // Define drop positions in the middle of the table (spread out slightly)
+    const shellPositions = [
+        { x: -1.5, z: 0 },    // Left position
+        { x: 0, z: 0 },       // Center position
+        { x: 1.5, z: 0 },     // Right position
+    ];
+
+    for (let i = 0; i < 3; i++) {
+        const shellCasing = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.12, 0.12, 0.45, 12),
+            new THREE.MeshStandardMaterial({ color: 0xb91c1c })
+        );
+        const shellBase = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.125, 0.125, 0.1, 12),
+            new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8 })
+        );
+        shellBase.position.y = -0.22;
+        shellCasing.add(shellBase);
+        shellCasing.rotation.z = Math.PI / 2;
+        shellCasing.visible = false;
+        shellCasing.userData.shellIndex = i;
+        shellCasing.userData.basePosition = shellPositions[i];
+        shellCasing.userData.landedAt = null;
+        scene.add(shellCasing);
+        shellCasings.push(shellCasing);
+        shellVelocities.push(new THREE.Vector3());
+    }
+
+    // Keep backward compatibility - return first shell as 'shellCasing'
+    return { bulletMesh, shellCasing: shellCasings[0], shellCasings, shellVelocities };
 };
+
 
 export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string, hp: number = 4, maxHp: number = 4) => {
     const avatarGroup = new THREE.Group();

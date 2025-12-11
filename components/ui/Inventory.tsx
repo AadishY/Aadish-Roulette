@@ -29,16 +29,16 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
                             <button
                                 onClick={() => onUseItem(idx)}
                                 disabled={isUsageDisabled}
-                                className={`w-7 h-8 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 relative`}
+                                className={`w-10 h-12 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 relative`}
                             >
-                                {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'SAW' && <Icons.Saw className="text-orange-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'PHONE' && <Icons.Phone className="text-blue-200 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'INVERTER' && <Icons.Inverter className="text-green-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                {item === 'ADRENALINE' && <Icons.Adrenaline className="text-pink-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                                {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'SAW' && <Icons.Saw className="text-orange-600 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'PHONE' && <Icons.Phone className="text-blue-200 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'INVERTER' && <Icons.Inverter className="text-green-400 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'ADRENALINE' && <Icons.Adrenaline className="text-pink-600 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 <span className="text-[6px] md:text-[8px] text-stone-300 font-bold tracking-widest block text-center px-1 truncate w-full">
                                     {{
                                         'BEER': 'BEER',

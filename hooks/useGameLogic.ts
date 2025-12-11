@@ -95,31 +95,35 @@ export const useGameLogic = () => {
     setLogs(prev => [...prev, { id: Date.now() + Math.random(), text, type }]);
   };
 
-  // Revised Probabilities - Weighted for balance
+  // Balanced Probabilities - Common items frequent, powerful items rare
   const getRandomItem = (): ItemType => {
-    // BEER: 15% 
-    // CIGS: 15% 
-    // GLASS: 10%
-    // PHONE: 20% (Increased)
-    // INVERTER: 15% (Increased)
-    // SAW: 10%
-    // CUFFS: 10%
-    // ADRENALINE: 5%
+    // BEER: 18% (Common - eject shell)
+    // CIGS: 16% (Common - heal 1 HP)
+    // GLASS: 14% (Useful - see current shell)
+    // CUFFS: 14% (Useful - skip opponent turn)
+    // PHONE: 10% (Strategic - see random shell)
+    // SAW: 10% (Powerful - double damage)
+    // INVERTER: 8% (Rare - flip shell type)
+    // ADRENALINE: 10% (Steal and use item)
 
     const r = Math.random() * 100;
-    if (r < 15) return 'BEER';
-    if (r < 30) return 'CIGS';
-    if (r < 40) return 'GLASS';
-    if (r < 60) return 'PHONE';
-    if (r < 75) return 'INVERTER';
-    if (r < 85) return 'SAW';
-    if (r < 95) return 'CUFFS';
+    if (r < 18) return 'BEER';
+    if (r < 34) return 'CIGS';
+    if (r < 48) return 'GLASS';
+    if (r < 62) return 'CUFFS';
+    if (r < 72) return 'PHONE';
+    if (r < 82) return 'SAW';
+    if (r < 90) return 'INVERTER';
     return 'ADRENALINE';
   };
 
   // --- Logic ---
   const resetGame = (toMenu: boolean = false) => {
-    // Reset all states
+    // Reset all states FIRST
+    setReceivedItems([]); // Clear loot overlay items
+    setShowLootOverlay(false);
+    setOverlayText(null);
+
     setGameState({
       phase: toMenu ? 'INTRO' : 'LOAD',
       turnOwner: 'PLAYER',
@@ -143,18 +147,10 @@ export const useGameLogic = () => {
     setIsProcessing(false);
 
     if (!toMenu) {
-      // If restarting immediately, we must ensure item state is clear.
-      // startRound() will be called, which calls distributeItems().
-      // distributeItems uses setPlayer(prev => ... items: [...prev.items, ...new]).
-      // Because of React batching, if we call setPlayer(reset) here, then startRound() calls setPlayer(append) in the SAME batch,
-      // the 'prev' in append might be the *old* state if not handled carefully, OR
-      // more likely, the logic in distributeItems might be running twice or assuming persistent items.
-      // Actually, distributeItems uses `prev.items`. 
-      // If we want to guarantee empty start in startRound, we should maybe pass a flag to startRound or distributeItems.
-      // Or simply delay startRound slightly to let state settle? No, that's hacky.
-      // Better: startRound calls `distributeItems` which appends.
-      // We can pass `resetItems: true` to distributeItems?
-      startRound(true);
+      // Delay startRound to ensure all state resets are flushed to React
+      setTimeout(() => {
+        startRound(true);
+      }, 200);
     }
   };
 
@@ -211,9 +207,14 @@ export const useGameLogic = () => {
   };
 
   const distributeItems = async (forceClear: boolean = false) => {
+    // If forceClear, ensure items are cleared FIRST before anything else
+    if (forceClear) {
+      setPlayer(p => ({ ...p, items: [] }));
+      setDealer(d => ({ ...d, items: [] }));
+      await wait(50); // Small delay to ensure state is flushed
+    }
+
     // Generate items based on round count
-    // The state update is async, so 'gameState.roundCount' is likely still the OLD value here (0 at start).
-    // So roundNum will be 1 at start.
     const roundNum = forceClear ? 1 : gameState.roundCount + 1;
 
     let amount = 2; // Default start with 2 items
@@ -221,21 +222,30 @@ export const useGameLogic = () => {
     else if (roundNum === 2) amount = 3;
     else amount = 4;
 
+
     const generateLoot = () => {
       return Array(amount).fill(null).map(() => getRandomItem());
     };
 
+    // Generate BOTH loot pools at the same time
     const pNew = generateLoot();
     const dNew = generateLoot();
 
+    // Store items for reference (for debugging consistency)
+    console.log('[LOOT] Player items:', pNew, 'Dealer items:', dNew);
+
+    // SAFETY: Clear any previous overlay state
+    setShowLootOverlay(false);
+    setReceivedItems([]);
+    await wait(100); // Wait for UI to clear
+
+    // Show NEW items in overlay
     setGameState(prev => ({ ...prev, phase: 'LOOTING' }));
-    setReceivedItems(pNew);
+    setReceivedItems([...pNew]); // Use spread to ensure new array reference
     setShowLootOverlay(true);
     await wait(3500); // Allow time to see items
 
-    // Strictly enforce MAX_ITEMS limit (8)
-    // If forceClear is true, we ignore previous items (though they should be empty from startRound)
-    // but just to be safe, we use the flag.
+    // Apply items to inventories - player gets pNew, dealer gets dNew
     setPlayer(p => {
       const baseItems = forceClear ? [] : p.items;
       return { ...p, items: [...baseItems, ...pNew].slice(0, MAX_ITEMS) };
@@ -244,6 +254,8 @@ export const useGameLogic = () => {
       const baseItems = forceClear ? [] : d.items;
       return { ...d, items: [...baseItems, ...dNew].slice(0, MAX_ITEMS) };
     });
+
+    // Clean up overlay
     setShowLootOverlay(false);
     setReceivedItems([]);
   };
@@ -392,8 +404,9 @@ export const useGameLogic = () => {
     let nextOwner = shooter;
     let turnChanged = false;
 
+    const shooterName = shooter === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
     if (!isLive && shooter === target) {
-      addLog(`${shooter} GOES AGAIN`);
+      addLog(`${shooterName} GOES AGAIN`);
     } else {
       nextOwner = shooter === 'PLAYER' ? 'DEALER' : 'PLAYER';
       turnChanged = true;
@@ -403,8 +416,9 @@ export const useGameLogic = () => {
     let skipped = false;
     if (turnChanged) {
       const nextPersonState = nextOwner === 'PLAYER' ? player : dealer;
+      const nextPersonName = nextOwner === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
       if (nextPersonState.isHandcuffed) {
-        const message = `${nextOwner} CUFFED. SKIPPING.`;
+        const message = `${nextPersonName} CUFFED. SKIPPING.`;
         addLog(message, 'info');
         setOverlayText(`${nextOwner} CUFFED`);
 
@@ -441,11 +455,11 @@ export const useGameLogic = () => {
       }
     }
 
-    setOverlayText(`${user} USED ${item}`);
-    // Show overlay for both now as requested
+    const userName = user === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
+    setOverlayText(`${userName} USED ${item}`);
 
-    addLog(`${user} USED ${item}`, 'info');
-    await wait(2000); // 2 seconds to read
+    addLog(`${userName} USED ${item}`, 'info');
+    await wait(1500); // Brief display before animation starts
     setOverlayText(null);
 
     let roundEnded = false;
@@ -476,7 +490,8 @@ export const useGameLogic = () => {
         break;
 
       case 'CUFFS':
-        ItemActions.handleCuffs(user, setPlayer, setDealer, (v) => setAnim(p => ({ ...p, triggerCuff: typeof v === 'function' ? v(p.triggerCuff) : v })));
+        await ItemActions.handleCuffs(user, setPlayer, setDealer, (v) => setAnim(p => ({ ...p, triggerCuff: typeof v === 'function' ? v(p.triggerCuff) : v })));
+        await wait(500); // Pause after cuffs animation
         break;
 
       case 'GLASS':
@@ -489,26 +504,31 @@ export const useGameLogic = () => {
       case 'PHONE':
         await ItemActions.handlePhone(user, gameState,
           (v) => setAnim(p => ({ ...p, triggerPhone: typeof v === 'function' ? v(p.triggerPhone) : v })),
-          addLog
+          addLog,
+          setOverlayText
         );
         break;
 
       case 'INVERTER':
         await ItemActions.handleInverter(user, gameState, setGameState,
           (v) => setAnim(p => ({ ...p, triggerInverter: typeof v === 'function' ? v(p.triggerInverter) : v })),
-          addLog
+          addLog,
+          setOverlayText
         );
         break;
 
       case 'ADRENALINE':
-        setOverlayColor('scan');
         await ItemActions.handleAdrenaline(user,
           (v) => setAnim(p => ({ ...p, triggerAdrenaline: typeof v === 'function' ? v(p.triggerAdrenaline) : v })),
-          setGameState, addLog
+          setGameState, addLog, setOverlayText
         );
+        await wait(500); // Pause before next action
         setTimeout(() => setOverlayColor('none'), 1200);
         break;
     }
+
+    // Final synchronization wait - ensures animation is visually complete before proceeding
+    await wait(300);
 
     return roundEnded;
   };
@@ -544,23 +564,47 @@ export const useGameLogic = () => {
   };
 
   const stealItem = async (index: number) => {
+    // Prevent actions during steal
+    if (isProcessing) return;
+
     // 1. Remove from dealer
     const itemToSteal = dealer.items[index];
     if (!itemToSteal) return;
+
+    // Can't steal ADRENALINE with ADRENALINE
+    if (itemToSteal === 'ADRENALINE') {
+      addLog("CAN'T STEAL ADRENALINE!", 'danger');
+      setOverlayText("❌ CAN'T STEAL ADRENALINE! PICK ANOTHER");
+      await wait(2000);
+      setOverlayText(null);
+      // Stay in STEALING phase so player can pick another item
+      return;
+    }
+
+    // Lock processing immediately
+    setIsProcessing(true);
 
     const newDealerItems = [...dealer.items];
     newDealerItems.splice(index, 1);
     setDealer(prev => ({ ...prev, items: newDealerItems }));
 
-    addLog(`STOLEN ${itemToSteal}`, 'info');
+    // Show steal message and wait for it to be visible
+    addLog(`${playerName.toUpperCase()} STOLE ${itemToSteal}`, 'info');
+    setOverlayText(`🎯 STOLE ${itemToSteal}!`);
+    await wait(1800); // Let player see the steal message
+    setOverlayText(null);
+
     setGameState(p => ({ ...p, phase: 'PLAYER_TURN' }));
 
-    // 2. Use it immediately
-    setIsProcessing(true); // Lock while using
-    await wait(500);
+    // 2. Use it immediately - with clear gap for readability
+    await wait(800); // Gap between steal and use
     await processItemEffect('PLAYER', itemToSteal);
+
+    // Final sync wait
+    await wait(300);
     setIsProcessing(false);
   };
+
 
   return {
     gameState,
@@ -591,6 +635,7 @@ export const useGameLogic = () => {
     resetGame,
     setPlayerName,
     pickupGun,
-    setGamePhase
+    setGamePhase,
+    setOverlayText
   };
 };

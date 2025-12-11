@@ -189,9 +189,9 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                     <ItemCard
                         icon={<Phone size={20} />}
                         name="BURNER PHONE"
-                        description="Mysterious caller reveals a random future shell position in the chamber. Plan your strategy ahead."
+                        description="Mysterious caller reveals a random future shell position. WARNING: The caller is unreliable and has a 5% chance of lying!"
                         color="text-blue-300"
-                        effect="→ REVEALS FUTURE SHELL"
+                        effect="→ REVEALS FUTURE SHELL (95% ACCURATE)"
                     />
 
                     <ItemCard
@@ -442,8 +442,8 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                 key={index}
                                 onClick={() => goToPage(index)}
                                 className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all ${index === currentPage
-                                        ? 'bg-red-500 scale-125 shadow-lg shadow-red-500/50'
-                                        : 'bg-stone-700 hover:bg-stone-500'
+                                    ? 'bg-red-500 scale-125 shadow-lg shadow-red-500/50'
+                                    : 'bg-stone-700 hover:bg-stone-500'
                                     }`}
                                 aria-label={`Go to page ${index + 1}`}
                             />
@@ -456,8 +456,8 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             onClick={prevPage}
                             disabled={currentPage === 0}
                             className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 md:py-3 font-bold tracking-wider transition-all text-sm md:text-base rounded-sm ${currentPage === 0
-                                    ? 'text-stone-700 cursor-not-allowed'
-                                    : 'text-stone-300 hover:text-white hover:bg-stone-800 border border-stone-700 hover:border-stone-500'
+                                ? 'text-stone-700 cursor-not-allowed'
+                                : 'text-stone-300 hover:text-white hover:bg-stone-800 border border-stone-700 hover:border-stone-500'
                                 }`}
                         >
                             <ChevronLeft size={18} />
@@ -475,8 +475,8 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             onClick={nextPage}
                             disabled={currentPage === pages.length - 1}
                             className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 md:py-3 font-bold tracking-wider transition-all text-sm md:text-base rounded-sm ${currentPage === pages.length - 1
-                                    ? 'text-stone-700 cursor-not-allowed'
-                                    : 'text-stone-300 hover:text-white hover:bg-stone-800 border border-stone-700 hover:border-stone-500'
+                                ? 'text-stone-700 cursor-not-allowed'
+                                : 'text-stone-300 hover:text-white hover:bg-stone-800 border border-stone-700 hover:border-stone-500'
                                 }`}
                         >
                             <span className="hidden sm:inline">NEXT</span>

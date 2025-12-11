@@ -41,7 +41,8 @@ export const useMultiplayerGame = ({
         chamber: [],
         currentShellIndex: 0,
         liveCount: 0,
-        blankCount: 0
+        blankCount: 0,
+        roundCount: 0
     });
 
     const [player, setPlayer] = useState<PlayerState>({
@@ -81,6 +82,10 @@ export const useMultiplayerGame = ({
         triggerHeal: 0,
         triggerDrink: 0,
         triggerCuff: 0,
+        triggerGlass: 0,
+        triggerPhone: 0,
+        triggerInverter: 0,
+        triggerAdrenaline: 0,
         isSawing: false,
         ejectedShellColor: 'red',
         muzzleFlashIntensity: 0,

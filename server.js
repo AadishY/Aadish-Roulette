@@ -42,12 +42,17 @@ let gameState = {
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const getRandomItem = () => {
-    const r = Math.random();
-    if (r < 0.20) return 'BEER';
-    if (r < 0.45) return 'CIGS';
-    if (r < 0.65) return 'GLASS';
-    if (r < 0.85) return 'CUFFS';
-    return 'SAW';
+    // Balanced Probabilities - ADRENALINE at 10%
+    // BEER: 18%, CIGS: 16%, GLASS: 14%, CUFFS: 14%, PHONE: 10%, SAW: 10%, INVERTER: 8%, ADRENALINE: 10%
+    const r = Math.random() * 100;
+    if (r < 18) return 'BEER';
+    if (r < 34) return 'CIGS';
+    if (r < 48) return 'GLASS';
+    if (r < 62) return 'CUFFS';
+    if (r < 72) return 'PHONE';
+    if (r < 82) return 'SAW';
+    if (r < 90) return 'INVERTER';
+    return 'ADRENALINE';
 };
 
 const initializeGame = () => {

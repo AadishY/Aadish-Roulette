@@ -11,6 +11,7 @@ import { LootOverlay } from './ui/LootOverlay';
 import { LogsDisplay } from './ui/LogsDisplay';
 import { MultiplayerHUD } from './MultiplayerHUD';
 import { GameStateData } from '../hooks/useSocket';
+import { Icons } from './ui/Icons';
 
 interface GameUIProps {
     gameState: GameState;
@@ -201,14 +202,67 @@ export const GameUI: React.FC<GameUIProps> = ({
                     </div>
                 )}
 
-                {/* Stealing Overlay Message */}
+                {/* Stealing Overlay - ENLARGED for better clicking */}
                 {gameState.phase === 'STEALING' && (
-                    <div className="absolute inset-x-0 top-[15%] z-50 flex flex-col items-center justify-center pointer-events-none px-4">
-                        <div className="text-2xl md:text-5xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(255,0,0,0.8)] animate-pulse mb-2">
-                            STEAL AN ITEM
+                    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm px-4 pointer-events-auto">
+                        <div className="text-2xl md:text-5xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(255,0,0,0.8)] animate-pulse mb-4">
+                            ⚡ STEAL AN ITEM ⚡
                         </div>
-                        <div className="text-sm md:text-xl text-stone-300 font-bold bg-black/70 px-4 py-1">
-                            SELECT AN ITEM FROM OPPONENT
+                        <div className="text-sm md:text-xl text-stone-300 font-bold bg-black/70 px-4 py-2 mb-8 border border-stone-700">
+                            CLICK AN ITEM TO STEAL AND USE IT
+                        </div>
+
+                        {/* Enlarged Dealer Items */}
+                        <div className="flex gap-4 md:gap-6 flex-wrap justify-center max-w-4xl">
+                            {dealer.items.length === 0 ? (
+                                <div className="text-stone-500 text-lg font-bold py-8">NO ITEMS TO STEAL</div>
+                            ) : (
+                                dealer.items.map((item, idx) => {
+                                    const isAdrenaline = item === 'ADRENALINE';
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => !isAdrenaline && onStealItem && onStealItem(idx)}
+                                            disabled={isAdrenaline}
+                                            className={`flex flex-col items-center justify-center w-20 h-24 md:w-28 md:h-36 bg-gradient-to-b transition-all shadow-lg relative ${isAdrenaline
+                                                    ? 'from-stone-900 to-stone-950 border-2 border-stone-700 cursor-not-allowed opacity-50'
+                                                    : 'from-stone-800 to-stone-900 border-2 border-pink-600 hover:border-pink-400 hover:bg-stone-700 cursor-pointer shadow-pink-900/30 hover:shadow-pink-500/50 hover:scale-110 active:scale-95'
+                                                }`}
+                                        >
+                                            {isAdrenaline && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+                                                    <span className="text-red-500 text-2xl md:text-3xl">🚫</span>
+                                                </div>
+                                            )}
+                                            <div className={`mb-2 ${isAdrenaline ? 'text-stone-600' :
+                                                item === 'BEER' ? 'text-amber-500' :
+                                                    item === 'CIGS' ? 'text-red-500' :
+                                                        item === 'GLASS' ? 'text-cyan-500' :
+                                                            item === 'CUFFS' ? 'text-stone-400' :
+                                                                item === 'SAW' ? 'text-orange-600' :
+                                                                    item === 'PHONE' ? 'text-blue-300' :
+                                                                        item === 'INVERTER' ? 'text-green-400' : 'text-stone-300'
+                                                }`}>
+                                                {item === 'BEER' && <Icons.Beer size={36} />}
+                                                {item === 'CIGS' && <Icons.Cigs size={36} />}
+                                                {item === 'GLASS' && <Icons.Glass size={36} />}
+                                                {item === 'CUFFS' && <Icons.Cuffs size={36} />}
+                                                {item === 'SAW' && <Icons.Saw size={36} />}
+                                                {item === 'PHONE' && <Icons.Phone size={36} />}
+                                                {item === 'INVERTER' && <Icons.Inverter size={36} />}
+                                                {item === 'ADRENALINE' && <Icons.Adrenaline size={36} />}
+                                            </div>
+                                            <span className={`text-xs md:text-sm font-bold tracking-wider ${isAdrenaline ? 'text-stone-600 line-through' : 'text-stone-200'}`}>
+                                                {item === 'INVERTER' ? 'INVERT' : item}
+                                            </span>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        <div className="mt-6 text-stone-500 text-xs md:text-sm">
+                            Stolen item will be USED IMMEDIATELY • <span className="text-red-500">ADRENALINE cannot be stolen</span>
                         </div>
                     </div>
                 )}

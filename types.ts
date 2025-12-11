@@ -73,15 +73,20 @@ export interface SceneContext {
   bulletMesh: THREE.Mesh;
   dealerGroup: THREE.Group;
   shellCasing: THREE.Mesh;
-  shellVel: THREE.Vector3;
+  shellCasings?: THREE.Mesh[];
+  shellVelocities?: THREE.Vector3[];
+  nextShellIndex?: number;
   mouse: THREE.Vector2;
   raycaster: THREE.Raycaster;
   barrelMesh: THREE.Mesh;
+  pumpMesh: THREE.Mesh;
+  magTubeMesh: THREE.Mesh;
   bloodParticles: THREE.Points;
   sparkParticles: THREE.Points;
   dustParticles: THREE.Points;
   baseLights: { light: THREE.Light, baseIntensity: number }[];
   underLight?: THREE.PointLight;
+  ejectedShells?: THREE.Group[]; // Pool of ejected shells on table
   itemsGroup?: {
     itemBeer: THREE.Group;
     itemCigs: THREE.Group;

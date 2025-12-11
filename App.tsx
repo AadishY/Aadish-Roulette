@@ -82,6 +82,7 @@ export default function App() {
     setPlayer: spGame.setPlayer,
     setTargetAim: spGame.setAimTarget,
     setCameraView: spGame.setCameraView,
+    setOverlayText: spGame.setOverlayText,
     isMultiplayer: isMultiplayerMode
   });
 
@@ -178,7 +179,7 @@ export default function App() {
 
       {/* 3D Scene */}
       <ThreeScene
-        isSawed={game.player.isSawedActive}
+        isSawed={game.player.isSawedActive || game.dealer.isSawedActive}
         isPlayerCuffed={game.player.isHandcuffed}
         knownShell={game.knownShell}
         onGunClick={() => { }}

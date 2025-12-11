@@ -13,6 +13,7 @@ interface DealerAIProps {
     setPlayer: React.Dispatch<React.SetStateAction<PlayerState>>;
     setTargetAim: (aim: AimTarget) => void;
     setCameraView: (view: CameraView) => void;
+    setOverlayText?: React.Dispatch<React.SetStateAction<string | null>>;
     isMultiplayer?: boolean; // Disable AI in multiplayer mode
 }
 
@@ -27,6 +28,7 @@ export const useDealerAI = ({
     setPlayer,
     setTargetAim,
     setCameraView,
+    setOverlayText,
     isMultiplayer = false
 }: DealerAIProps) => {
     const isAITurnInProgress = useRef(false);
@@ -53,7 +55,7 @@ export const useDealerAI = ({
 
             const runAITurn = async () => {
                 try {
-                    await wait(1000);
+                    await wait(1800); // Initial thinking pause - more deliberate
 
                     const lives = gameState.liveCount;
                     const blanks = gameState.blankCount;
@@ -221,43 +223,50 @@ export const useDealerAI = ({
                                     }
                                 }
 
-                                if (stealIdx === -1) stealIdx = Math.floor(Math.random() * player.items.length);
+                                // Last resort: Pick first non-ADRENALINE item
+                                if (stealIdx === -1) {
+                                    for (let i = 0; i < player.items.length; i++) {
+                                        if (player.items[i] !== 'ADRENALINE') {
+                                            stealIdx = i;
+                                            break;
+                                        }
+                                    }
+                                }
 
-                                const stolenItem = player.items[stealIdx];
+                                // If only adrenaline left, can't steal anything
+                                if (stealIdx === -1) {
+                                    if (setOverlayText) {
+                                        setOverlayText("NO STEALABLE ITEMS!");
+                                        setTimeout(() => setOverlayText?.(null), 1500);
+                                    }
+                                    // Continue to next action
+                                } else {
+                                    const stolenItem = player.items[stealIdx];
 
-                                // Remove from player
-                                setPlayer(p => {
-                                    const newItems = [...p.items];
-                                    newItems.splice(stealIdx, 1);
-                                    return { ...p, items: newItems };
-                                });
+                                    // Show steal message
+                                    if (setOverlayText) {
+                                        setOverlayText(`🎯 DEALER STOLE ${stolenItem}!`);
+                                        setTimeout(() => setOverlayText?.(null), 2000);
+                                    }
 
-                                // Dealer USES it immediately (Just like player)
-                                // We don't add to Dealer inventory, we just trigger effect
-                                // BUT: Some items (Saw, Cuffs) require state checks inside itemActions which might check Dealer Inventory? 
-                                // Actually itemActions usually takes 'user' and applies effect.
-                                // useGameLogic's processItemEffect handles logic often assuming item was consumed.
-                                // Let's just call processItemEffect. 
-                                // Note: We need to handle animations.
+                                    // Remove from player
+                                    setPlayer(p => {
+                                        const newItems = [...p.items];
+                                        newItems.splice(stealIdx, 1);
+                                        return { ...p, items: newItems };
+                                    });
 
-                                // Give visual feedback of theft
-                                // addLog via processItemEffect isn't available here directly, but processItemEffect logs usage.
-                                // We should probably log the theft first? No access to addLog.
-                                // Let's just wait and use.
-
-                                await wait(800);
-                                await processItemEffect('DEALER', stolenItem);
-
-                                // Log it? processItemEffect already logged "DEALER IS HYPED".
-                                // We should log the theft?
-                                // We don't have addLog here easily, it's inside useGameLogic.
-                                // But visuals will update (item disappears from player).
+                                    await wait(1500); // Wait for steal message to be visible
+                                    await processItemEffect('DEALER', stolenItem);
+                                    await wait(500); // Post-effect sync
+                                }
                             }
                         }
 
-                        await wait(1500);
+                        await wait(1800); // Post-item action pause
 
                         if (!roundEnded) {
+                            await wait(1000); // Pause before next action
                             isAITurnInProgress.current = false;
                             setAiTick(t => t + 1); // Rerun logic
                         } else {
@@ -267,23 +276,31 @@ export const useDealerAI = ({
                     }
 
                     // --- SHOOT ---
-                    await wait(500);
+                    // Phase 1: Pick up gun (show dealer preparing)
+                    await wait(1000); // Initial pause
+                    setTargetAim('IDLE'); // Gun at ready position first
+                    await wait(1200); // Let gun move to ready position
+
                     let target: TurnOwner = 'PLAYER';
 
                     // Decision
                     if (currentKnowledge === 'LIVE') target = 'PLAYER';
                     else if (currentKnowledge === 'BLANK') target = 'DEALER';
                     else {
-                        // Probabilistic approach
+                        // Probabilistic approach with slight hesitation
+                        await wait(600); // Extra thinking time when uncertain
                         if (liveProb >= 0.5) target = 'PLAYER'; // Aggressive
                         else target = 'DEALER'; // Play safe
                     }
 
+                    // Phase 2: Aim at target (dramatic pause)
                     setTargetAim(target === 'PLAYER' ? 'OPPONENT' : 'SELF');
-                    await wait(1000);
+                    await wait(1800); // Let gun smoothly move to aim position
 
+                    // Phase 3: Fire
                     aiKnownShell.current = null;
                     await fireShot('DEALER', target);
+
 
                 } catch (e) {
                     console.error("AI Error", e);

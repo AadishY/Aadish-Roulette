@@ -80,19 +80,24 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const camera = new THREE.PerspectiveCamera(propsRef.current.settings.fov || defaultFov, width / height, 0.1, 100);
             camera.position.set(0, 4, 14);
 
+            // Detect mobile for performance optimization
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || width < 900;
+
             const renderer = new THREE.WebGLRenderer({
                 antialias: false,
-                powerPreference: 'high-performance',
+                powerPreference: isMobile ? 'low-power' : 'high-performance',
                 alpha: false
             });
 
-            const pixelScale = propsRef.current.settings.pixelScale || 3;
+            // Lower resolution on mobile for better performance
+            const pixelScale = isMobile ? 4 : (propsRef.current.settings.pixelScale || 3);
             renderer.setSize(width / pixelScale, height / pixelScale, false);
             renderer.domElement.style.width = '100%';
             renderer.domElement.style.height = '100%';
             renderer.domElement.style.imageRendering = 'pixelated';
 
-            renderer.shadowMap.enabled = true;
+            // Disable shadows on mobile for performance
+            renderer.shadowMap.enabled = !isMobile;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.1;
@@ -103,10 +108,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             createEnvironment(scene);
             const dustParticles = createDust(scene);
             createTable(scene);
-            const { gunGroup, barrelMesh, muzzleFlash } = createGunModel(scene);
-            const { bulletMesh, shellCasing } = createProjectiles(scene);
+            const { gunGroup, barrelMesh, muzzleFlash, pump, magTube } = createGunModel(scene);
+            const { bulletMesh, shellCasing, shellCasings, shellVelocities } = createProjectiles(scene);
 
-            // === ITEM MODELS ===
             // === ITEM MODELS ===
             const itemBeer = createBeerCan(); itemBeer.visible = false; scene.add(itemBeer);
             const itemCigs = createCigarette(); itemCigs.visible = false; scene.add(itemCigs);
@@ -162,7 +166,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             scene.userData.isMultiplayer = isMultiplayerGame;
 
             // dedicated light on gunGroup for visibility when dealer holds it
-            const gunLight = new THREE.PointLight(0xffeebb, 0, 15); // Increased range and lighter color
+            const gunLight = new THREE.PointLight(0xffeebb, 0, 15);
             gunLight.position.set(0, 0.5, 0);
             gunGroup.add(gunLight);
 
@@ -191,7 +195,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const bloodParticles = new THREE.Points(particles, pMat);
             scene.add(bloodParticles);
 
-            const sparkCount = 100; // Increased
+            const sparkCount = 100;
             const sparkGeo = new THREE.BufferGeometry();
             const sPos = new Float32Array(sparkCount * 3);
             const sVel = new Float32Array(sparkCount * 3);
@@ -204,27 +208,43 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
-            const shellVel = new THREE.Vector3();
 
-            // We need to ensure muzzleFlash (now a Group) matches the Context type which we updated to Group
-            // However, the state in ThreeScene might not interpret createGunModel return correctly if not typed.
-            // Let's force it.
             sceneRef.current = {
                 scene, camera, renderer, gunGroup, muzzleFlash, muzzleLight, roomRedLight, bulbLight, gunLight,
-                bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles, baseLights, underLight,
-                itemsGroup // Add to context
+                bulletMesh, dealerGroup, shellCasing, shellCasings, shellVelocities, mouse, raycaster, barrelMesh,
+                pumpMesh: pump, magTubeMesh: magTube,
+                bloodParticles, sparkParticles, dustParticles, baseLights, underLight,
+                itemsGroup,
+                nextShellIndex: 0 // Track which shell to use next
             };
+
 
             updateCameraResponsive();
         };
 
+        // Detect mobile for FPS limiting (outside initThree for access in animate)
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 900;
+
         let frameId = 0;
         let time = 0;
+        let lastTime = performance.now();
+        const targetFPS = isMobile ? 30 : 60; // Limit FPS on mobile
+        const frameInterval = 1000 / targetFPS;
+        let lastFrameTime = 0;
 
-        const animate = () => {
+        const animate = (currentTime: number = 0) => {
             frameId = requestAnimationFrame(animate);
             if (!sceneRef.current) return;
-            time += 0.01;
+
+            // Frame rate limiting for mobile
+            const elapsed = currentTime - lastFrameTime;
+            if (elapsed < frameInterval) return;
+            lastFrameTime = currentTime - (elapsed % frameInterval);
+
+            // Delta time for smooth animations (capped to prevent jumps)
+            const delta = Math.min((currentTime - lastTime) / 1000, 0.05);
+            lastTime = currentTime;
+            time += delta;
 
             updateScene(sceneRef.current, propsRef.current, time);
         };
@@ -348,15 +368,34 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     useEffect(() => {
         if (!sceneRef.current) return;
-        const { barrelMesh } = sceneRef.current;
+        const { barrelMesh, pumpMesh, magTubeMesh } = sceneRef.current;
         if (animState.isSawing) {
+            // During sawing animation, keep at full size
             barrelMesh.scale.y = 1;
+            pumpMesh.scale.y = 1;
+            magTubeMesh.scale.y = 1;
         } else if (isSawed) {
+            // Sawed off - shorten barrel, pump (brown foregrip), and mag tube
             barrelMesh.scale.y = 0.43;
             barrelMesh.position.z = 2.5;
+
+            // Also cut the pump (brown wooden foregrip)
+            pumpMesh.scale.y = 0.5;
+            pumpMesh.position.z = 2.8;
+
+            // Also cut the mag tube
+            magTubeMesh.scale.y = 0.45;
+            magTubeMesh.position.z = 2.0;
         } else {
+            // Normal state
             barrelMesh.scale.y = 1;
             barrelMesh.position.z = 4.5;
+
+            pumpMesh.scale.y = 1;
+            pumpMesh.position.z = 4.5;
+
+            magTubeMesh.scale.y = 1;
+            magTubeMesh.position.z = 4.0;
         }
     }, [isSawed, animState.isSawing]);
 
@@ -458,16 +497,56 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     useEffect(() => {
         if (animState.triggerRack === 0 || !sceneRef.current) return;
-        const { shellCasing, shellVel, gunGroup } = sceneRef.current;
-        const mat = (shellCasing as THREE.Mesh).material as THREE.MeshStandardMaterial;
-        if (animState.ejectedShellColor === 'blue') mat.color.setHex(0x2563eb);
-        else mat.color.setHex(0xb91c1c);
-        shellCasing.visible = true;
-        shellCasing.position.copy(gunGroup.position);
-        shellCasing.position.y += 0.5;
-        shellVel.set((Math.random() - 0.5) * 0.4, 0.45, 0);
+        const { shellCasings, shellVelocities, gunGroup } = sceneRef.current;
+
+        if (!shellCasings || !shellVelocities) return;
+
+        // Get next shell index (rotating 0, 1, 2, 0, 1, 2...)
+        const nextIdx = sceneRef.current.nextShellIndex ?? 0;
+        const shell = shellCasings[nextIdx];
+        const vel = shellVelocities[nextIdx];
+
+        // Update to next index for next ejection
+        sceneRef.current.nextShellIndex = (nextIdx + 1) % 3;
+
+        const mat = shell.material as THREE.MeshStandardMaterial;
+
+        // Set shell color based on ejected shell type
+        if (animState.ejectedShellColor === 'blue') {
+            mat.color.setHex(0x3b82f6); // Brighter blue
+            mat.emissive.setHex(0x1e40af);
+            mat.emissiveIntensity = 0.5;
+        } else {
+            mat.color.setHex(0xef4444); // Brighter red
+            mat.emissive.setHex(0x991b1b);
+            mat.emissiveIntensity = 0.4;
+        }
+
+        // Make shell more visible
+        shell.scale.setScalar(2.0);
+        shell.visible = true;
+
+        // Use predefined position for this shell slot + small random variation
+        const basePos = shell.userData.basePosition || { x: 0, z: 0 };
+        shell.position.set(
+            basePos.x + (Math.random() - 0.5) * 0.3, // Small X variation around slot
+            3, // Start from above
+            basePos.z + (Math.random() - 0.5) * 0.3  // Small Z variation
+        );
+
+        // Reset landing timer
+        shell.userData.landedAt = null;
+
+        // Minimal velocity - just drop straight down with tiny wobble
+        vel.set(
+            (Math.random() - 0.5) * 0.02,
+            0.05,
+            (Math.random() - 0.5) * 0.02
+        );
+
         gunGroup.rotation.x -= 0.4;
     }, [animState.triggerRack, animState.ejectedShellColor]);
+
 
     return <div ref={containerRef} className="absolute inset-0 z-0 bg-neutral-950" />;
 };
