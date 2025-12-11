@@ -1,78 +1,85 @@
 import * as THREE from 'three';
 
 export const setupLighting = (scene: THREE.Scene) => {
-    // Linear Fog to fade background but keep props visible. Darker fog for mood.
-    // scene.fog = new THREE.Fog(0x050505, 10, 50);
-    // Exponential fog for better depth falloff
-    scene.fog = new THREE.FogExp2(0x020202, 0.02);
+    // Dense, dark volumetric-ish fog
+    scene.fog = new THREE.FogExp2(0x05070a, 0.035);
 
-    // Reduced ambient for more contrasty look
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    // Ultra-low ambient to force reliance on practical lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.15);
     scene.add(ambient);
 
-    // Main Hanging Bulb - Warmer and moodier
-    const bulbLight = new THREE.PointLight(0xffaa55, 30.0, 50);
+    // Main Hanging Bulb - Warm Tungsten, flickering intensity managed in sceneLogic
+    const bulbLight = new THREE.PointLight(0xffaa55, 45.0, 60);
     bulbLight.position.set(0, 9, 0);
     bulbLight.castShadow = true;
-    bulbLight.shadow.bias = -0.0001;
-    bulbLight.shadow.mapSize.width = 1024;
-    bulbLight.shadow.mapSize.height = 1024;
+    bulbLight.shadow.bias = -0.00005;
+    bulbLight.shadow.mapSize.width = 2048; // Sharper shadows
+    bulbLight.shadow.mapSize.height = 2048;
+    bulbLight.shadow.radius = 2; // Soft edges
     scene.add(bulbLight);
 
-    // Front Fill Light - Reduced blue tint, more neutral/dark
-    const playerFill = new THREE.DirectionalLight(0x556677, 0.4);
-    playerFill.position.set(2, 2, 10);
+    // Cool Blue Fill - Simulates ambient moon/city light from vents
+    const playerFill = new THREE.DirectionalLight(0x445577, 0.5);
+    playerFill.position.set(-5, 2, 10);
     scene.add(playerFill);
 
-    // Background Blue Rim (Cinematic depth) - Slightly stronger and cooler
-    // Background Blue Rim (Cinematic depth) - Brighter and wider
-    const bgRim = new THREE.DirectionalLight(0x335577, 4.0);
-    bgRim.position.set(-15, 8, -25);
-    bgRim.target.position.set(0, 0, -15);
+    // Cinematic Rim Light (Warm) - Highlights player/dealer edges
+    const bgRim = new THREE.DirectionalLight(0xff9966, 2.5);
+    bgRim.position.set(15, 5, -20);
+    bgRim.target.position.set(0, 4, 0);
     scene.add(bgRim);
     scene.add(bgRim.target);
 
-    // Strong Back Rim Light for Dealer silhouette
-    const dealerRim = new THREE.SpotLight(0xaaccff, 20);
-    dealerRim.position.set(5, 8, -20);
-    dealerRim.target.position.set(0, 5, -14); // Aim at Dealer Head
+    // Cold Rim Light (Opposite side)
+    const coldRim = new THREE.SpotLight(0x4488ff, 8);
+    coldRim.position.set(-15, 8, -20);
+    coldRim.target.position.set(0, 4, 0);
+    coldRim.angle = 0.6;
+    coldRim.penumbra = 0.5;
+    scene.add(coldRim);
+    scene.add(coldRim.target);
+
+    // Dealer Rim Light - Strong Silhouette
+    const dealerRim = new THREE.SpotLight(0xaaccff, 15);
+    dealerRim.position.set(0, 10, -25);
+    dealerRim.target.position.set(0, 5, -14);
     dealerRim.angle = 0.5;
     dealerRim.penumbra = 1;
     scene.add(dealerRim);
     scene.add(dealerRim.target);
 
-    // Spot Light focused on Table Gun area
-    const gunSpot = new THREE.SpotLight(0xffeeb0, 1000);
-    gunSpot.position.set(0, 12, 1);
-    gunSpot.target.position.set(0, -1, 4);
-    gunSpot.angle = 0.6;
-    gunSpot.penumbra = 0.4;
+    // Table Spotlight - Focused and bright
+    const gunSpot = new THREE.SpotLight(0xffddaa, 1200);
+    gunSpot.position.set(0, 14, 2);
+    gunSpot.target.position.set(0, 0, 4);
+    gunSpot.angle = 0.45;
+    gunSpot.penumbra = 0.3;
     gunSpot.castShadow = true;
     scene.add(gunSpot);
     scene.add(gunSpot.target);
 
-    // Rim Light (General Back)
-    const rimLight = new THREE.SpotLight(0x334455, 5);
+    // General Rim
+    const rimLight = new THREE.SpotLight(0x334455, 4);
     rimLight.position.set(0, 10, -25);
     rimLight.lookAt(0, 5, -14);
     scene.add(rimLight);
 
-    // Table Glow
-    const tableGlow = new THREE.PointLight(0xff6600, 1.5, 8);
-    tableGlow.position.set(0, 1, 3);
+    // Bounce Light from Table Surface (Fake GI)
+    const tableGlow = new THREE.PointLight(0x996633, 1.0, 10);
+    tableGlow.position.set(0, 0.5, 0);
     scene.add(tableGlow);
 
-    // Dynamic Lights (Muzzle & Room Red)
-    const muzzleLight = new THREE.PointLight(0xffaa00, 0, 15);
+    // Dynamic Lights (Muzzle & Room Red) - Initialized to 0
+    const muzzleLight = new THREE.PointLight(0xffaa00, 0, 20);
     scene.add(muzzleLight);
 
-    const roomRedLight = new THREE.PointLight(0xff0000, 0, 50);
+    const roomRedLight = new THREE.PointLight(0xff0000, 0, 80);
     roomRedLight.position.set(0, 10, 0);
     scene.add(roomRedLight);
 
-    // Creepy Under-Light for Dealer
-    const underLight = new THREE.PointLight(0x44ffaa, 2.0, 10);
-    underLight.position.set(0, -2, -12);
+    // Spooky Under-lighting for Dealer face
+    const underLight = new THREE.PointLight(0x22ffaa, 1.0, 8);
+    underLight.position.set(0, -3, -11);
     scene.add(underLight);
 
     return { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight: playerFill, ambient, bgRim, dealerRim, underLight };
@@ -236,6 +243,25 @@ export const createEnvironment = (scene: THREE.Scene) => {
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.8), new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x00ff00, emissiveIntensity: 0.2 }));
     screen.position.set(-10, -5, -20.9); screen.rotation.y = 0.4;
     scene.add(screen);
+
+    // --- CAGE / FENCE BACKGROUND ---
+    const fenceGroup = new THREE.Group();
+    const wireMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7, metalness: 0.5 });
+
+    // Horizontal Bars
+    for (let i = 0; i < 6; i++) {
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 50), wireMat);
+        bar.rotation.z = Math.PI / 2;
+        bar.position.set(0, -5 + i * 2, -18);
+        fenceGroup.add(bar);
+    }
+    // Vertical Bars
+    for (let i = -12; i <= 12; i += 2) {
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 14), wireMat);
+        bar.position.set(i * 2, 0, -18);
+        fenceGroup.add(bar);
+    }
+    scene.add(fenceGroup);
 };
 
 function generateGlowTexture() {

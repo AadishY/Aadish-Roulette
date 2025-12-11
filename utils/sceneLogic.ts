@@ -17,9 +17,16 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     }
 
-    // Bulb Flicker & Sway
-    const flicker = (Math.random() > 0.98 ? (Math.random() * 2.0 + 12.0) : THREE.MathUtils.lerp(bulbLight.intensity / (Math.pow(brightnessMult, 0.5) || 1), 12.0, 0.1));
-    bulbLight.intensity = flicker * Math.pow(brightnessMult, 0.5);
+    // Bulb Flicker - Electrical Instability
+    const bulbBase = baseLights.find(b => b.light === bulbLight)?.baseIntensity || 45.0;
+    // Occasional deeper dimming or bright sparks
+    let target = bulbBase;
+    if (Math.random() > 0.96) target = bulbBase * (0.5 + Math.random() * 0.8); // Drop or spike
+
+    // Smooth flickering
+    const currentBase = bulbLight.intensity / brightnessMult;
+    const flicker = THREE.MathUtils.lerp(currentBase, target, 0.2);
+    bulbLight.intensity = flicker * brightnessMult;
 
     // SWAY LOGIC
     const bulbGroup = scene.getObjectByName('HANGING_LIGHT');

@@ -104,7 +104,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
             containerRef.current.appendChild(renderer.domElement);
 
-            const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim, underLight } = setupLighting(scene);
+            const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim, dealerRim, underLight } = setupLighting(scene);
             createEnvironment(scene);
             const dustParticles = createDust(scene);
             createTable(scene);
@@ -171,14 +171,17 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             gunGroup.add(gunLight);
 
             // Capture base intensities for scaling brightness
+            // Capture base intensities for scaling brightness dynamically
             const baseLights = [
-                { light: bulbLight, baseIntensity: 15.0 },
-                { light: gunSpot, baseIntensity: 800 },
-                { light: tableGlow, baseIntensity: 2.0 },
-                { light: rimLight, baseIntensity: 10 },
-                { light: fillLight, baseIntensity: 0.6 },
-                { light: ambient, baseIntensity: 0.5 },
-                { light: bgRim, baseIntensity: 1.5 },
+                { light: bulbLight, baseIntensity: bulbLight.intensity },
+                { light: gunSpot, baseIntensity: gunSpot.intensity },
+                { light: tableGlow, baseIntensity: tableGlow.intensity },
+                { light: rimLight, baseIntensity: rimLight.intensity },
+                { light: fillLight, baseIntensity: fillLight.intensity },
+                { light: ambient, baseIntensity: ambient.intensity },
+                { light: bgRim, baseIntensity: bgRim.intensity },
+                { light: dealerRim, baseIntensity: dealerRim.intensity },
+                { light: underLight, baseIntensity: underLight.intensity }
             ];
 
             // Particles setup
