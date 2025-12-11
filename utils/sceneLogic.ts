@@ -554,6 +554,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         if (scene.userData.lastAdrenaline === undefined) scene.userData.lastAdrenaline = animState.triggerAdrenaline;
 
         // GLASS ANIMATION - Shortened for dealer
+        if (animState.triggerGlass < scene.userData.lastGlass) scene.userData.lastGlass = animState.triggerGlass;
         if (animState.triggerGlass > scene.userData.lastGlass) {
             scene.userData.lastGlass = animState.triggerGlass;
             scene.userData.glassStart = time;
@@ -592,6 +593,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // BEER ANIMATION - Smoother
+        if (animState.triggerDrink < scene.userData.lastDrink) scene.userData.lastDrink = animState.triggerDrink; // Reset check
         if (animState.triggerDrink > scene.userData.lastDrink) {
             scene.userData.lastDrink = animState.triggerDrink;
             scene.userData.drinkStart = time;
@@ -647,6 +649,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // RACK ANIMATION (Shell ejection handled in ThreeScene.tsx)
+        if (animState.triggerRack < scene.userData.lastRack) scene.userData.lastRack = animState.triggerRack;
         if (animState.triggerRack > scene.userData.lastRack) {
             scene.userData.lastRack = animState.triggerRack;
             scene.userData.rackStart = time;
@@ -660,6 +663,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
 
 
         // CIGARETTE - SMOKE & GLOW
+        if (animState.triggerHeal < scene.userData.lastHeal) scene.userData.lastHeal = animState.triggerHeal;
         if (animState.triggerHeal > scene.userData.lastHeal) {
             scene.userData.lastHeal = animState.triggerHeal;
             scene.userData.healStart = time;
@@ -755,6 +759,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // SAW ANIMATION (Restored)
+        if (animState.triggerSparks < scene.userData.lastSaw) scene.userData.lastSaw = animState.triggerSparks;
         if (animState.isSawing || (animState.triggerSparks > scene.userData.lastSaw)) {
             if (animState.triggerSparks > scene.userData.lastSaw) scene.userData.lastSaw = animState.triggerSparks;
             items.itemSaw.visible = true;
@@ -778,6 +783,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // CUFFS ANIMATION - Improved visibility
+        if (animState.triggerCuff < scene.userData.lastCuff) scene.userData.lastCuff = animState.triggerCuff;
         if (animState.triggerCuff > scene.userData.lastCuff) {
             scene.userData.lastCuff = animState.triggerCuff;
             scene.userData.cuffStart = time;
@@ -821,6 +827,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // PHONE ANIMATION - Enhanced with screen glow
+        if (animState.triggerPhone < scene.userData.lastPhone) scene.userData.lastPhone = animState.triggerPhone;
         if (animState.triggerPhone > scene.userData.lastPhone) {
             scene.userData.lastPhone = animState.triggerPhone;
             scene.userData.phoneStart = time;
@@ -883,6 +890,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // INVERTER ANIMATION - Enhanced with spin and energy effect
+        if (animState.triggerInverter < scene.userData.lastInverter) scene.userData.lastInverter = animState.triggerInverter;
         if (animState.triggerInverter > scene.userData.lastInverter) {
             scene.userData.lastInverter = animState.triggerInverter;
             scene.userData.inverterStart = time;
@@ -932,6 +940,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         }
 
         // ADRENALINE ANIMATION - Enhanced with injection effect
+        if (animState.triggerAdrenaline < scene.userData.lastAdrenaline) scene.userData.lastAdrenaline = animState.triggerAdrenaline;
         if (animState.triggerAdrenaline > scene.userData.lastAdrenaline) {
             scene.userData.lastAdrenaline = animState.triggerAdrenaline;
             scene.userData.adrStart = time;

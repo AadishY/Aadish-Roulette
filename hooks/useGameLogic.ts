@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GameState, PlayerState, ShellType, ItemType, LogEntry, TurnOwner, CameraView, AimTarget, AnimationState } from '../types';
 import { MAX_HP, MAX_ITEMS, ITEMS } from '../constants';
 import { randomInt, wait } from '../utils/gameUtils';
@@ -63,7 +63,6 @@ export const useGameLogic = () => {
   // Load name on mount and handle boot
   useEffect(() => {
     const saved = localStorage.getItem('aadish_roulette_name');
-    console.log("Loading name from localStorage:", saved);
     if (saved) setPlayerName(saved);
 
     // Simulate System Boot
@@ -117,8 +116,16 @@ export const useGameLogic = () => {
     return 'ADRENALINE';
   };
 
+  const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // --- Logic ---
   const resetGame = (toMenu: boolean = false) => {
+    // Clear any pending restart
+    if (resetTimeoutRef.current) {
+      clearTimeout(resetTimeoutRef.current);
+      resetTimeoutRef.current = null;
+    }
+
     // Reset all states FIRST
     setReceivedItems([]); // Clear loot overlay items
     setShowLootOverlay(false);
@@ -148,14 +155,14 @@ export const useGameLogic = () => {
 
     if (!toMenu) {
       // Delay startRound to ensure all state resets are flushed to React
-      setTimeout(() => {
+      resetTimeoutRef.current = setTimeout(() => {
         startRound(true);
+        resetTimeoutRef.current = null;
       }, 200);
     }
   };
 
   const startGame = (name: string) => {
-    console.log("Saving name to localStorage:", name);
     localStorage.setItem('aadish_roulette_name', name);
     setPlayerName(name);
     setGameState(prev => ({ ...prev, phase: 'LOAD' }));
@@ -232,7 +239,7 @@ export const useGameLogic = () => {
     const dNew = generateLoot();
 
     // Store items for reference (for debugging consistency)
-    console.log('[LOOT] Player items:', pNew, 'Dealer items:', dNew);
+    // console.log('[LOOT] Player items:', pNew, 'Dealer items:', dNew);
 
     // SAFETY: Clear any previous overlay state
     setShowLootOverlay(false);

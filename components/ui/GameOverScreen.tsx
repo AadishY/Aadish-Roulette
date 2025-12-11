@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, RotateCcw, Power } from 'lucide-react';
+import { Skull, Power } from 'lucide-react';
 import { TurnOwner } from '../../types';
 
 interface GameOverScreenProps {
@@ -20,11 +20,8 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
             </div>
             {winner === 'DEALER' && <Skull size={80} className="md:w-32 md:h-32 text-red-800 mb-8 md:mb-12 animate-bounce" />}
             {winner === 'PLAYER' && <div className="text-4xl mb-8 animate-bounce text-green-700">$ 1,000,000</div>}
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full max-w-xl px-8">
-                <button onClick={() => onResetGame(false)} className="flex-1 py-4 md:py-6 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-red-600 hover:text-white transition-all tracking-widest flex items-center justify-center gap-3 group">
-                    <RotateCcw size={20} className="group-hover:-rotate-180 transition-transform" /> RESTART
-                </button>
-                <button onClick={() => onResetGame(true)} className="flex-1 py-4 md:py-6 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg md:text-xl hover:bg-stone-800 hover:text-white transition-all tracking-widest flex items-center justify-center gap-3">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full max-w-xl px-8 items-center justify-center">
+                <button onClick={() => onResetGame(true)} className="w-full md:w-auto px-12 py-4 md:py-6 bg-stone-100 text-black font-black text-lg md:text-xl hover:bg-stone-300 transition-all tracking-widest flex items-center justify-center gap-3">
                     <Power size={20} /> MAIN MENU
                 </button>
             </div>
