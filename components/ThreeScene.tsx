@@ -105,8 +105,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             containerRef.current.appendChild(renderer.domElement);
 
             const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim, dealerRim, underLight } = setupLighting(scene);
-            createEnvironment(scene);
-            const dustParticles = createDust(scene);
+            createEnvironment(scene, isMobile);
+            const dustParticles = createDust(scene, isMobile);
             createTable(scene);
             const { gunGroup, barrelMesh, muzzleFlash, pump, magTube } = createGunModel(scene);
             const { bulletMesh, shellCasing, shellCasings, shellVelocities } = createProjectiles(scene);
@@ -184,8 +184,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 { light: underLight, baseIntensity: underLight.intensity }
             ];
 
-            // Particles setup
-            const particleCount = 150;
+            // Particles setup (Reduced for mobile)
+            const particleCount = isMobile ? 40 : 150;
             const particles = new THREE.BufferGeometry();
             const pPositions = new Float32Array(particleCount * 3);
             const pVelocities = new Float32Array(particleCount * 3);
@@ -198,7 +198,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const bloodParticles = new THREE.Points(particles, pMat);
             scene.add(bloodParticles);
 
-            const sparkCount = 100;
+            const sparkCount = isMobile ? 30 : 100;
             const sparkGeo = new THREE.BufferGeometry();
             const sPos = new Float32Array(sparkCount * 3);
             const sVel = new Float32Array(sparkCount * 3);

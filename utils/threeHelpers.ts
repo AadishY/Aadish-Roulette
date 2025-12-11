@@ -85,7 +85,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     return { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight: playerFill, ambient, bgRim, dealerRim, underLight };
 };
 
-export const createEnvironment = (scene: THREE.Scene) => {
+export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false) => {
     // Floor
     const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(100, 100),
@@ -93,8 +93,15 @@ export const createEnvironment = (scene: THREE.Scene) => {
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -8;
-    floor.receiveShadow = true;
+    floor.receiveShadow = !isMobile;
     scene.add(floor);
+
+    // Grunge Back Wall (Behind the Cage)
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.95 });
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), wallMat);
+    backWall.position.set(0, 5, -28);
+    backWall.receiveShadow = !isMobile;
+    scene.add(backWall);
 
     const crateMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
 
@@ -103,8 +110,10 @@ export const createEnvironment = (scene: THREE.Scene) => {
         const box = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), crateMat);
         box.position.set(x, y, z);
         box.rotation.y = r;
-        box.castShadow = true;
-        box.receiveShadow = true;
+        if (!isMobile) {
+            box.castShadow = true;
+            box.receiveShadow = true;
+        }
         scene.add(box);
         return box;
     };
@@ -122,7 +131,7 @@ export const createEnvironment = (scene: THREE.Scene) => {
     // Far Back Props (Silhouettes)
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(12, 10, 1), crateMat);
     shelf.position.set(0, -3, -20);
-    shelf.receiveShadow = true;
+    shelf.receiveShadow = !isMobile;
     scene.add(shelf);
 
     // Bulb & Wire Group for animation
@@ -130,15 +139,12 @@ export const createEnvironment = (scene: THREE.Scene) => {
     bulbGroup.name = "BULB_GROUP";
     scene.add(bulbGroup);
 
-    // Wire (We will update its rotation/geometry in sceneLogic or just rotate the group? No, swinging pivot is at top)
-    // Actually simpler: The pivot point is at the ceiling (say y=15).
-    // The bulb hangs down.
-
     // Wire Geometry
     const wireGeo = new THREE.CylinderGeometry(0.02, 0.02, 6);
     const wire = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
-    wire.position.set(0, -3, 0); // Center of cylinder is -3 local. Pivot is at 0,0,0 of Group?
-    // Let's make a Pivot Group at ceiling height y=14
+    wire.position.set(0, -3, 0);
+
+    // Ceiling Pivot Group
     const hangingLight = new THREE.Group();
     hangingLight.name = "HANGING_LIGHT";
     hangingLight.position.set(0, 14, 0);
@@ -157,22 +163,22 @@ export const createEnvironment = (scene: THREE.Scene) => {
         })
     );
     bulb.position.set(0, -6, 0); // End of wire
-    bulb.castShadow = true;
+    if (!isMobile) bulb.castShadow = true;
     hangingLight.add(bulb);
 
-    // Fake Volumetric Glow Sprite
-    const spriteMat = new THREE.SpriteMaterial({
-        map: generateGlowTexture(),
-        color: 0xffaa00,
-        transparent: true,
-        opacity: 0.4,
-        blending: THREE.AdditiveBlending
-    });
-    const glowSprite = new THREE.Sprite(spriteMat);
-    glowSprite.scale.set(6, 6, 1);
-    bulb.add(glowSprite);
-
-
+    // Fake Volumetric Glow Sprite (Only on Desktop)
+    if (!isMobile) {
+        const spriteMat = new THREE.SpriteMaterial({
+            map: generateGlowTexture(),
+            color: 0xffaa00,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending
+        });
+        const glowSprite = new THREE.Sprite(spriteMat);
+        glowSprite.scale.set(6, 6, 1);
+        bulb.add(glowSprite);
+    }
 
     // --- ENHANCED BACKGROUND PROPS ---
     const boxGeo = new THREE.BoxGeometry(3, 3, 3);
@@ -193,16 +199,29 @@ export const createEnvironment = (scene: THREE.Scene) => {
     drum.position.set(2, -6, -26);
     scene.add(drum);
 
+    // Floor Debris (Random papers/scraps)
+    if (!isMobile) {
+        const debrisGeo = new THREE.PlaneGeometry(0.3, 0.4);
+        const debrisMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, side: THREE.DoubleSide });
+        for (let i = 0; i < 15; i++) {
+            const debris = new THREE.Mesh(debrisGeo, debrisMat);
+            debris.position.set((Math.random() - 0.5) * 15, -7.95, (Math.random() - 0.5) * 15 - 5);
+            debris.rotation.x = -Math.PI / 2;
+            debris.rotation.z = Math.random() * 2 * Math.PI;
+            scene.add(debris);
+        }
+    }
+
     // Background point lights for ominous depth - Increased intensity
-    const clutterLight = new THREE.PointLight(0x667788, 8, 60); // Brighter and wider range
+    const clutterLight = new THREE.PointLight(0x667788, 8, 50);
     clutterLight.position.set(0, 10, -20);
     scene.add(clutterLight);
 
     // Extra Fill for far corners
-    const bgFill = new THREE.PointLight(0x443322, 3, 50);
+    const bgFill = new THREE.PointLight(0x443322, 3, 40);
     bgFill.position.set(-20, -5, -25);
     scene.add(bgFill);
-    const bgFill2 = new THREE.PointLight(0x223344, 3, 50);
+    const bgFill2 = new THREE.PointLight(0x223344, 3, 40);
     bgFill2.position.set(20, -5, -25);
     scene.add(bgFill2);
 
@@ -280,8 +299,8 @@ function generateGlowTexture() {
     return texture;
 }
 
-export const createDust = (scene: THREE.Scene) => {
-    const particleCount = 20;
+export const createDust = (scene: THREE.Scene, isMobile: boolean = false) => {
+    const particleCount = isMobile ? 5 : 20;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
