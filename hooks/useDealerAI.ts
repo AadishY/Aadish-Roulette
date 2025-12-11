@@ -10,6 +10,7 @@ interface DealerAIProps {
     fireShot: (shooter: TurnOwner, target: TurnOwner) => Promise<void>;
     processItemEffect: (user: TurnOwner, item: ItemType) => Promise<boolean>;
     setDealer: React.Dispatch<React.SetStateAction<PlayerState>>;
+    setPlayer: React.Dispatch<React.SetStateAction<PlayerState>>;
     setTargetAim: (aim: AimTarget) => void;
     setCameraView: (view: CameraView) => void;
     isMultiplayer?: boolean; // Disable AI in multiplayer mode
@@ -23,6 +24,7 @@ export const useDealerAI = ({
     fireShot,
     processItemEffect,
     setDealer,
+    setPlayer,
     setTargetAim,
     setCameraView,
     isMultiplayer = false
@@ -111,13 +113,39 @@ export const useDealerAI = ({
                         }
                     }
 
-                    // 5. SAW FALLBACK (High confidence)
+                    // 5. PHONE (Gain Future Knowledge)
+                    if (!itemToUse && dealer.items.includes('PHONE') && !currentKnowledge && total > 2) {
+                        itemIndex = dealer.items.indexOf('PHONE');
+                        itemToUse = 'PHONE';
+                    }
+
+                    // 6. INVERTER (Tactical Flip)
+                    // If we know it's blank, invert to Live to shoot player.
+                    if (!itemToUse && dealer.items.includes('INVERTER')) {
+                        if (currentKnowledge === 'BLANK') {
+                            itemIndex = dealer.items.indexOf('INVERTER');
+                            itemToUse = 'INVERTER';
+                        }
+                        // Or if 50/50 but we want to confirm a shot? No, Inverter is best used when we KNOW it's bad.
+                    }
+
+                    // 7. ADRENALINE (Steal)
+                    // If player has something good or dealer is desperate.
+                    if (!itemToUse && dealer.items.includes('ADRENALINE')) {
+                        // Simple logic: Use it if player has items and dealer has < 4 items
+                        if (player.items.length > 0 && dealer.items.length < 4) {
+                            itemIndex = dealer.items.indexOf('ADRENALINE');
+                            itemToUse = 'ADRENALINE';
+                        }
+                    }
+
+                    // 8. SAW FALLBACK (High confidence)
                     if (!itemToUse && dealer.items.includes('SAW') && !dealer.isSawedActive && liveProb > 0.6) {
                         itemIndex = dealer.items.indexOf('SAW');
                         itemToUse = 'SAW';
                     }
 
-                    // 6. CIGS if has plenty
+                    // 9. CIGS if has plenty
                     if (!itemToUse && dealer.items.includes('CIGS') && dealer.hp < dealer.maxHp) {
                         const cigCount = dealer.items.filter(i => i === 'CIGS').length;
                         if (cigCount > 1 || dealer.hp < 2) {
@@ -130,6 +158,7 @@ export const useDealerAI = ({
                     if (itemToUse) {
                         setDealer(d => ({ ...d, items: d.items.filter((_, i) => i !== itemIndex) }));
 
+
                         if (itemToUse === 'GLASS') {
                             const actual = gameState.chamber[gameState.currentShellIndex];
                             aiKnownShell.current = actual;
@@ -137,8 +166,95 @@ export const useDealerAI = ({
                         if (itemToUse === 'BEER') {
                             aiKnownShell.current = null;
                         }
+                        if (itemToUse === 'INVERTER') {
+                            if (aiKnownShell.current === 'BLANK') aiKnownShell.current = 'LIVE';
+                            else if (aiKnownShell.current === 'LIVE') aiKnownShell.current = 'BLANK';
+                        }
 
                         const roundEnded = await processItemEffect('DEALER', itemToUse);
+
+                        // Handling Adrenaline effect for Dealer:
+                        // Dealer used Adrenaline, wait for animation, then steal logic.
+                        if (itemToUse === 'ADRENALINE') {
+                            await wait(500); // Sync with animation
+                            // Check if player has items to steal
+                            if (player.items.length > 0) {
+                                // Dynamic Priority Stealing Logic
+                                let priorities: ItemType[] = ['PHONE', 'INVERTER', 'GLASS', 'SAW', 'CUFFS', 'BEER', 'CIGS'];
+
+                                // 1. Health Critical: Prioritize CIGS
+                                if (dealer.hp < 3) {
+                                    priorities = ['CIGS', ...priorities.filter(i => i !== 'CIGS')];
+                                }
+
+                                // 2. Select item
+                                let stealIdx = -1;
+
+                                for (const pItem of priorities) {
+                                    // Check if Player has it
+                                    const idx = player.items.indexOf(pItem);
+                                    if (idx === -1) continue;
+
+                                    // Check if Dealer already has it (Move to next priority if duplicate)
+                                    // Exception: CIGS when low HP (always take more)
+                                    const dealerHasIt = dealer.items.includes(pItem);
+                                    if (dealerHasIt) {
+                                        if (pItem === 'CIGS' && dealer.hp < 3) {
+                                            // Take it anyway
+                                        } else {
+                                            continue; // Skip, look for something I don't have
+                                        }
+                                    }
+
+                                    stealIdx = idx;
+                                    break;
+                                }
+
+                                // Fallback: Take highest priority available even if duplicate
+                                if (stealIdx === -1) {
+                                    for (const pItem of priorities) {
+                                        const idx = player.items.indexOf(pItem);
+                                        if (idx !== -1) {
+                                            stealIdx = idx;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (stealIdx === -1) stealIdx = Math.floor(Math.random() * player.items.length);
+
+                                const stolenItem = player.items[stealIdx];
+
+                                // Remove from player
+                                setPlayer(p => {
+                                    const newItems = [...p.items];
+                                    newItems.splice(stealIdx, 1);
+                                    return { ...p, items: newItems };
+                                });
+
+                                // Dealer USES it immediately (Just like player)
+                                // We don't add to Dealer inventory, we just trigger effect
+                                // BUT: Some items (Saw, Cuffs) require state checks inside itemActions which might check Dealer Inventory? 
+                                // Actually itemActions usually takes 'user' and applies effect.
+                                // useGameLogic's processItemEffect handles logic often assuming item was consumed.
+                                // Let's just call processItemEffect. 
+                                // Note: We need to handle animations.
+
+                                // Give visual feedback of theft
+                                // addLog via processItemEffect isn't available here directly, but processItemEffect logs usage.
+                                // We should probably log the theft first? No access to addLog.
+                                // Let's just wait and use.
+
+                                await wait(800);
+                                await processItemEffect('DEALER', stolenItem);
+
+                                // Log it? processItemEffect already logged "DEALER IS HYPED".
+                                // We should log the theft?
+                                // We don't have addLog here easily, it's inside useGameLogic.
+                                // But visuals will update (item disappears from player).
+                            }
+                        }
+
                         await wait(1500);
 
                         if (!roundEnded) {

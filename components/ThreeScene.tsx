@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext } from '../types';
-import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass } from '../utils/threeHelpers';
+import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline } from '../utils/threeHelpers';
 import { updateScene } from '../utils/sceneLogic';
 
 interface ThreeSceneProps {
@@ -107,12 +107,17 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const { bulletMesh, shellCasing } = createProjectiles(scene);
 
             // === ITEM MODELS ===
+            // === ITEM MODELS ===
             const itemBeer = createBeerCan(); itemBeer.visible = false; scene.add(itemBeer);
             const itemCigs = createCigarette(); itemCigs.visible = false; scene.add(itemCigs);
             const itemSaw = createSaw(); itemSaw.visible = false; scene.add(itemSaw);
             const itemCuffs = createHandcuffs(); itemCuffs.visible = false; scene.add(itemCuffs);
             const itemGlass = createMagnifyingGlass(); itemGlass.visible = false; scene.add(itemGlass);
-            const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass };
+            const itemPhone = createPhone(); itemPhone.visible = false; scene.add(itemPhone);
+            const itemInverter = createInverter(); itemInverter.visible = false; scene.add(itemInverter);
+            const itemAdrenaline = createAdrenaline(); itemAdrenaline.visible = false; scene.add(itemAdrenaline);
+
+            const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline };
 
             // === MULTIPLAYER AVATAR LOGIC ===
             let dealerGroup = new THREE.Group();

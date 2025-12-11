@@ -1,16 +1,16 @@
 import React from 'react';
-import { Beer, Link, Cigarette, Search, Zap, Crosshair, ShieldAlert, Heart, RefreshCcw } from 'lucide-react';
+import { Beer, Link, Cigarette, Search, Zap, Crosshair, ShieldAlert, Heart, RefreshCcw, Smartphone, Syringe } from 'lucide-react';
 
 export const ChainsawIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
-  <svg 
-    width={size} 
-    height={size} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     {/* Handle */}
@@ -26,14 +26,17 @@ export const ChainsawIcon = ({ className, size = 24 }: { className?: string; siz
 );
 
 export const Icons = {
-    Beer,
-    Cuffs: Link,
-    Cigs: Cigarette,
-    Glass: Search,
-    Saw: ChainsawIcon,
-    Zap,
-    Crosshair,
-    ShieldAlert,
-    Heart,
-    RefreshCcw
+  Beer,
+  Cuffs: Link,
+  Cigs: Cigarette,
+  Glass: Search,
+  Saw: ChainsawIcon,
+  Zap,
+  Crosshair,
+  ShieldAlert,
+  Heart,
+  RefreshCcw,
+  Phone: Smartphone,
+  Inverter: RefreshCcw,
+  Adrenaline: Syringe
 };

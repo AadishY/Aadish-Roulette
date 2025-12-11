@@ -38,6 +38,7 @@ interface GameUIProps {
     onHoverTarget: (target: AimTarget) => void;
     onPickupGun: () => void;
     onOpenSettings: () => void;
+    onOpenGuide: () => void;
     onUpdateName?: (name: string) => void;
     messages?: any[];
     onSendMessage?: (msg: string) => void;
@@ -45,6 +46,7 @@ interface GameUIProps {
     mpGameState?: GameStateData | null;
     mpMyPlayerId?: string | null;
     onMpShoot?: (targetId: string) => void;
+    onStealItem?: (index: number) => void;
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -86,6 +88,7 @@ export const GameUI: React.FC<GameUIProps> = ({
     onHoverTarget,
     onPickupGun,
     onOpenSettings,
+    onOpenGuide,
     onStartMultiplayer,
     onUpdateName,
     messages = [],
@@ -93,7 +96,8 @@ export const GameUI: React.FC<GameUIProps> = ({
     isMultiplayer = false,
     mpGameState,
     mpMyPlayerId,
-    onMpShoot
+    onMpShoot,
+    onStealItem
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
     const [chatMsg, setChatMsg] = useState('');
@@ -197,6 +201,18 @@ export const GameUI: React.FC<GameUIProps> = ({
                     </div>
                 )}
 
+                {/* Stealing Overlay Message */}
+                {gameState.phase === 'STEALING' && (
+                    <div className="absolute inset-x-0 top-[15%] z-50 flex flex-col items-center justify-center pointer-events-none px-4">
+                        <div className="text-2xl md:text-5xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(255,0,0,0.8)] animate-pulse mb-2">
+                            STEAL AN ITEM
+                        </div>
+                        <div className="text-sm md:text-xl text-stone-300 font-bold bg-black/70 px-4 py-1">
+                            SELECT AN ITEM FROM OPPONENT
+                        </div>
+                    </div>
+                )}
+
                 {showLootOverlay && <LootOverlay receivedItems={receivedItems} />}
 
                 {/* Intro Screen */}
@@ -208,6 +224,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         onStartGame={handleStartGame}
                         onStartMultiplayer={handleStartMP}
                         onOpenSettings={onOpenSettings}
+                        onOpenGuide={onOpenGuide}
                     />
                 )}
 
@@ -292,15 +309,30 @@ export const GameUI: React.FC<GameUIProps> = ({
                             )}
 
                             {/* Inventory */}
-                            <Inventory
-                                player={player}
-                                dealer={dealer}
-                                gameState={gameState}
-                                cameraView={cameraView}
-                                isProcessing={isProcessing}
-                                onUseItem={onUseItem}
-                                disabled={isMultiplayer && !isMyTurn}
-                            />
+                            {/* Inventory vs Steal UI */}
+                            {gameState.phase === 'STEALING' ? (
+                                <Inventory
+                                    player={dealer} // Show DEALER items to steal
+                                    dealer={player} // (Swap context)
+                                    gameState={gameState}
+                                    cameraView={cameraView}
+                                    isProcessing={false}
+                                    onUseItem={(idx) => {
+                                        if (onStealItem) onStealItem(idx);
+                                    }}
+                                    disabled={false}
+                                />
+                            ) : (
+                                <Inventory
+                                    player={player}
+                                    dealer={dealer}
+                                    gameState={gameState}
+                                    cameraView={cameraView}
+                                    isProcessing={isProcessing}
+                                    onUseItem={onUseItem}
+                                    disabled={isMultiplayer && !isMyTurn}
+                                />
+                            )}
                         </div>
                     </div>
                 )}

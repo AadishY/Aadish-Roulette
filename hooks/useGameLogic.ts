@@ -48,6 +48,9 @@ export const useGameLogic = () => {
     triggerDrink: 0,
     triggerCuff: 0,
     triggerGlass: 0,
+    triggerPhone: 0,
+    triggerInverter: 0,
+    triggerAdrenaline: 0,
     isSawing: false,
     ejectedShellColor: 'red',
     muzzleFlashIntensity: 0,
@@ -92,14 +95,26 @@ export const useGameLogic = () => {
     setLogs(prev => [...prev, { id: Date.now() + Math.random(), text, type }]);
   };
 
-  // Revised Probabilities - More balanced
+  // Revised Probabilities - Weighted for balance
   const getRandomItem = (): ItemType => {
-    const r = Math.random();
-    if (r < 0.25) return 'BEER';      // 25% Beer (Core mechanic)
-    if (r < 0.50) return 'CIGS';      // 25% Cigs (Healing is good)
-    if (r < 0.70) return 'GLASS';     // 20% Glass (Intel)
-    if (r < 0.85) return 'CUFFS';     // 15% Cuffs (Powerful but situational)
-    return 'SAW';                     // 15% Saw (High damage)
+    // BEER: 15% 
+    // CIGS: 15% 
+    // GLASS: 10%
+    // PHONE: 20% (Increased)
+    // INVERTER: 15% (Increased)
+    // SAW: 10%
+    // CUFFS: 10%
+    // ADRENALINE: 5%
+
+    const r = Math.random() * 100;
+    if (r < 15) return 'BEER';
+    if (r < 30) return 'CIGS';
+    if (r < 40) return 'GLASS';
+    if (r < 60) return 'PHONE';
+    if (r < 75) return 'INVERTER';
+    if (r < 85) return 'SAW';
+    if (r < 95) return 'CUFFS';
+    return 'ADRENALINE';
   };
 
   // --- Logic ---
@@ -470,6 +485,29 @@ export const useGameLogic = () => {
           addLog
         );
         break;
+
+      case 'PHONE':
+        await ItemActions.handlePhone(user, gameState,
+          (v) => setAnim(p => ({ ...p, triggerPhone: typeof v === 'function' ? v(p.triggerPhone) : v })),
+          addLog
+        );
+        break;
+
+      case 'INVERTER':
+        await ItemActions.handleInverter(user, gameState, setGameState,
+          (v) => setAnim(p => ({ ...p, triggerInverter: typeof v === 'function' ? v(p.triggerInverter) : v })),
+          addLog
+        );
+        break;
+
+      case 'ADRENALINE':
+        setOverlayColor('scan');
+        await ItemActions.handleAdrenaline(user,
+          (v) => setAnim(p => ({ ...p, triggerAdrenaline: typeof v === 'function' ? v(p.triggerAdrenaline) : v })),
+          setGameState, addLog
+        );
+        setTimeout(() => setOverlayColor('none'), 1200);
+        break;
     }
 
     return roundEnded;
@@ -505,6 +543,25 @@ export const useGameLogic = () => {
     setGameState(prev => ({ ...prev, phase }));
   };
 
+  const stealItem = async (index: number) => {
+    // 1. Remove from dealer
+    const itemToSteal = dealer.items[index];
+    if (!itemToSteal) return;
+
+    const newDealerItems = [...dealer.items];
+    newDealerItems.splice(index, 1);
+    setDealer(prev => ({ ...prev, items: newDealerItems }));
+
+    addLog(`STOLEN ${itemToSteal}`, 'info');
+    setGameState(p => ({ ...p, phase: 'PLAYER_TURN' }));
+
+    // 2. Use it immediately
+    setIsProcessing(true); // Lock while using
+    await wait(500);
+    await processItemEffect('PLAYER', itemToSteal);
+    setIsProcessing(false);
+  };
+
   return {
     gameState,
     player,
@@ -525,13 +582,15 @@ export const useGameLogic = () => {
     startGame,
     fireShot,
     usePlayerItem,
+    stealItem, // Exported
     setAimTarget,
     setCameraView,
     setDealer,
+    setPlayer,
     processItemEffect,
     resetGame,
-    setPlayerName, // Expose setter
+    setPlayerName,
     pickupGun,
-    setGamePhase // For multiplayer phase control
+    setGamePhase
   };
 };

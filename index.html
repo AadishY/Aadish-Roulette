@@ -2,12 +2,94 @@
 <html lang="en">
 
 <head>
+  <!-- Primary Meta Tags -->
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Aadish Roulette</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="color-scheme" content="dark" />
+  
+  <!-- SEO Meta Tags -->
+  <title>Aadish Roulette - A Deadly Game of Chance | Web-Based Buckshot Roulette</title>
+  <meta name="description" content="Play Aadish Roulette - A high-stakes tabletop horror game inspired by Buckshot Roulette. Features 3D graphics, strategic items, smart AI, and online multiplayer. Free to play in your browser!" />
+  <meta name="keywords" content="Aadish Roulette, Buckshot Roulette, web game, 3D game, horror game, Russian roulette, multiplayer game, browser game, Three.js game, React game" />
+  <meta name="author" content="Aadish" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://aadish-roulette.vercel.app/" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://aadish-roulette.vercel.app/" />
+  <meta property="og:title" content="Aadish Roulette - A Deadly Game of Chance" />
+  <meta property="og:description" content="High-stakes tabletop horror game with 3D graphics, strategic items, and multiplayer. Play the web-based Buckshot Roulette now!" />
+  <meta property="og:image" content="/image/preview-normalquality.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Aadish Roulette - 3D Horror Game Preview" />
+  <meta property="og:site_name" content="Aadish Roulette" />
+  <meta property="og:locale" content="en_US" />
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://aadish-roulette.vercel.app/" />
+  <meta name="twitter:title" content="Aadish Roulette - A Deadly Game of Chance" />
+  <meta name="twitter:description" content="High-stakes tabletop horror game with 3D graphics, strategic items, and multiplayer. Play now!" />
+  <meta name="twitter:image" content="/image/preview-normalquality.jpg" />
+  <meta name="twitter:creator" content="@yo_akatsuki" />
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/x-icon" href="/image/favicon/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/image/favicon/favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/image/favicon/favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/image/favicon/apple-touch-icon.png" />
+  <link rel="manifest" href="/image/favicon/site.webmanifest" />
+  
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" />
+  
+  <!-- DNS Prefetch -->
+  <link rel="dns-prefetch" href="https://aistudiocdn.com" />
+  
+  <!-- Preload critical resources -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" as="style" />
+  
+  <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Structured Data for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Aadish Roulette",
+    "description": "A high-stakes tabletop horror game where you play Russian Roulette with a 12-gauge pump-action shotgun. Features item mechanics, dynamic 3D visuals, and smart AI.",
+    "genre": ["Horror", "Strategy", "Card Game"],
+    "gamePlatform": ["Web Browser"],
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "author": {
+      "@type": "Person",
+      "name": "Aadish",
+      "url": "https://github.com/AadishY"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "image": "/image/preview-normalquality.jpg",
+    "url": "https://aadish-roulette.vercel.app/"
+  }
+  </script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
 
     body {
       background-color: #050505;
@@ -17,51 +99,46 @@
       width: 100vw;
       height: 100vh;
       height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+
+    /* Prevent pull-to-refresh on mobile */
+    html, body {
+      overscroll-behavior-y: contain;
     }
 
     button,
     .interactive {
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Optimize touch scrolling */
+    .scroll-container {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
     }
 
     @keyframes scanline {
       0% {
         background-position: 0% 0%;
       }
-
       100% {
         background-position: 0% 100%;
       }
     }
 
     @keyframes flicker {
-      0% {
-        opacity: 0.97;
-      }
-
-      5% {
-        opacity: 0.9;
-      }
-
-      10% {
-        opacity: 0.94;
-      }
-
-      15% {
-        opacity: 0.8;
-      }
-
-      20% {
-        opacity: 0.98;
-      }
-
-      50% {
-        opacity: 0.95;
-      }
-
-      100% {
-        opacity: 0.97;
-      }
+      0% { opacity: 0.97; }
+      5% { opacity: 0.9; }
+      10% { opacity: 0.94; }
+      15% { opacity: 0.8; }
+      20% { opacity: 0.98; }
+      50% { opacity: 0.95; }
+      100% { opacity: 0.97; }
     }
 
     @keyframes text-pop {
@@ -69,12 +146,10 @@
         transform: scale(0.8);
         opacity: 0;
       }
-
       50% {
         transform: scale(1.1);
         opacity: 1;
       }
-
       100% {
         transform: scale(1);
         opacity: 1;
@@ -82,41 +157,17 @@
     }
 
     @keyframes glitch {
-      0% {
-        transform: translate(0);
-      }
-
-      20% {
-        transform: translate(-2px, 2px);
-      }
-
-      40% {
-        transform: translate(-2px, -2px);
-      }
-
-      60% {
-        transform: translate(2px, 2px);
-      }
-
-      80% {
-        transform: translate(2px, -2px);
-      }
-
-      100% {
-        transform: translate(0);
-      }
+      0% { transform: translate(0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(-2px, -2px); }
+      60% { transform: translate(2px, 2px); }
+      80% { transform: translate(2px, -2px); }
+      100% { transform: translate(0); }
     }
 
     @keyframes bounce-x {
-
-      0%,
-      100% {
-        transform: translateX(0);
-      }
-
-      50% {
-        transform: translateX(5px);
-      }
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(5px); }
     }
 
     @keyframes flash-bang {
@@ -124,7 +175,6 @@
         background-color: white;
         opacity: 1;
       }
-
       100% {
         background-color: transparent;
         opacity: 0;
@@ -136,12 +186,10 @@
         opacity: 0.4;
         transform: scale(1);
       }
-
       50% {
         opacity: 0.7;
         transform: scale(1.02);
       }
-
       100% {
         opacity: 0.4;
         transform: scale(1);
@@ -173,7 +221,7 @@
       animation: blood-pulse 3s infinite;
     }
 
-    /* CRT Effect Base */
+    /* CRT Effect Base - Reduced for mobile performance */
     .crt::before {
       content: " ";
       display: block;
@@ -187,6 +235,14 @@
       background-size: 100% 2px, 3px 100%;
       pointer-events: none;
       animation: flicker 0.15s infinite;
+      will-change: opacity;
+    }
+
+    /* Disable CRT on low-power devices */
+    @media (prefers-reduced-motion: reduce) {
+      .crt::before {
+        animation: none;
+      }
     }
 
     /* VHS FILTER OVERRIDE - IMPROVED */
@@ -211,18 +267,14 @@
 
     /* Chromatic Aberration Animation for VHS */
     @keyframes chromatic {
-      0% {
-        text-shadow: 2px 0 0 red, -2px 0 0 blue;
-      }
-
-      100% {
-        text-shadow: -2px 0 0 red, 2px 0 0 blue;
-      }
+      0% { text-shadow: 2px 0 0 red, -2px 0 0 blue; }
+      100% { text-shadow: -2px 0 0 red, 2px 0 0 blue; }
     }
 
     /* Custom Scrollbar for logs */
     ::-webkit-scrollbar {
       width: 6px;
+      height: 6px;
     }
 
     ::-webkit-scrollbar-track {
@@ -232,6 +284,10 @@
     ::-webkit-scrollbar-thumb {
       background: #44403c;
       border-radius: 2px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #57534e;
     }
 
     .clip-path-slant {
@@ -257,16 +313,40 @@
     }
 
     /* Force landscape on mobile */
-    @media only screen and (orientation: portrait) {
+    @media only screen and (max-width: 900px) and (orientation: portrait) {
       #root {
-        display: none;
+        display: none !important;
       }
 
       #rotate-warning {
-        display: flex;
+        display: flex !important;
       }
     }
+
+    /* Performance optimizations for mobile */
+    @media (max-width: 768px) {
+      .crt::before {
+        background-size: 100% 3px, 4px 100%;
+      }
+    }
+
+    /* Safe area padding for notched devices */
+    @supports (padding: max(0px)) {
+      body {
+        padding-left: max(0px, env(safe-area-inset-left));
+        padding-right: max(0px, env(safe-area-inset-right));
+        padding-bottom: max(0px, env(safe-area-inset-bottom));
+      }
+    }
+
+    /* GPU acceleration hints */
+    .gpu-accelerated {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      perspective: 1000px;
+    }
   </style>
+  
   <script type="importmap">
 {
   "imports": {
@@ -283,17 +363,32 @@
 </head>
 
 <body>
+  <!-- Noscript fallback -->
+  <noscript>
+    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #050505; color: #ef4444; font-family: monospace; text-align: center; padding: 20px;">
+      <div>
+        <h1 style="font-size: 2rem; margin-bottom: 1rem;">⚠️ JAVASCRIPT REQUIRED</h1>
+        <p style="color: #a8a29e;">Please enable JavaScript to play Aadish Roulette.</p>
+      </div>
+    </div>
+  </noscript>
+
+  <!-- Orientation Warning -->
   <div id="rotate-warning">
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"
-      stroke-linejoin="round">
-      <path d="M12 2a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3 3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" />
-      <path d="M5 8h.01" />
-      <path d="M19 16v.01" />
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 2v4h4" />
+      <path d="M21 6L9 18" />
+      <path d="M20 21a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2" />
     </svg>
     <h1 style="font-size: 1.5rem; margin-top: 1rem; font-weight: 800; color: #ef4444;">ROTATE DEVICE</h1>
     <p style="font-size: 0.9rem; color: #a8a29e; margin-top: 0.5rem;">LANDSCAPE ORIENTATION REQUIRED</p>
+    <p style="font-size: 0.75rem; color: #57534e; margin-top: 1rem;">Turn your device sideways to play</p>
   </div>
+
+  <!-- App Root -->
   <div id="root"></div>
+  
+  <!-- Main App Script -->
   <script type="module" src="/index.tsx"></script>
 </body>
 

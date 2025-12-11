@@ -12,6 +12,7 @@ import { DEFAULT_SETTINGS } from './constants';
 
 import { LoadingScreen } from './components/LoadingScreen';
 import { MultiplayerLobby } from './components/MultiplayerLobby';
+import { TutorialGuide } from './components/TutorialGuide';
 
 type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOBBY' | 'LOADING_GAME' | 'GAME';
 
@@ -53,6 +54,7 @@ export default function App() {
   const effectiveReceivedItems = (isMultiplayerMode ? socket.receivedLoot : game.receivedItems) as import('./types').ItemType[];
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const [settings, setSettings] = useState<GameSettings>(() => {
     const saved = localStorage.getItem('aadish_roulette_settings');
@@ -77,6 +79,7 @@ export default function App() {
     fireShot: spGame.fireShot,
     processItemEffect: spGame.processItemEffect,
     setDealer: spGame.setDealer,
+    setPlayer: spGame.setPlayer,
     setTargetAim: spGame.setAimTarget,
     setCameraView: spGame.setCameraView,
     isMultiplayer: isMultiplayerMode
@@ -228,6 +231,7 @@ export default function App() {
         onHoverTarget={game.setAimTarget}
         onPickupGun={handlePickupGun}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenGuide={() => setIsGuideOpen(true)}
         onUpdateName={spGame.setPlayerName}
         messages={socket.messages}
         onSendMessage={socket.sendMessage}
@@ -235,6 +239,7 @@ export default function App() {
         mpGameState={socket.gameStateData}
         mpMyPlayerId={socket.myPlayerId}
         onMpShoot={socket.shootPlayer}
+        onStealItem={spGame.stealItem}
       />
 
       {/* MP Game Over Screen */}
@@ -280,6 +285,13 @@ export default function App() {
           onUpdateSettings={setSettings}
           onClose={() => setIsSettingsOpen(false)}
           onResetDefaults={handleResetSettings}
+        />
+      )}
+
+      {/* Tutorial Guide */}
+      {isGuideOpen && (
+        <TutorialGuide
+          onClose={() => setIsGuideOpen(false)}
         />
       )}
     </div>

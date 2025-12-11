@@ -501,6 +501,9 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         if (scene.userData.lastCuff === undefined) scene.userData.lastCuff = animState.triggerCuff;
         if (scene.userData.lastRack === undefined) scene.userData.lastRack = animState.triggerRack;
         if (scene.userData.lastGlass === undefined) scene.userData.lastGlass = 0;
+        if (scene.userData.lastPhone === undefined) scene.userData.lastPhone = animState.triggerPhone;
+        if (scene.userData.lastInverter === undefined) scene.userData.lastInverter = animState.triggerInverter;
+        if (scene.userData.lastAdrenaline === undefined) scene.userData.lastAdrenaline = animState.triggerAdrenaline;
 
         // GLASS ANIMATION - Fix Clipping
         // GLASS ANIMATION - Trigger off triggerGlass for instant visual
@@ -726,5 +729,81 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         } else {
             items.itemCuffs.visible = false;
         }
+
+        // PHONE ANIMATION
+        if (animState.triggerPhone > scene.userData.lastPhone) {
+            scene.userData.lastPhone = animState.triggerPhone;
+            scene.userData.phoneStart = time;
+            items.itemPhone.visible = true;
+        }
+        const phoneTime = time - (scene.userData.phoneStart || -999);
+        if (phoneTime < 3.0) {
+            items.itemPhone.visible = true;
+            if (isPlayerTurn) {
+                if (phoneTime < 0.5) {
+                    const p = phoneTime / 0.5;
+                    items.itemPhone.position.set(0.5, -3 + p * 4, 11);
+                    items.itemPhone.rotation.set(-0.2, -0.2, 0);
+                } else if (phoneTime < 2.5) {
+                    items.itemPhone.position.set(0.5, 1.0, 11);
+                    items.itemPhone.position.y += Math.sin(time * 2) * 0.05;
+                } else {
+                    items.itemPhone.position.y -= 0.2;
+                }
+            } else {
+                items.itemPhone.position.set(0.5, 5.0, -9);
+                items.itemPhone.rotation.set(0, Math.PI, 0);
+            }
+        } else {
+            items.itemPhone.visible = false;
+        }
+
+        // INVERTER ANIMATION
+        if (animState.triggerInverter > scene.userData.lastInverter) {
+            scene.userData.lastInverter = animState.triggerInverter;
+            scene.userData.inverterStart = time;
+            items.itemInverter.visible = true;
+        }
+        const invTime = time - (scene.userData.inverterStart || -999);
+        if (invTime < 2.0) {
+            items.itemInverter.visible = true;
+            if (isPlayerTurn) {
+                const p = Math.min(1, invTime * 2);
+                items.itemInverter.position.set(0, 1.0 + Math.sin(invTime * 10) * 0.2, 10);
+                items.itemInverter.rotation.y += 0.1;
+            } else {
+                items.itemInverter.position.set(0, 1.0, -4);
+                items.itemInverter.rotation.y += 0.1;
+            }
+        } else {
+            items.itemInverter.visible = false;
+        }
+
+        // ADRENALINE ANIMATION
+        if (animState.triggerAdrenaline > scene.userData.lastAdrenaline) {
+            scene.userData.lastAdrenaline = animState.triggerAdrenaline;
+            scene.userData.adrStart = time;
+            items.itemAdrenaline.visible = true;
+        }
+        const adrTime = time - (scene.userData.adrStart || -999);
+        if (adrTime < 2.0) {
+            items.itemAdrenaline.visible = true;
+            if (isPlayerTurn) {
+                if (adrTime < 0.5) {
+                    const p = adrTime / 0.5;
+                    items.itemAdrenaline.position.set(2.0 - p * 1.0, -2 + p * 3, 11);
+                    items.itemAdrenaline.rotation.set(-0.5, 0, -0.5);
+                } else {
+                    items.itemAdrenaline.position.set(1.0, 1.0, 11);
+                    if (adrTime < 1.0) camera.position.x += (Math.random() - 0.5) * 0.1;
+                }
+            } else {
+                items.itemAdrenaline.position.set(2.0, 4.0, -10);
+                items.itemAdrenaline.rotation.set(0.5, 0, 0.5);
+            }
+        } else {
+            items.itemAdrenaline.visible = false;
+        }
+
     }
 }

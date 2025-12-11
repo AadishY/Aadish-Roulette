@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Globe, Settings as SettingsIcon } from 'lucide-react';
+import { Globe, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
 
 interface IntroScreenProps {
     playerName: string;
@@ -8,9 +8,10 @@ interface IntroScreenProps {
     onStartGame: () => void;
     onStartMultiplayer: () => void;
     onOpenSettings: () => void;
+    onOpenGuide: () => void;
 }
 
-export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputName, onStartGame, onStartMultiplayer, onOpenSettings }) => {
+export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputName, onStartGame, onStartMultiplayer, onOpenSettings, onOpenGuide }) => {
     const nameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -27,6 +28,9 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                     <div className="flex gap-4">
                         <button onClick={onStartMultiplayer} disabled={!inputName.trim()} className="flex-1 px-6 py-4 bg-stone-900 border-2 border-blue-900/50 text-blue-500 font-black text-lg md:text-xl flex items-center justify-center gap-3 tracking-widest hover:text-white hover:border-blue-500 hover:bg-blue-900/30 transition-all shadow-[0_0_15px_rgba(30,64,175,0.2)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-stone-900 disabled:hover:border-stone-800 disabled:hover:text-stone-400">
                             <Globe size={24} /> MULTIPLAYER
+                        </button>
+                        <button onClick={onOpenGuide} className="flex-1 px-4 py-4 bg-stone-900 border-2 border-amber-900/50 text-amber-500 font-black text-base md:text-xl flex items-center justify-center gap-2 tracking-widest hover:text-white hover:border-amber-500 hover:bg-amber-900/30 transition-all shadow-[0_0_15px_rgba(217,119,6,0.2)]">
+                            <HelpCircle size={20} /> <span className="hidden sm:inline">GUIDE</span>
                         </button>
                         <button onClick={onOpenSettings} className="px-6 py-4 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg md:text-xl flex items-center justify-center gap-3 tracking-widest hover:text-white hover:border-stone-500">
                             <SettingsIcon size={24} />

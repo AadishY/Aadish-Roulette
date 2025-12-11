@@ -36,13 +36,19 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
                                 {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                                 {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                                 {item === 'SAW' && <Icons.Saw className="text-orange-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                <span className="text-[6px] md:text-[8px] text-stone-500 font-bold tracking-widest hidden md:block text-center px-1">
+                                {item === 'PHONE' && <Icons.Phone className="text-blue-200 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                                {item === 'INVERTER' && <Icons.Inverter className="text-green-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                                {item === 'ADRENALINE' && <Icons.Adrenaline className="text-pink-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
+                                <span className="text-[6px] md:text-[8px] text-stone-300 font-bold tracking-widest block text-center px-1 truncate w-full">
                                     {{
                                         'BEER': 'BEER',
-                                        'CIGS': 'CIGARETTE',
-                                        'GLASS': 'MAGNIFIER',
-                                        'CUFFS': 'HANDCUFFS',
-                                        'SAW': 'HAND SAW'
+                                        'CIGS': 'CIGS',
+                                        'GLASS': 'GLASS',
+                                        'CUFFS': 'CUFFS',
+                                        'SAW': 'SAW',
+                                        'PHONE': 'PHONE',
+                                        'INVERTER': 'INVERT',
+                                        'ADRENALINE': 'ADRENALINE'
                                     }[item]}
                                 </span>
 
@@ -61,7 +67,10 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
                                         'CIGS': 'CIGARETTE',
                                         'GLASS': 'MAGNIFYING GLASS',
                                         'CUFFS': 'HANDCUFFS',
-                                        'SAW': 'HAND SAW'
+                                        'SAW': 'HAND SAW',
+                                        'PHONE': 'BURNER PHONE',
+                                        'INVERTER': 'POLARITY INVERTER',
+                                        'ADRENALINE': 'ADRENALINE'
                                     }[item]}
                                 </div>
                                 {ITEM_DESCRIPTIONS[item]}

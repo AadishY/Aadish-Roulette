@@ -1,12 +1,12 @@
 
-export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW';
+export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE';
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
-export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE';
+export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI'; // Added STEAL_UI for Adrenaline
 export type AimTarget = 'OPPONENT' | 'SELF' | 'IDLE';
 
 export interface GameState {
-  phase: 'BOOT' | 'INTRO' | 'LOAD' | 'PLAYER_TURN' | 'DEALER_TURN' | 'RESOLVING' | 'GAME_OVER' | 'LOOTING';
+  phase: 'BOOT' | 'INTRO' | 'LOAD' | 'PLAYER_TURN' | 'DEALER_TURN' | 'RESOLVING' | 'GAME_OVER' | 'LOOTING' | 'STEALING'; // Added STEALING
   turnOwner: TurnOwner;
   winner: TurnOwner | null;
   chamber: ShellType[];
@@ -23,6 +23,7 @@ export interface PlayerState {
   items: ItemType[];
   isHandcuffed: boolean;
   isSawedActive: boolean;
+  isAdrenalineActive?: boolean; // Added
 }
 
 export interface LogEntry {
@@ -38,7 +39,10 @@ export interface AnimationState {
   triggerHeal: number; // Cigs
   triggerDrink: number; // Beer
   triggerCuff: number; // Cuffs
-  triggerGlass: number; // Magnifying Glass
+  triggerGlass: number; // Glass
+  triggerPhone: number; // Phone
+  triggerInverter: number; // Inverter
+  triggerAdrenaline: number; // Adrenaline
   isSawing: boolean; // Continuous saw state
   ejectedShellColor: 'red' | 'blue';
   muzzleFlashIntensity: number;
@@ -84,6 +88,9 @@ export interface SceneContext {
     itemSaw: THREE.Group;
     itemCuffs: THREE.Group;
     itemGlass: THREE.Group;
+    itemPhone: THREE.Group;
+    itemInverter: THREE.Group;
+    itemAdrenaline: THREE.Group;
   };
 }
 

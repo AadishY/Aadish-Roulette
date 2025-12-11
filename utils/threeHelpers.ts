@@ -838,3 +838,89 @@ export const createMagnifyingGlass = (): THREE.Group => {
     group.name = 'ITEM_GLASS';
     return group;
 };
+
+export const createPhone = (): THREE.Group => {
+    const group = new THREE.Group();
+    // Body
+    const bodyGeo = new THREE.BoxGeometry(0.5, 0.1, 0.9);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    group.add(body);
+
+    // Screen
+    const screenGeo = new THREE.PlaneGeometry(0.4, 0.6);
+    const screenMat = new THREE.MeshBasicMaterial({ color: 0x001133 });
+    const screen = new THREE.Mesh(screenGeo, screenMat);
+    screen.rotation.x = -Math.PI / 2;
+    screen.position.y = 0.06;
+    screen.position.z = -0.05;
+    screen.name = 'PHONE_SCREEN';
+    group.add(screen);
+
+    // Buttons area
+    const btnArea = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.2), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    btnArea.rotation.x = -Math.PI / 2;
+    btnArea.position.y = 0.06;
+    btnArea.position.z = 0.35;
+    group.add(btnArea);
+
+    group.name = 'ITEM_PHONE';
+    return group;
+};
+
+export const createInverter = (): THREE.Group => {
+    const group = new THREE.Group();
+    // Compact Device
+    const baseGeo = new THREE.BoxGeometry(0.5, 0.2, 0.7);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    group.add(base);
+
+    // Glowing core
+    const coreGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.22, 16);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc }); // Cyan glow
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.y = 0.05;
+    group.add(core);
+
+    // Wires/Detail
+    const wire = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.02, 8, 16), new THREE.MeshStandardMaterial({ color: 0xcc0000 }));
+    wire.rotation.x = Math.PI / 2;
+    wire.position.y = 0.11;
+    group.add(wire);
+
+    group.name = 'ITEM_INVERTER';
+    return group;
+};
+
+export const createAdrenaline = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Auto-Injector Shape
+    // Main Tube
+    const tubeGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.8, 16);
+    const tubeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+    group.add(tube);
+
+    // Liquid inside
+    const liquidGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 16);
+    const liquidMat = new THREE.MeshBasicMaterial({ color: 0xcc00aa }); // Pink/Purple fluid
+    const liquid = new THREE.Mesh(liquidGeo, liquidMat);
+    group.add(liquid);
+
+    // Cap/Needle guard
+    const capGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.2, 16);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.y = -0.45;
+    group.add(cap);
+
+    // Plunger
+    const plunger = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 16), capMat);
+    plunger.position.y = 0.45;
+    group.add(plunger);
+
+    group.name = 'ITEM_ADRENALINE';
+    return group;
+};
