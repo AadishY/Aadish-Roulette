@@ -296,8 +296,10 @@ export const useGameLogic = () => {
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';
 
-    if (isLive) audioManager.playSound('liveshell');
-    else audioManager.playSound('blankshell');
+    setTimeout(() => {
+      if (isLive) audioManager.playSound('liveshell');
+      else audioManager.playSound('blankshell');
+    }, 50);
 
     setAnim(prev => ({
       ...prev,

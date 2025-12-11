@@ -93,7 +93,16 @@ class AudioManager {
         // Clone for polyphony (multiple overlapping sounds)
         // Optimization: For mobile, limit concurrent sounds if needed, but modern devices handle 5-10 fine.
         const sound = original.cloneNode() as HTMLAudioElement;
-        sound.volume = this.sfxVolume;
+
+        // BOOST specific sounds
+        const boostMap: { [key: string]: number } = {
+            'liveshell': 1.5,
+            'blankshell': 1.5,
+            'grab': 1.5
+        };
+        const boost = boostMap[key] || 1.0;
+
+        sound.volume = Math.min(1.0, this.sfxVolume * boost);
 
         const playPromise = sound.play();
         if (playPromise !== undefined) {
@@ -113,10 +122,16 @@ class AudioManager {
     }
 
     public playMusic(key: string) {
+        // If same track requested
         if (this.currentMusic === key) {
-            // Ensure properties are correct even if same track
             const track = this.music[key];
-            if (track && track.paused && this.initialized) track.play().catch(() => { });
+            if (track && this.initialized) {
+                // If it's paused (finished non-looping track), restart it
+                if (track.paused) {
+                    track.currentTime = 0;
+                    track.play().catch(() => { });
+                }
+            }
             return;
         }
 

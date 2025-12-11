@@ -9,6 +9,7 @@ interface ControlsProps {
     onPickupGun: () => void;
     onFireShot: (target: TurnOwner, targetId?: string) => void;
     onHoverTarget: (target: AimTarget) => void;
+    currentAimTarget?: AimTarget;
     isMultiplayer?: boolean;
     mpGameState?: GameStateData | null;
     mpMyPlayerId?: string | null;
@@ -21,6 +22,7 @@ export const Controls: React.FC<ControlsProps> = ({
     onPickupGun,
     onFireShot,
     onHoverTarget,
+    currentAimTarget = 'IDLE',
     isMultiplayer = false,
     mpGameState,
     mpMyPlayerId,
@@ -31,14 +33,21 @@ export const Controls: React.FC<ControlsProps> = ({
         : [];
 
     const handleShootOpponent = (opponentId?: string) => {
-        // Always use onFireShot which handles camera positioning
-        // The fireShot in useMultiplayerGame will then call socket.shootPlayer
-        onFireShot('DEALER');
+        // 2-Step Aiming Logic for Mobile (and clearer interaction on desktop)
+        if (currentAimTarget !== 'OPPONENT') {
+            onHoverTarget('OPPONENT');
+        } else {
+            onFireShot('DEALER', opponentId);
+        }
     };
 
     const handleShootSelf = () => {
-        // Always use onFireShot which handles camera positioning
-        onFireShot('PLAYER');
+        // 2-Step Aiming Logic
+        if (currentAimTarget !== 'SELF') {
+            onHoverTarget('SELF');
+        } else {
+            onFireShot('PLAYER');
+        }
     };
 
     return (

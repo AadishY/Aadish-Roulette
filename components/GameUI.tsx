@@ -30,6 +30,7 @@ interface GameUIProps {
     receivedItems: ItemType[];
     playerName: string;
     cameraView: CameraView;
+    aimTarget?: AimTarget; // Added for controls logic
     isProcessing: boolean;
     settings: GameSettings;
     onStartGame: (name: string) => void;
@@ -81,6 +82,7 @@ export const GameUI: React.FC<GameUIProps> = ({
     receivedItems,
     playerName,
     cameraView,
+    aimTarget = 'IDLE',
     isProcessing,
     settings,
     onStartGame,
@@ -312,6 +314,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                 onPickupGun={onPickupGun}
                                 onFireShot={onFireShot}
                                 onHoverTarget={onHoverTarget}
+                                currentAimTarget={aimTarget}
                                 isMultiplayer={isMultiplayer}
                                 mpGameState={mpGameState}
                                 mpMyPlayerId={mpMyPlayerId}

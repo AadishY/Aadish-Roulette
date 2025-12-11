@@ -77,8 +77,11 @@ export default function App() {
     if (appState === 'MENU' || appState === 'LOBBY') {
       audioManager.playMusic('menu');
     } else if (appState === 'GAME') {
-      if (game.gameState.phase === 'GAME_OVER') {
+      const phase = game.gameState.phase;
+      if (phase === 'GAME_OVER') {
         audioManager.playMusic('endscreen');
+      } else if (phase === 'INTRO' || phase === 'BOOT') {
+        audioManager.playMusic('menu');
       } else {
         audioManager.playMusic('gameplay');
       }
@@ -233,6 +236,7 @@ export default function App() {
         knownShell={game.knownShell}
         playerName={spGame.playerName}
         cameraView={game.cameraView}
+        aimTarget={game.aimTarget}
         isProcessing={game.isProcessing}
         settings={settings}
         onStartGame={handleStartSP}
