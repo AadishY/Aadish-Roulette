@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView, GameSettings } from '../types';
 import { Settings as SettingsIcon, Send } from 'lucide-react';
+import { audioManager } from '../utils/audioManager';
 import { StatusDisplay } from './ui/StatusDisplay';
 import { Inventory } from './ui/Inventory';
 import { Controls } from './ui/Controls';
@@ -225,8 +226,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                                             onClick={() => !isAdrenaline && onStealItem && onStealItem(idx)}
                                             disabled={isAdrenaline}
                                             className={`flex flex-col items-center justify-center w-20 h-24 md:w-28 md:h-36 bg-gradient-to-b transition-all shadow-lg relative ${isAdrenaline
-                                                    ? 'from-stone-900 to-stone-950 border-2 border-stone-700 cursor-not-allowed opacity-50'
-                                                    : 'from-stone-800 to-stone-900 border-2 border-pink-600 hover:border-pink-400 hover:bg-stone-700 cursor-pointer shadow-pink-900/30 hover:shadow-pink-500/50 hover:scale-110 active:scale-95'
+                                                ? 'from-stone-900 to-stone-950 border-2 border-stone-700 cursor-not-allowed opacity-50'
+                                                : 'from-stone-800 to-stone-900 border-2 border-pink-600 hover:border-pink-400 hover:bg-stone-700 cursor-pointer shadow-pink-900/30 hover:shadow-pink-500/50 hover:scale-110 active:scale-95'
                                                 }`}
                                         >
                                             {isAdrenaline && (
@@ -372,6 +373,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     cameraView={cameraView}
                                     isProcessing={false}
                                     onUseItem={(idx) => {
+                                        audioManager.playSound('grab');
                                         if (onStealItem) onStealItem(idx);
                                     }}
                                     disabled={false}
@@ -383,7 +385,10 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     gameState={gameState}
                                     cameraView={cameraView}
                                     isProcessing={isProcessing}
-                                    onUseItem={onUseItem}
+                                    onUseItem={(idx) => {
+                                        audioManager.playSound('grab');
+                                        onUseItem(idx);
+                                    }}
                                     disabled={isMultiplayer && !isMyTurn}
                                 />
                             )}

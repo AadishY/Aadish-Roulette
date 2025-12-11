@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameState, PlayerState, TurnOwner, ShellType, ItemType, LogEntry } from '../types';
 import { wait } from './gameUtils';
+import { audioManager } from './audioManager';
 
 // Helper to update state safely
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -16,6 +17,7 @@ export const handleBeer = async (
     startRound: () => void
 ): Promise<boolean> => {
     setTriggerDrink(p => p + 1); // Visual cue
+    audioManager.playSound('blankshell');
     await wait(1500); // Wait for drinking animation
 
     const shell = gameState.chamber[gameState.currentShellIndex];

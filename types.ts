@@ -58,6 +58,8 @@ export interface GameSettings {
   uiScale: number;
   fishEye: boolean;
   fov: number;
+  musicVolume: number;
+  sfxVolume: number;
 }
 
 export interface SceneContext {

@@ -13,6 +13,7 @@ import { DEFAULT_SETTINGS } from './constants';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MultiplayerLobby } from './components/MultiplayerLobby';
 import { TutorialGuide } from './components/TutorialGuide';
+import { audioManager } from './utils/audioManager';
 
 type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOBBY' | 'LOADING_GAME' | 'GAME';
 
@@ -68,7 +69,21 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('aadish_roulette_settings', JSON.stringify(settings));
+    audioManager.updateVolumes(settings);
   }, [settings]);
+
+  // Handle Music Logic
+  useEffect(() => {
+    if (appState === 'MENU' || appState === 'LOBBY') {
+      audioManager.playMusic('menu');
+    } else if (appState === 'GAME') {
+      if (game.gameState.phase === 'GAME_OVER') {
+        audioManager.playMusic('endscreen');
+      } else {
+        audioManager.playMusic('gameplay');
+      }
+    }
+  }, [appState, game.gameState.phase]);
 
   // Dealer AI only for singleplayer
   useDealerAI({
@@ -90,6 +105,7 @@ export default function App() {
 
   const handleStartSP = () => {
     setIsMultiplayerMode(false);
+    audioManager.stopMusic(); // Stop menu music immediately
     setAppState('LOADING_SP');
   };
 
@@ -97,6 +113,7 @@ export default function App() {
     setSocketError(null);
     setIsMultiplayerMode(true);
     socket.connect();
+    audioManager.stopMusic();
     setAppState('LOADING_MP');
   };
 
@@ -175,7 +192,11 @@ export default function App() {
   const showMpGameOver = isMultiplayerMode && socket.gameOverData;
 
   return (
-    <div className={`relative w-full h-screen bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair`}>
+    <div
+      className={`relative w-full h-screen bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair`}
+      onClick={() => audioManager.initialize()}
+      onKeyDown={() => audioManager.initialize()}
+    >
 
       {/* 3D Scene */}
       <ThreeScene

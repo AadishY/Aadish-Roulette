@@ -75,6 +75,36 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             className="w-full h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
                         />
                     </div>
+
+                    {/* Music Volume */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                            <span className="flex items-center gap-2">🎵 MUSIC</span>
+                            <span>{Math.round((settings.musicVolume ?? 0.5) * 100)}%</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0" max="1" step="0.1"
+                            value={settings.musicVolume ?? 0.5}
+                            onChange={(e) => handleChange('musicVolume', parseFloat(e.target.value))}
+                            className="w-full h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                        />
+                    </div>
+
+                    {/* SFX Volume */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                            <span className="flex items-center gap-2">🔊 SFX</span>
+                            <span>{Math.round((settings.sfxVolume ?? 0.7) * 100)}%</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0" max="1" step="0.1"
+                            value={settings.sfxVolume ?? 0.7}
+                            onChange={(e) => handleChange('sfxVolume', parseFloat(e.target.value))}
+                            className="w-full h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                        />
+                    </div>
                 </div>
 
                 <div className="mt-8 pt-4 border-t border-stone-800 flex flex-col gap-3">

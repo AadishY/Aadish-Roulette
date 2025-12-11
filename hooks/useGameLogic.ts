@@ -3,6 +3,7 @@ import { GameState, PlayerState, ShellType, ItemType, LogEntry, TurnOwner, Camer
 import { MAX_HP, MAX_ITEMS, ITEMS } from '../constants';
 import { randomInt, wait } from '../utils/gameUtils';
 import * as ItemActions from '../utils/itemActions';
+import { audioManager } from '../utils/audioManager';
 
 export const useGameLogic = () => {
   // --- State ---
@@ -295,6 +296,9 @@ export const useGameLogic = () => {
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';
 
+    if (isLive) audioManager.playSound('liveshell');
+    else audioManager.playSound('blankshell');
+
     setAnim(prev => ({
       ...prev,
       isLiveShot: isLive,
@@ -319,6 +323,9 @@ export const useGameLogic = () => {
         setOverlayColor('none');
       }, 2500);
     }
+
+
+
 
     if (isLive) {
       setShowFlash(true);
@@ -473,6 +480,7 @@ export const useGameLogic = () => {
 
     switch (item) {
       case 'BEER':
+        audioManager.playSound('blankshell');
         roundEnded = await ItemActions.handleBeer(
           gameState, setGameState,
           (v) => setAnim(p => ({ ...p, triggerRack: typeof v === 'function' ? v(p.triggerRack) : v })),
