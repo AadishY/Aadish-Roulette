@@ -6,9 +6,8 @@
 
 ### A Deadly Game of Chance
 
-[![Play Now](https://img.shields.io/badge/PLAY%20NOW-Live%20Demo-red?style=for-the-badge&logo=vercel)](https://aadish-roulette.vercel.app/)
+[![Play Now](https://img.shields.io/badge/PLAY%20NOW-Live%20Demo-red?style=for-the-badge&logo=vercel)](https://aadishroulette.vercel.app/)
 [![GitHub](https://img.shields.io/badge/GitHub-AadishY-black?style=for-the-badge&logo=github)](https://github.com/AadishY)
-[![Instagram](https://img.shields.io/badge/Instagram-@yo.akatsuki-purple?style=for-the-badge&logo=instagram)](https://www.instagram.com/yo.akatsuki/)
 
 ---
 
