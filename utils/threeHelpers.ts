@@ -2,7 +2,9 @@ import * as THREE from 'three';
 
 export const setupLighting = (scene: THREE.Scene) => {
     // Linear Fog to fade background but keep props visible. Darker fog for mood.
-    scene.fog = new THREE.Fog(0x050505, 10, 50);
+    // scene.fog = new THREE.Fog(0x050505, 10, 50);
+    // Exponential fog for better depth falloff
+    scene.fog = new THREE.FogExp2(0x020202, 0.02);
 
     // Reduced ambient for more contrasty look
     const ambient = new THREE.AmbientLight(0xffffff, 0.4);
@@ -23,9 +25,10 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(playerFill);
 
     // Background Blue Rim (Cinematic depth) - Slightly stronger and cooler
-    const bgRim = new THREE.DirectionalLight(0x224466, 2.0);
-    bgRim.position.set(-10, 5, -20);
-    bgRim.target.position.set(0, 0, -10);
+    // Background Blue Rim (Cinematic depth) - Brighter and wider
+    const bgRim = new THREE.DirectionalLight(0x335577, 4.0);
+    bgRim.position.set(-15, 8, -25);
+    bgRim.target.position.set(0, 0, -15);
     scene.add(bgRim);
     scene.add(bgRim.target);
 
@@ -115,9 +118,26 @@ export const createEnvironment = (scene: THREE.Scene) => {
     shelf.receiveShadow = true;
     scene.add(shelf);
 
-    // Hanging wire
-    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 10), new THREE.MeshBasicMaterial({ color: 0x111111 }));
-    wire.position.set(0, 10, 0);
+    // Bulb & Wire Group for animation
+    const bulbGroup = new THREE.Group();
+    bulbGroup.name = "BULB_GROUP";
+    scene.add(bulbGroup);
+
+    // Wire (We will update its rotation/geometry in sceneLogic or just rotate the group? No, swinging pivot is at top)
+    // Actually simpler: The pivot point is at the ceiling (say y=15).
+    // The bulb hangs down.
+
+    // Wire Geometry
+    const wireGeo = new THREE.CylinderGeometry(0.02, 0.02, 6);
+    const wire = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
+    wire.position.set(0, -3, 0); // Center of cylinder is -3 local. Pivot is at 0,0,0 of Group?
+    // Let's make a Pivot Group at ceiling height y=14
+    const hangingLight = new THREE.Group();
+    hangingLight.name = "HANGING_LIGHT";
+    hangingLight.position.set(0, 14, 0);
+    scene.add(hangingLight);
+
+    hangingLight.add(wire);
 
     // Bulb Mesh
     const bulb = new THREE.Mesh(
@@ -129,7 +149,9 @@ export const createEnvironment = (scene: THREE.Scene) => {
             toneMapped: false
         })
     );
-    bulb.position.set(0, 9, 0);
+    bulb.position.set(0, -6, 0); // End of wire
+    bulb.castShadow = true;
+    hangingLight.add(bulb);
 
     // Fake Volumetric Glow Sprite
     const spriteMat = new THREE.SpriteMaterial({
@@ -142,8 +164,6 @@ export const createEnvironment = (scene: THREE.Scene) => {
     const glowSprite = new THREE.Sprite(spriteMat);
     glowSprite.scale.set(6, 6, 1);
     bulb.add(glowSprite);
-
-    scene.add(wire, bulb);
 
 
 
@@ -166,10 +186,56 @@ export const createEnvironment = (scene: THREE.Scene) => {
     drum.position.set(2, -6, -26);
     scene.add(drum);
 
-    // Background point lights for ominous depth
-    const clutterLight = new THREE.PointLight(0x445566, 2, 25);
-    clutterLight.position.set(0, 0, -20);
+    // Background point lights for ominous depth - Increased intensity
+    const clutterLight = new THREE.PointLight(0x667788, 8, 60); // Brighter and wider range
+    clutterLight.position.set(0, 10, -20);
     scene.add(clutterLight);
+
+    // Extra Fill for far corners
+    const bgFill = new THREE.PointLight(0x443322, 3, 50);
+    bgFill.position.set(-20, -5, -25);
+    scene.add(bgFill);
+    const bgFill2 = new THREE.PointLight(0x223344, 3, 50);
+    bgFill2.position.set(20, -5, -25);
+    scene.add(bgFill2);
+
+    // --- INDUSTRIAL PIPES & VENTS ---
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6, metalness: 0.8 });
+    const rustMat = new THREE.MeshStandardMaterial({ color: 0x3d2618, roughness: 0.9 });
+
+    // Ceiling Piping
+    const pipe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 40), pipeMat);
+    pipe1.rotation.z = Math.PI / 2; pipe1.position.set(0, 12, -15);
+    scene.add(pipe1);
+
+    const pipe2 = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 40), rustMat);
+    pipe2.rotation.z = Math.PI / 2; pipe2.position.set(0, 13, -12);
+    scene.add(pipe2);
+
+    // Vertical pipes in background
+    const vPipe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 20), pipeMat);
+    vPipe1.position.set(-18, 5, -25);
+    scene.add(vPipe1);
+
+    const vPipe2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 20), rustMat);
+    vPipe2.position.set(15, 5, -24);
+    scene.add(vPipe2);
+
+    // Vent Fan (Non-animated for perf, just distinct shape)
+    const fanHousing = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+    fanHousing.position.set(8, 5, -28);
+    scene.add(fanHousing);
+    const fanBlades = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+    fanBlades.rotation.x = Math.PI / 2; fanBlades.position.set(8, 5, -27);
+    scene.add(fanBlades);
+
+    // Grimy Monitor/Terminal
+    const terminal = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 2), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    terminal.position.set(-10, -5, -22); terminal.rotation.y = 0.4;
+    scene.add(terminal);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.8), new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x00ff00, emissiveIntensity: 0.2 }));
+    screen.position.set(-10, -5, -20.9); screen.rotation.y = 0.4;
+    scene.add(screen);
 };
 
 function generateGlowTexture() {
@@ -206,8 +272,13 @@ export const createDust = (scene: THREE.Scene) => {
     geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
 
     const material = new THREE.PointsMaterial({
-        color: 0xaaaaaa, size: 0.05, transparent: true, opacity: 0.3,
-        blending: THREE.AdditiveBlending, sizeAttenuation: true
+        color: 0x88aabb, // Slightly blueish dust
+        size: 0.15, // Larger particles
+        transparent: true,
+        opacity: 0.15, // Faint
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true,
+        depthWrite: false
     });
     const particles = new THREE.Points(geometry, material);
     scene.add(particles);
@@ -215,18 +286,46 @@ export const createDust = (scene: THREE.Scene) => {
 };
 
 export const createTable = (scene: THREE.Scene) => {
-    const tableMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.4, metalness: 0.5 });
-    const table = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 22), tableMat);
-    table.position.y = -1; table.receiveShadow = true; table.castShadow = true;
-    scene.add(table);
+    const tableGroup = new THREE.Group();
 
-    const legGeo = new THREE.BoxGeometry(1.5, 10, 1.5);
-    const leg1 = new THREE.Mesh(legGeo, tableMat); leg1.position.set(-11, -5.5, -9);
-    const leg2 = new THREE.Mesh(legGeo, tableMat); leg2.position.set(11, -5.5, -9);
-    const leg3 = new THREE.Mesh(legGeo, tableMat); leg3.position.set(-11, -5.5, 9);
-    const leg4 = new THREE.Mesh(legGeo, tableMat); leg4.position.set(11, -5.5, 9);
-    scene.add(leg1, leg2, leg3, leg4);
-    return table;
+    // Table Top - Grungy, Industrial
+    const tableMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.9, metalness: 0.3 });
+    const top = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 22), tableMat);
+    top.position.y = -1; top.receiveShadow = true; top.castShadow = true;
+    tableGroup.add(top);
+
+    // Metal Rim/Border
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5, metalness: 0.8 });
+    const rimGeo = new THREE.BoxGeometry(26.5, 0.6, 22.5);
+    // Subtraction logic isn't easy here, so just 4 border pieces
+    // Front/Back
+    const rimF = new THREE.Mesh(new THREE.BoxGeometry(26.4, 0.8, 0.5), rimMat); rimF.position.set(0, -1, 11.2); tableGroup.add(rimF);
+    const rimB = new THREE.Mesh(new THREE.BoxGeometry(26.4, 0.8, 0.5), rimMat); rimB.position.set(0, -1, -11.2); tableGroup.add(rimB);
+    // Left/Right
+    const rimL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 22), rimMat); rimL.position.set(-13.1, -1, 0); tableGroup.add(rimL);
+    const rimR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 22), rimMat); rimR.position.set(13.1, -1, 0); tableGroup.add(rimR);
+
+    // Legs - Reinforced
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 });
+    const legGeo = new THREE.CylinderGeometry(0.8, 0.6, 10, 8);
+    const leg1 = new THREE.Mesh(legGeo, legMat); leg1.position.set(-12, -6, -10);
+    const leg2 = new THREE.Mesh(legGeo, legMat); leg2.position.set(12, -6, -10);
+    const leg3 = new THREE.Mesh(legGeo, legMat); leg3.position.set(-12, -6, 10);
+    const leg4 = new THREE.Mesh(legGeo, legMat); leg4.position.set(12, -6, 10);
+    tableGroup.add(leg1, leg2, leg3, leg4);
+
+    scene.add(tableGroup);
+    return top; // Return the surface mesh for raycasting if needed, or group? original returned Mesh.
+    // Original returned 'table' (mesh). 'top' is the mesh.
+    // But we added a loop over 'table' elsewhere maybe?
+    // sceneLogic passes 'table' for gun rest height?
+    // It actually doesn't use the returned table object for logic, usually static pos.
+    // Wait, the hook might use it for raycasting items? 
+    // `useGameLogic.ts` doesn't seem to do raycasting on table itself, just items on it.
+    // So returning 'top' is safe.
+    // Actually, let's look at signature: export const createTable = (scene) => { ... return table; }
+    // It's not assigned to anything in context usually.
+
 };
 
 export const createGunModel = (scene: THREE.Scene) => {
@@ -266,9 +365,10 @@ export const createGunModel = (scene: THREE.Scene) => {
     receiver.add(port);
 
     // Bolts/Screws
+    // Bolts/Screws - No Shadows for perf
     const boltGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.1);
     const boltMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-    const b1 = new THREE.Mesh(boltGeo, boltMat); b1.rotation.z = Math.PI / 2; b1.position.set(0.41, 0.3, 2.5);
+    const b1 = new THREE.Mesh(boltGeo, boltMat); b1.rotation.z = Math.PI / 2; b1.position.set(0.41, 0.3, 2.5); b1.castShadow = false; b1.receiveShadow = false;
     const b2 = b1.clone(); b2.position.set(0.41, -0.2, 4.0);
     const b3 = b1.clone(); b3.position.set(0.41, 0.3, 4.5);
     receiver.add(b1, b2, b3);
@@ -377,6 +477,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
         const x = (i - 7.5) * 0.16;
         t.position.set(x, -0.7, 2.1);
         t.rotation.x = Math.PI; // Point down
+        t.castShadow = false; t.receiveShadow = false;
         teethGroup.add(t);
 
         // Bottom Row
@@ -385,6 +486,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
         b.rotation.x = 0; // Point up
         // Offset randomness
         b.scale.y = 0.8 + Math.random() * 0.4;
+        b.castShadow = false; b.receiveShadow = false;
         teethGroup.add(b);
     }
     headGroup.add(teethGroup);
@@ -410,9 +512,26 @@ export const createDealerModel = (scene: THREE.Scene) => {
     const lArm = new THREE.Mesh(armGeo, suitMat); lArm.position.set(-4, HEAD_Y - 5, Z_POS + 3); lArm.rotation.x = 0.9; lArm.rotation.z = -0.2; lArm.castShadow = true;
     const rArm = new THREE.Mesh(armGeo, suitMat); rArm.position.set(4, HEAD_Y - 5, Z_POS + 3); rArm.rotation.x = 0.9; rArm.rotation.z = 0.2; rArm.castShadow = true;
 
-    const handGeo = new THREE.BoxGeometry(1.8, 0.6, 2.2);
-    const lHand = new THREE.Mesh(handGeo, skinMat); lHand.position.set(-3.5, 0, -10.5); lHand.rotation.y = 0.3;
-    const rHand = new THREE.Mesh(handGeo, skinMat); rHand.position.set(3.5, 0, -10.5); rHand.rotation.y = -0.3;
+    const handGeo = new THREE.BoxGeometry(1.2, 1.5, 0.4);
+    const fingerGeo = new THREE.BoxGeometry(0.25, 0.6, 0.25);
+
+    // Left Hand
+    const lHand = new THREE.Group();
+    lHand.position.set(-3.5, 0, -10.5); // Resting on table
+    lHand.rotation.x = -0.3; lHand.rotation.z = -0.3;
+    const lhPalm = new THREE.Mesh(handGeo, skinMat); lHand.add(lhPalm);
+    for (let i = 0; i < 4; i++) {
+        const f = new THREE.Mesh(fingerGeo, skinMat);
+        f.position.set(0.4 - i * 0.27, -0.9, 0.1); f.rotation.z = 0.1 * (i - 1.5);
+        lHand.add(f);
+    }
+    const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.3), skinMat);
+    lThumb.position.set(0.7, -0.3, 0.2); lThumb.rotation.z = -0.6; lHand.add(lThumb);
+
+    // Right Hand
+    const rHand = lHand.clone();
+    rHand.position.set(3.5, 0, -10.5);
+    rHand.rotation.set(-0.3, 0, 0.3);
 
     dealerGroup.add(torso, collar, lShoulder, rShoulder, lArm, rArm, lHand, rHand);
 

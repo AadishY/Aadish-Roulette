@@ -20,7 +20,15 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                             {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400" size={28} />}
                             {item === 'SAW' && <Icons.Saw className="text-orange-600" size={28} />}
                         </div>
-                        <span className="font-bold text-stone-400 text-[10px] md:text-sm tracking-widest">{item}</span>
+                        <span className="font-bold text-stone-400 text-[10px] md:text-sm tracking-widest mt-1">
+                            {{
+                                'BEER': 'BEER',
+                                'CIGS': 'CIGARETTES',
+                                'GLASS': 'MAGNIFYING GLASS',
+                                'CUFFS': 'HANDCUFFS',
+                                'SAW': 'HAND SAW'
+                            }[item]}
+                        </span>
                     </div>
                 ))}
             </div>

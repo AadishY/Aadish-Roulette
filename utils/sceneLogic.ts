@@ -16,9 +16,28 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     }
 
-    // Bulb Flicker
+    // Bulb Flicker & Sway
     const flicker = (Math.random() > 0.98 ? (Math.random() * 2.0 + 12.0) : THREE.MathUtils.lerp(bulbLight.intensity / (Math.pow(brightnessMult, 0.5) || 1), 12.0, 0.1));
     bulbLight.intensity = flicker * Math.pow(brightnessMult, 0.5);
+
+    // SWAY LOGIC
+    const bulbGroup = scene.getObjectByName('HANGING_LIGHT');
+    if (bulbGroup) {
+        // Pendulum Swing
+        bulbGroup.rotation.z = Math.sin(time * 0.8) * 0.05;
+        bulbGroup.rotation.x = Math.sin(time * 0.6) * 0.03;
+
+        // Sync Light Source Position to Mesh (Approximation for shadows)
+        // Wire length approx 14 (from y=14 to y=0) - wait, wire is len 6, pos -3. Bulb is at -6.
+        // Distance from Pivot (0,0,0 of HANGING_LIGHT) to Bulb (-6 y) is 6 units.
+        const len = 6;
+        // Transform 0,-6,0 by rotation Z then X
+        // Simple approx:
+        bulbLight.position.x = bulbGroup.position.x + (len * Math.sin(bulbGroup.rotation.z));
+        bulbLight.position.z = bulbGroup.position.z - (len * Math.sin(bulbGroup.rotation.x));
+        // bulbLight.position.y is roughly constant or handled by setup, but we should sync it if Y moves. 
+        // For small angles, Y change is negligible.
+    }
 
     // FOV Handling
     const baseFOV = settings.fov || 70; // Use 70 as defined in constants
@@ -40,8 +59,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     if (turnOwner === 'PLAYER') {
         if (aimTarget === 'OPPONENT') {
-            targets.targetPos.set(0, 0, 8);
-            targets.targetRot.set(0, Math.PI, 0);
+            const swayX = Math.sin(time * 1.5) * 0.02;
+            const swayY = Math.cos(time * 2.0) * 0.02;
+            targets.targetPos.set(swayX, swayY, 8);
+            targets.targetRot.set(swayY * 0.5, Math.PI + swayX * 0.5, 0);
         } else if (aimTarget === 'SELF') {
             targets.targetPos.set(0, -2.5, 7);
             targets.targetRot.set(-0.7, 0, 0);
@@ -134,14 +155,19 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
 
     if (animState.playerHit) {
-        // Falling over
-        targetCamPos.set(2, -7.5, 12); // Fall to floor
-        camera.lookAt(0, 5, -5); // Look up at ceiling/dealer
-        camera.rotation.z = -0.6; // Tilt head more
-        scene.userData.cameraShake = 0.3; // Heavy heavy shake
-    } else if (!animState.playerHit && camera.position.y < -5) {
-        // Recovering (Stand up slowly)
-        camera.rotation.z *= 0.92;
+        // Falling over - Dramatic Instant Drop
+        targetCamPos.set(3, -5.5, 9); // Hit floor
+        // We override LookAt effectively by setting rotation manually or letting lookAt handle it then adding Z shake
+        camera.lookAt(0, 10, -5); // Look WAY UP at light/dealer
+        camera.rotation.z = -0.9 + (Math.random() * 0.1);
+        scene.userData.cameraShake = 0.5;
+    } else if (!animState.playerHit && camera.position.y < -4) {
+        // Recovering (Stand up slowly) - Groggy effect
+        const recoverSpeed = 0.02; // Slow recovery
+        camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, recoverSpeed);
+        // Dizzy Wobble - Pitch and Roll
+        camera.rotation.z += Math.sin(time * 3) * 0.003;
+        camera.rotation.x += Math.cos(time * 2.5) * 0.002; // Nodding slightly
     }
 
     // Camera Lerp
@@ -179,9 +205,12 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     const faceLight = dealerGroup.getObjectByName("FACE_LIGHT") as THREE.PointLight;
     if (faceLight) {
-        const flicker = Math.random() > 0.9 ? Math.random() * 0.5 + 3.5 : 4;
-        faceLight.intensity = THREE.MathUtils.lerp(faceLight.intensity, flicker, 0.2) * brightnessMult;
+        // Creepy pulsating face light
+        const pulse = 1.0 + Math.sin(time * 0.8) * 0.3;
+        const flicker = Math.random() > 0.95 ? Math.random() * 0.5 : 0;
+        faceLight.intensity = (pulse + flicker) * brightnessMult;
     }
+    // End Dealer Animation
 
     if (underLight) {
         const flicker = Math.random() > 0.95 ? Math.random() * 2.0 : 2.0;
@@ -298,8 +327,12 @@ function updateParticles(p: THREE.Points, limit: number) {
 function updateShell(shell: THREE.Mesh, vel: THREE.Vector3) {
     if (shell.visible) {
         shell.position.add(vel);
-        vel.y -= 0.035;
-        shell.rotation.x += 0.25; shell.rotation.z += 0.2;
+        vel.y -= 0.015; // Gravity
+
+        // Tumble
+        shell.rotation.x += 0.2;
+        shell.rotation.z += 0.1;
+
         if (shell.position.y < -2) {
             vel.y = -vel.y * 0.6; vel.x *= 0.8;
             if (Math.abs(vel.y) < 0.1) shell.visible = false;

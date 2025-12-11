@@ -46,21 +46,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                         />
                     </div>
 
-// REMOVED BRIGHTNESS CONTROL
-                    {/* <div className="space-y-2">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
-                            <span className="flex items-center gap-2"><Sun size={16} /> BRIGHTNESS</span>
-                            <span>{(settings.brightness * 100).toFixed(0)}%</span>
-                        </div>
-                        <input
-                            type="range"
-                            min="0.5" max="3.0" step="0.1"
-                            value={settings.brightness}
-                            onChange={(e) => handleChange('brightness', parseFloat(e.target.value))}
-                            className="w-full h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
-                        />
-                    </div> */}
-
                     {/* UI Scale */}
                     <div className="space-y-2">
                         <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
@@ -89,20 +74,6 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             onChange={(e) => handleChange('fov', parseInt(e.target.value))}
                             className="w-full h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
                         />
-                    </div>
-
-                    {/* Toggles */}
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                        <button
-                            onClick={() => handleChange('fishEye', !settings.fishEye)}
-                            className={`p-3 border-2 flex flex-col items-center gap-2 transition-all ${settings.fishEye ? 'border-red-600 bg-red-900/20 text-white' : 'border-stone-700 bg-stone-800 text-stone-500'}`}
-                        >
-                            {/* <Eye size={20} />
-                            <span className="text-xs font-bold tracking-wider">FISH EYE</span>
-                            <span className="text-[10px]">{settings.fishEye ? 'ON' : 'OFF'}</span> */}
-                        </button>
-
-
                     </div>
                 </div>
 

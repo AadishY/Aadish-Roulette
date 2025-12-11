@@ -16,7 +16,8 @@ export const useGameLogic = () => {
     chamber: [],
     currentShellIndex: 0,
     liveCount: 0,
-    blankCount: 0
+    blankCount: 0,
+    roundCount: 0
   });
 
   const [player, setPlayer] = useState<PlayerState>({
@@ -110,7 +111,8 @@ export const useGameLogic = () => {
       chamber: [],
       currentShellIndex: 0,
       liveCount: 0,
-      blankCount: 0
+      blankCount: 0,
+      roundCount: 0
     });
     setPlayer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false });
     setDealer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false });
@@ -155,6 +157,7 @@ export const useGameLogic = () => {
       currentShellIndex: 0,
       liveCount: lives,
       blankCount: blanks,
+      roundCount: prev.roundCount + 1,
       phase: 'LOAD'
     }));
 
@@ -181,9 +184,18 @@ export const useGameLogic = () => {
   };
 
   const distributeItems = async () => {
-    // Generate exactly 3 items per round as requested
+    // Generate items based on round count
+    // The state update is async, so 'gameState.roundCount' is likely still the OLD value here (0 at start).
+    // So roundNum will be 1 at start.
+    const roundNum = gameState.roundCount + 1;
+
+    let amount = 2; // Default start with 2 items
+    if (roundNum === 1) amount = 2;
+    else if (roundNum === 2) amount = 3;
+    else amount = 4;
+
     const generateLoot = () => {
-      return Array(3).fill(null).map(() => getRandomItem());
+      return Array(amount).fill(null).map(() => getRandomItem());
     };
 
     const pNew = generateLoot();

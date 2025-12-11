@@ -29,21 +29,43 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
                             <button
                                 onClick={() => onUseItem(idx)}
                                 disabled={isUsageDisabled}
-                                className={`w-7 h-8 md:w-20 md:h-24 bg-stone-900 border border-stone-700 flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 ${isUsageDisabled ? 'opacity-30' : ''}`}
+                                className={`w-7 h-8 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 relative`}
                             >
                                 {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                                 {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                                 {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                                 {item === 'CUFFS' && <Icons.Cuffs className="text-stone-400 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
                                 {item === 'SAW' && <Icons.Saw className="text-orange-600 mb-0 md:mb-2 w-3 h-3 md:w-6 md:h-6" />}
-                                <span className="text-[6px] md:text-[10px] text-stone-500 font-bold tracking-widest hidden md:block">{item}</span>
+                                <span className="text-[6px] md:text-[8px] text-stone-500 font-bold tracking-widest hidden md:block text-center px-1">
+                                    {{
+                                        'BEER': 'BEER',
+                                        'CIGS': 'CIGARETTE',
+                                        'GLASS': 'MAGNIFIER',
+                                        'CUFFS': 'HANDCUFFS',
+                                        'SAW': 'HAND SAW'
+                                    }[item]}
+                                </span>
+
+                                {isCuffDisabled && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-red-600 font-bold text-lg pointer-events-none">
+                                        🚫
+                                    </div>
+                                )}
                             </button>
 
                             {/* Tooltip */}
-                            <div className="absolute bottom-[110%] left-1/2 -translate-x-1/2 w-40 bg-stone-950/95 border border-stone-600 p-2 text-[10px] text-center hidden md:group-hover:block pointer-events-none z-[100] text-stone-200 shadow-[0_0_15px_rgba(0,0,0,1)]">
-                                <div className="font-bold text-white mb-1 tracking-widest">{item}</div>
+                            <div className="absolute bottom-[110%] left-1/2 -translate-x-1/2 w-48 bg-stone-950/95 border border-stone-600 p-2 text-[10px] text-center hidden md:group-hover:block pointer-events-none z-[100] text-stone-200 shadow-[0_0_15px_rgba(0,0,0,1)]">
+                                <div className="font-bold text-white mb-1 tracking-widest">
+                                    {{
+                                        'BEER': 'BEER',
+                                        'CIGS': 'CIGARETTE',
+                                        'GLASS': 'MAGNIFYING GLASS',
+                                        'CUFFS': 'HANDCUFFS',
+                                        'SAW': 'HAND SAW'
+                                    }[item]}
+                                </div>
                                 {ITEM_DESCRIPTIONS[item]}
-                                {isCuffDisabled && <div className="text-red-500 mt-1">OPPONENT IS CUFFED</div>}
+                                {isCuffDisabled && <div className="text-red-500 mt-1 font-bold border-t border-red-900 pt-1">ALREADY CUFFED</div>}
                                 {isGunHeld && <div className="text-red-500 mt-1">DROP GUN FIRST</div>}
                             </div>
                         </div>

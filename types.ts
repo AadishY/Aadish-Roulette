@@ -14,6 +14,7 @@ export interface GameState {
   liveCount: number;
   blankCount: number;
   lastTurnWasSkipped?: boolean;
+  roundCount: number;
 }
 
 export interface PlayerState {
