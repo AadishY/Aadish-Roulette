@@ -22,6 +22,6 @@ export const DEFAULT_SETTINGS: GameSettings = {
   uiScale: 1.0,
   fishEye: false,
   fov: 70,
-  musicVolume: 0.5,
-  sfxVolume: 0.7
+  musicVolume: 0.3,
+  sfxVolume: 1.0
 };
