@@ -4,105 +4,113 @@ import { GameUI } from './components/GameUI';
 import { useGameLogic } from './hooks/useGameLogic';
 import { useDealerAI } from './hooks/useDealerAI';
 import { useSocket } from './hooks/useSocket';
+import { useMultiplayerGame } from './hooks/useMultiplayerGame';
 import { SettingsMenu } from './components/SettingsMenu';
+import { MultiplayerGameOver } from './components/MultiplayerGameOver';
 import { GameSettings } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 
-import { MainMenu } from './components/MainMenu';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MultiplayerLobby } from './components/MultiplayerLobby';
 
 type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOBBY' | 'LOADING_GAME' | 'GAME';
 
 export default function App() {
-  const game = useGameLogic();
+  const spGame = useGameLogic();
   const [appState, setAppState] = useState<AppState>('MENU');
+  const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
 
-  // Socket Hook Hoisted
   const handleConnect = useCallback(() => { }, []);
   const [socketError, setSocketError] = useState<string | null>(null);
   const handleError = useCallback((err: string) => setSocketError(err), []);
 
-  const socket = useSocket(game.playerName || "PLAYER", handleConnect, handleError);
+  const handleGameStart = useCallback(() => {
+    setAppState('LOADING_GAME');
+  }, []);
 
-  // Settings State & Logic
+  const socket = useSocket(spGame.playerName || "PLAYER", handleConnect, handleError, handleGameStart);
+
+  // Multiplayer game logic
+  const mpGame = useMultiplayerGame({
+    mpGameState: socket.gameStateData,
+    myPlayerId: socket.myPlayerId,
+    lastAction: socket.lastAction,
+    knownShell: socket.knownShell,
+    onShoot: socket.shootPlayer,
+    onUseItem: socket.useItem,
+    onGrabGun: socket.grabGun,
+    socketReceivedLoot: socket.receivedLoot,
+    socketShowLootOverlay: socket.showLootOverlay,
+    socketAnnouncement: socket.announcement,
+    gameOverData: socket.gameOverData
+  });
+
+  // Switch between SP and MP - use mpGame once in multiplayer mode
+  const game = isMultiplayerMode ? mpGame : spGame;
+
+  // For loot overlay in MP, use socket directly since game state may not be ready yet
+  const effectiveShowLootOverlay = isMultiplayerMode ? socket.showLootOverlay : game.showLootOverlay;
+  const effectiveReceivedItems = (isMultiplayerMode ? socket.receivedLoot : game.receivedItems) as import('./types').ItemType[];
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Initialize from local storage or defaults
   const [settings, setSettings] = useState<GameSettings>(() => {
     const saved = localStorage.getItem('aadish_roulette_settings');
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse settings", e);
-      }
+      } catch (e) { }
     }
     return DEFAULT_SETTINGS;
   });
 
-  // Persist settings
   useEffect(() => {
     localStorage.setItem('aadish_roulette_settings', JSON.stringify(settings));
   }, [settings]);
 
+  // Dealer AI only for singleplayer
   useDealerAI({
-    gameState: game.gameState,
-    dealer: game.dealer,
-    player: game.player,
-    knownShell: game.knownShell,
-    fireShot: game.fireShot,
-    processItemEffect: game.processItemEffect,
-    setDealer: game.setDealer,
-    setTargetAim: game.setAimTarget,
-    setCameraView: game.setCameraView
+    gameState: spGame.gameState,
+    dealer: spGame.dealer,
+    player: spGame.player,
+    knownShell: spGame.knownShell,
+    fireShot: spGame.fireShot,
+    processItemEffect: spGame.processItemEffect,
+    setDealer: spGame.setDealer,
+    setTargetAim: spGame.setAimTarget,
+    setCameraView: spGame.setCameraView,
+    isMultiplayer: isMultiplayerMode
   });
 
-  const handleResetSettings = () => {
-    setSettings(DEFAULT_SETTINGS);
+  const handleResetSettings = () => setSettings(DEFAULT_SETTINGS);
+
+  const handleStartSP = () => {
+    setIsMultiplayerMode(false);
+    setAppState('LOADING_SP');
   };
 
-  /* State Machine Simplified:
-     - MENU/GAME: Handled by GameUI's internal 'phase' (Intro vs Game).
-     - LOADING_MP: Shows loading screen, then Lobby.
-     - LOBBY: Shows lobby.
-     - LOADING_GAME: Shows loading screen, then starts match.
-  */
-  const handleStartSP = () => setAppState('LOADING_SP');
   const handleStartMP = () => {
     setSocketError(null);
+    setIsMultiplayerMode(true);
     socket.connect();
     setAppState('LOADING_MP');
   };
 
   const handleLobbyStart = () => {
     socket.startGame();
-    // Wait for server "game_started" event to actually switch? 
-    // For now, assume optimistic or wait for socket event in useEffect?
-    // The user requested: "after clicking start game there will be a loading untill alll player connected"
-    // We will switch to LOADING_GAME state, but wait for server signal.
-    // Actually, let's just trigger the server start. The server will emit 'game_started'.
-    // We need to listen to that in App or useSocket.
-    // For this step, I'll just keep the local state transition for immediate feedback if host.
-    setAppState('LOADING_GAME');
   };
 
   const onLoadingComplete = () => {
     if (appState === 'LOADING_MP') {
       if (socket.isConnected) setAppState('LOBBY');
-      // If not connected, LoadingScreen might handle it via passed error or we stay showing error
     }
-
     if (appState === 'LOADING_SP') {
       setAppState('GAME');
-      game.resetGame();
-      setTimeout(() => game.startGame(game.playerName), 100);
+      spGame.resetGame(true);
+      setTimeout(() => spGame.startGame(spGame.playerName), 100);
     }
-
     if (appState === 'LOADING_GAME') {
       setAppState('GAME');
-      game.resetGame();
-      game.startGame(game.playerName);
     }
   };
 
@@ -110,14 +118,62 @@ export default function App() {
     if (appState === 'LOBBY' || appState === 'LOADING_MP') {
       socket.disconnect();
     }
+    setIsMultiplayerMode(false);
     setAppState('GAME');
-    game.resetGame(true);
+    spGame.resetGame(true);
   };
+
+  // Handlers for shooting and items
+  const handleFireShot = (target: 'PLAYER' | 'DEALER') => {
+    if (isMultiplayerMode && socket.gameStateData && socket.myPlayerId) {
+      mpGame.fireShot('PLAYER', target);
+    } else {
+      spGame.fireShot('PLAYER', target);
+    }
+  };
+
+  const handleUseItem = (index: number) => {
+    if (isMultiplayerMode && socket.gameStateData) {
+      mpGame.usePlayerItem(index);
+    } else {
+      spGame.usePlayerItem(index);
+    }
+  };
+
+  const handlePickupGun = () => {
+    if (isMultiplayerMode && socket.gameStateData) {
+      mpGame.pickupGun();
+    } else {
+      spGame.pickupGun();
+    }
+  };
+
+  // MP game over handlers
+  const handlePlayAgain = () => {
+    socket.requestRestart();
+    setAppState('LOBBY');
+  };
+
+  const handleMainMenu = () => {
+    socket.disconnect();
+    setIsMultiplayerMode(false);
+    // Add loading?
+    setAppState('GAME');
+    spGame.resetGame(true);
+  };
+
+  const handleRestartSP = () => {
+    setAppState('LOADING_SP');
+    spGame.resetGame(false);
+  };
+
+  // Check if MP game over
+  const showMpGameOver = isMultiplayerMode && socket.gameOverData;
 
   return (
     <div className={`relative w-full h-screen bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair`}>
 
-      {/* Always Render Scene & UI (UI handles Intro/Menu internally) */}
+      {/* 3D Scene */}
       <ThreeScene
         isSawed={game.player.isSawedActive}
         onGunClick={() => { }}
@@ -126,13 +182,14 @@ export default function App() {
         animState={game.animState}
         turnOwner={game.gameState.turnOwner}
         settings={settings}
-        players={socket.players}
-        playerId={game.playerName}
+        players={isMultiplayerMode && socket.gameStateData
+          ? Object.values(socket.gameStateData.players)
+          : socket.players}
+        playerId={isMultiplayerMode ? socket.myPlayerId : spGame.playerName}
         messages={socket.messages}
       />
-      {/* Pass necessary MP props if needed later (e.g. other players) */}
-      {/* For now ThreeScene expects just SP props, we will update it soon */}
 
+      {/* Game UI - Uses same components for SP and MP */}
       <GameUI
         gameState={game.gameState}
         player={game.player}
@@ -142,35 +199,58 @@ export default function App() {
         overlayColor={game.overlayColor}
         showBlood={game.showBlood}
         showFlash={game.showFlash}
-        showLootOverlay={game.showLootOverlay}
-        receivedItems={game.receivedItems}
+        showLootOverlay={effectiveShowLootOverlay}
+        receivedItems={effectiveReceivedItems}
         triggerHeal={game.animState.triggerHeal}
         triggerDrink={game.animState.triggerDrink}
         knownShell={game.knownShell}
-        playerName={game.playerName}
+        playerName={spGame.playerName}
         cameraView={game.cameraView}
         isProcessing={game.isProcessing}
         settings={settings}
         onStartGame={handleStartSP}
         onStartMultiplayer={handleStartMP}
-        onResetGame={game.resetGame}
-        onFireShot={(target) => game.fireShot('PLAYER', target)}
-        onUseItem={game.usePlayerItem}
+        onResetGame={(toMenu) => {
+          if (toMenu) {
+            setAppState('LOADING_GAME');
+            setTimeout(() => {
+              handleMainMenu();
+            }, 100);
+          } else {
+            setAppState('LOADING_SP'); // Re-trigger loading
+            spGame.resetGame(false);
+          }
+        }}
+        onFireShot={handleFireShot}
+        onUseItem={handleUseItem}
         onHoverTarget={game.setAimTarget}
-        onPickupGun={game.pickupGun}
+        onPickupGun={handlePickupGun}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onUpdateName={game.setPlayerName}
+        onUpdateName={spGame.setPlayerName}
         messages={socket.messages}
         onSendMessage={socket.sendMessage}
-        isMultiplayer={socket.isConnected}
+        isMultiplayer={isMultiplayerMode && !!socket.gameStateData}
+        mpGameState={socket.gameStateData}
+        mpMyPlayerId={socket.myPlayerId}
+        onMpShoot={socket.shootPlayer}
       />
 
-      {/* Overlays for MP Flow */}
+      {/* MP Game Over Screen */}
+      {showMpGameOver && socket.gameOverData && (
+        <MultiplayerGameOver
+          winnerName={socket.gameOverData.winnerName}
+          isWinner={socket.gameOverData.winnerId === socket.myPlayerId}
+          onPlayAgain={handlePlayAgain}
+          onMainMenu={handleMainMenu}
+        />
+      )}
+
+      {/* Loading Screens */}
       {(appState === 'LOADING_SP' || appState === 'LOADING_MP' || appState === 'LOADING_GAME') && (
         <div className="absolute inset-0 z-[100]">
           <LoadingScreen
             onComplete={onLoadingComplete}
-            text={appState === 'LOADING_GAME' ? "INITIALIZING TABLE..." : (appState === 'LOADING_SP' ? "PREPARING SINGLEPLAYER..." : "ESTABLISHING SECURE CONNECTION...")}
+            text={appState === 'LOADING_GAME' ? "INITIALIZING TABLE..." : (appState === 'LOADING_SP' ? "LOADING..." : "CONNECTING...")}
             duration={appState === 'LOADING_GAME' ? 4000 : 2500}
             serverCheck={appState === 'LOADING_MP'}
             onBack={handleBackToMenu}
@@ -178,19 +258,20 @@ export default function App() {
         </div>
       )}
 
+      {/* Lobby */}
       {appState === 'LOBBY' && (
         <div className="absolute inset-0 z-[100]">
           <MultiplayerLobby
             onStartGame={handleLobbyStart}
             onBack={handleBackToMenu}
-            playerName={game.playerName || "PLAYER"}
-            // Pass Socket Props
+            playerName={spGame.playerName || "PLAYER"}
             socketData={socket}
             errorMsg={socketError}
           />
         </div>
       )}
 
+      {/* Settings */}
       {isSettingsOpen && (
         <SettingsMenu
           settings={settings}

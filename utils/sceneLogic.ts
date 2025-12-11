@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SceneContext, SceneProps } from '../types';
 
 export function updateScene(context: SceneContext, props: SceneProps, time: number) {
-    const { gunGroup, camera, dealerGroup, shellCasing, shellVel, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight } = context;
+    const { gunGroup, camera, dealerGroup, shellCasing, shellVel, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, messages } = props; // Added 'messages'
 
     // --- BRIGHTNESS & FOV ---
@@ -57,8 +57,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         // DEALER TURN
         if (aimTarget === 'SELF') {
             // Dealer Goal: Shoot Self
-            targets.targetPos.set(0, 3, -11);
-            targets.targetRot.set(-0.5, Math.PI, 0);
+            targets.targetPos.set(0, 3.8, -5.0);
+            targets.targetRot.set(-0.25, Math.PI, 0); // Corrected angle for new distance
             targetGunLightIntensity = 5.0;
         } else if (aimTarget === 'OPPONENT') {
             // Dealer Goal: Shoot Player
@@ -114,12 +114,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             targetCamPos.set(swayX * 0.1, 1.5 + swayY * 0.1, 5);
             camera.lookAt(0, 2, -10);
             scene.userData.cameraShake = 0.05;
-        } else if (aimTarget === 'SELF') {
-            // Dealer Shooting Self: Closer, lower, more dramatic up-angle
-            targetCamPos.set(3.5, -1.0, -9);
-            camera.lookAt(0, 6, -14); // Look sharply up at chin/gun
         } else {
-            // Idle Dealer View
+            // Idle Dealer View (Used for SELF shooting too now)
             targetCamPos.set(swayX, 5 + swayY, 12);
             camera.lookAt(0, 2 + swayY * 0.5, -14);
         }
@@ -187,6 +183,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         faceLight.intensity = THREE.MathUtils.lerp(faceLight.intensity, flicker, 0.2) * brightnessMult;
     }
 
+    if (underLight) {
+        const flicker = Math.random() > 0.95 ? Math.random() * 2.0 : 2.0;
+        underLight.intensity = THREE.MathUtils.lerp(underLight.intensity, flicker, 0.05) * brightnessMult;
+    }
+
     // --- SPAWN PARTICLES ---
     // --- SPAWN PARTICLES ---
     // const { animState } = props; // Already destructured at top
@@ -202,15 +203,17 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
                 // Find "dead" particle (we use Y > 100 as inactive in updateBlood, assuming initialization puts them there)
                 if (bPos[i * 3 + 1] > 100) {
                     // Re-initialize
+                    // Re-initialize
                     // Dealer Head position roughly: (0, 5, -14)
-                    bPos[i * 3] = (Math.random() - 0.5) * 1.5;
-                    bPos[i * 3 + 1] = 5.5 + (Math.random() - 0.5) * 1.5;
-                    bPos[i * 3 + 2] = -14.0 + (Math.random() - 0.5) * 1.0;
+                    // Spawn closer to camera -12 ensures it's in front of face
+                    bPos[i * 3] = (Math.random() - 0.5) * 1.0;
+                    bPos[i * 3 + 1] = 5.0 + (Math.random() - 0.5) * 1.0;
+                    bPos[i * 3 + 2] = -13.0 + (Math.random() - 0.5) * 0.5;
 
-                    // Explosive velocity outward
-                    bVel[i * 3] = (Math.random() - 0.5) * 2.5;
-                    bVel[i * 3 + 1] = (Math.random() * 2.0); // Up
-                    bVel[i * 3 + 2] = (Math.random() * 2.5); // Towards screen slightly?
+                    // Explosive velocity outward towards camera
+                    bVel[i * 3] = (Math.random() - 0.5) * 4.0;
+                    bVel[i * 3 + 1] = (Math.random() * 3.0); // Up
+                    bVel[i * 3 + 2] = (Math.random() * 5.0) + 2.0; // Towards screen strongly
                     break;
                 }
             }
@@ -269,6 +272,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // Update Chat Bubbles
     if (messages) {
         updateChatBubbles(scene, messages);
+    }
+
+    // Update multiplayer player health bars
+    if (scene.userData.isMultiplayer && props.players) {
+        updatePlayerHealthBars(scene, props.players);
     }
 
     renderer.render(scene, camera);
@@ -346,35 +354,39 @@ function updateSparks(p: THREE.Points) {
 }
 
 function updateChatBubbles(scene: THREE.Scene, messages: any[]) {
+    if (!messages || messages.length === 0) return;
+
     scene.children.forEach(child => {
         if (child.name.startsWith("PLAYER_")) {
-            const playerName = child.name.replace("PLAYER_", "");
-            const lastMsg = messages.filter(m => m.sender === playerName && (Date.now() - m.timestamp < 6000)).pop();
+            const playerName = child.name.replace("PLAYER_", "").toUpperCase();
+            const lastMsg = messages.filter(m => {
+                const senderName = (m.sender || '').toUpperCase();
+                const isRecent = Date.now() - (m.timestamp || 0) < 6000;
+                return senderName === playerName && isRecent;
+            }).pop();
 
             const chatGroup = child.userData.chatGroup as THREE.Group;
             if (chatGroup) {
                 if (lastMsg) {
                     chatGroup.visible = true;
-                    // Check if content changed
-                    if (chatGroup.userData.lastMsgId !== lastMsg.id) {
+                    const msgId = lastMsg.id || lastMsg.timestamp;
+                    if (chatGroup.userData.lastMsgId !== msgId) {
                         chatGroup.clear();
 
-                        // Create Sprite
                         const canvas = document.createElement('canvas');
                         canvas.width = 512; canvas.height = 128;
                         const ctx = canvas.getContext('2d');
                         if (ctx) {
-                            // Bubble
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                             ctx.beginPath();
-                            ctx.roundRect(10, 10, 492, 108, 20);
+                            ctx.roundRect(10, 10, 492, 100, 20);
                             ctx.fill();
-                            // Text
-                            ctx.fillStyle = 'black';
-                            ctx.font = 'bold 40px monospace';
+                            ctx.fillStyle = '#000000';
+                            ctx.font = 'bold 36px sans-serif';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText(lastMsg.text, 256, 64, 480);
+                            const text = lastMsg.text.length > 25 ? lastMsg.text.substring(0, 25) + '...' : lastMsg.text;
+                            ctx.fillText(text, 256, 60, 480);
                         }
 
                         const tex = new THREE.CanvasTexture(canvas);
@@ -382,11 +394,7 @@ function updateChatBubbles(scene: THREE.Scene, messages: any[]) {
                         sprite.scale.set(6, 1.5, 1);
                         chatGroup.add(sprite);
 
-                        chatGroup.userData.lastMsgId = lastMsg.id;
-
-                        // Look at camera (billboard)
-                        // Actually Sprite does this automatically, but we might want it fixed relative to player?
-                        // Sprite always faces camera. Perfect.
+                        chatGroup.userData.lastMsgId = msgId;
                     }
                 } else {
                     chatGroup.visible = false;
@@ -396,3 +404,32 @@ function updateChatBubbles(scene: THREE.Scene, messages: any[]) {
     });
 }
 
+function updatePlayerHealthBars(scene: THREE.Scene, players: any[]) {
+    const avatars = scene.userData.playerAvatars as THREE.Group[] || [];
+
+    avatars.forEach(avatar => {
+        const playerId = avatar.userData.playerId;
+        const player = players.find(p => p.id === playerId || p.name === avatar.userData.playerName);
+
+        if (player && avatar.userData.hpFill) {
+            const hpFill = avatar.userData.hpFill as THREE.Mesh;
+            const maxHp = avatar.userData.maxHp || 4;
+            const hp = player.hp !== undefined ? player.hp : maxHp;
+
+            // Update health bar width
+            const ratio = Math.max(0, hp / maxHp);
+            hpFill.scale.x = ratio || 0.01;
+
+            // Change color based on health
+            const mat = hpFill.material as THREE.MeshBasicMaterial;
+            if (ratio > 0.5) mat.color.setHex(0xff3333);
+            else if (ratio > 0.25) mat.color.setHex(0xff9900);
+            else mat.color.setHex(0xcc0000);
+
+            // Fade out avatar if eliminated
+            if (hp <= 0) {
+                avatar.visible = false;
+            }
+        }
+    });
+}

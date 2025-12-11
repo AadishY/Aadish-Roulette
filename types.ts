@@ -75,6 +75,7 @@ export interface SceneContext {
   sparkParticles: THREE.Points;
   dustParticles: THREE.Points;
   baseLights: { light: THREE.Light, baseIntensity: number }[];
+  underLight?: THREE.PointLight;
 }
 
 export interface SceneProps {
@@ -95,4 +96,11 @@ export interface MPPlayer {
   name: string;
   ready: boolean;
   isHost: boolean;
+  hp?: number;
+  maxHp?: number;
+  items?: string[];
+  isHandcuffed?: boolean;
+  isSawedActive?: boolean;
+  position?: number;
+  isAlive?: boolean;
 }

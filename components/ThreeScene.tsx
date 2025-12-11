@@ -93,53 +93,54 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
             containerRef.current.appendChild(renderer.domElement);
 
-            const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim } = setupLighting(scene);
+            const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim, underLight } = setupLighting(scene);
             createEnvironment(scene);
             const dustParticles = createDust(scene);
             createTable(scene);
             const { gunGroup, barrelMesh, muzzleFlash } = createGunModel(scene);
             const { bulletMesh, shellCasing } = createProjectiles(scene);
 
-            // Avatar Logic
-            let dealerGroup = new THREE.Group(); // Default empty
-            const opponents = propsRef.current.players
-                ? propsRef.current.players.filter(p => p.name !== propsRef.current.playerId)
-                : [];
+            // === MULTIPLAYER AVATAR LOGIC ===
+            let dealerGroup = new THREE.Group();
+            const playerAvatars: THREE.Group[] = [];
 
-            if (opponents.length > 0) {
-                // Multiplayer Mode
-                // Find index of 'me' to rotate table? No, simpler to just place opponents relative to my default camera
-                // Sort opponents to ensure consistent placement?
-                // Just take the list as is.
+            const mpPlayers = propsRef.current.players || [];
+            const myId = propsRef.current.playerId;
+            // Filter opponents by ID (not name) since playerId is socket ID in multiplayer
+            const opponents = mpPlayers.filter(p => p.id !== myId && p.id);
+            const isMultiplayerGame = opponents.length > 0;
+
+            if (isMultiplayerGame) {
+                // Position opponents around the table based on count
+                // Table positions: 0 = opposite (dealer position), 1 = left, 2 = right
+                const positions = [
+                    { pos: new THREE.Vector3(0, -5, -14), rot: 0 },           // Opposite (default)
+                    { pos: new THREE.Vector3(-14, -5, 0), rot: Math.PI / 2 },  // Left
+                    { pos: new THREE.Vector3(14, -5, 0), rot: -Math.PI / 2 }   // Right
+                ];
+
                 opponents.forEach((opp, i) => {
-                    let pos = new THREE.Vector3(0, -5, -14); // Default Dealer spot
-                    let rot = 0;
-
-                    if (opponents.length === 1) {
-                        // Face to Face
-                        // Use default pos
-                    } else if (opponents.length === 2 || opponents.length === 3) {
-                        // 3 or 4 players total (1 me implies 2 or 3 opponents)
-                        if (i === 0) { pos.set(0, -5, -14); rot = 0; } // Opposite
-                        if (i === 1) { pos.set(-14, -5, 0); rot = Math.PI / 2; } // Left (facing right) - actually Left side is -X, facing +X is Math.PI/2? No, facing (0,0) center.
-                        // At -14 X, looking at 0,0. Vector (1,0,0). Rotation Math.PI/2 means rotated 90 deg around Y.
-                        // Default forward is +Z. +X is -90deg?
-                        // Let's use lookAt logic or trial.
-                        // If at (-14, 0), looking at (0,0), rot Y should be -Math.PI/2?
-                        if (i === 2) { pos.set(14, -5, 0); rot = -Math.PI / 2; } // Right
-                        // Adjust if 2 opponents (Triangle? or just Opp + Side?)
-                        // User said: "if two player joined them place them face to face" -> That means 1 Me + 1 Opponent. Handled by index 0.
-                        // "for more than 3 properly give option..." implies 3 opponents (4 players).
+                    if (i < positions.length) {
+                        const { pos, rot } = positions[i];
+                        const hp = opp.hp !== undefined ? opp.hp : 4;
+                        const maxHp = opp.maxHp !== undefined ? opp.maxHp : 4;
+                        const avatar = createPlayerAvatar(scene, pos, rot, opp.name, hp, maxHp);
+                        avatar.userData.playerId = opp.id;
+                        playerAvatars.push(avatar);
                     }
-
-                    const avatar = createPlayerAvatar(scene, pos, rot, opp.name);
-                    avatar.name = `PLAYER_${opp.name}`;
-                    // We can store ref to avatar for animations
                 });
+
+                // Wider camera FOV for multiplayer to see all players
+                camera.fov = opponents.length >= 2 ? 100 : 95;
+                camera.updateProjectionMatrix();
             } else {
-                // Singleplayer Dealer
+                // Singleplayer - use creepy dealer
                 dealerGroup = createDealerModel(scene);
             }
+
+            // Store avatars in scene for later updates
+            scene.userData.playerAvatars = playerAvatars;
+            scene.userData.isMultiplayer = isMultiplayerGame;
 
             // dedicated light on gunGroup for visibility when dealer holds it
             const gunLight = new THREE.PointLight(0xffeebb, 0, 15); // Increased range and lighter color
@@ -191,7 +192,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             // Let's force it.
             sceneRef.current = {
                 scene, camera, renderer, gunGroup, muzzleFlash, muzzleLight, roomRedLight, bulbLight, gunLight,
-                bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles, baseLights
+                bulletMesh, dealerGroup, shellCasing, shellVel, mouse, raycaster, barrelMesh, bloodParticles, sparkParticles, dustParticles, baseLights, underLight
             };
 
             updateCameraResponsive();
@@ -265,7 +266,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             if (sceneRef.current) sceneRef.current.renderer.dispose();
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
-    }, [settings.pixelScale]);
+        // Reinit when players change - use IDs string to detect when game state players arrive
+    }, [settings.pixelScale, players?.map(p => p.id).join(',')]);
 
     // --- SYNC EFFECTS ---
     useEffect(() => {
@@ -402,7 +404,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                     isVis = true;
                 }
             });
-            muzzleFlash.visible = isVis;
+
+            // Force hide if intended to be off
+            if (animState.muzzleFlashIntensity === 0) {
+                isVis = false;
+                muzzleFlash.visible = false;
+            } else {
+                muzzleFlash.visible = isVis;
+            }
+
             roomRedLight.intensity = THREE.MathUtils.lerp(roomRedLight.intensity, 0, 0.2);
 
             // Safety: Force hide if very low opacity

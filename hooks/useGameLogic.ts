@@ -90,13 +90,14 @@ export const useGameLogic = () => {
     setLogs(prev => [...prev, { id: Date.now() + Math.random(), text, type }]);
   };
 
+  // Revised Probabilities - More balanced
   const getRandomItem = (): ItemType => {
     const r = Math.random();
-    if (r < 0.20) return 'BEER';
-    if (r < 0.45) return 'CIGS'; // Increased Cigs chance
-    if (r < 0.65) return 'GLASS';
-    if (r < 0.85) return 'CUFFS';
-    return 'SAW';
+    if (r < 0.25) return 'BEER';      // 25% Beer (Core mechanic)
+    if (r < 0.50) return 'CIGS';      // 25% Cigs (Healing is good)
+    if (r < 0.70) return 'GLASS';     // 20% Glass (Intel)
+    if (r < 0.85) return 'CUFFS';     // 15% Cuffs (Powerful but situational)
+    return 'SAW';                     // 15% Saw (High damage)
   };
 
   // --- Logic ---
@@ -223,7 +224,7 @@ export const useGameLogic = () => {
     const isSelf = shooter === target;
     setAimTarget(isSelf ? 'SELF' : 'OPPONENT');
 
-    await wait(1000);
+    await wait(50);
 
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';
@@ -244,7 +245,13 @@ export const useGameLogic = () => {
     if (isLive && target === 'PLAYER') {
       // INSTANT HIT
       setAnim(prev => ({ ...prev, playerHit: true }));
-      setTimeout(() => setAnim(prev => ({ ...prev, playerHit: false })), 2500);
+      setOverlayColor('red'); // Instant Red Screen
+      setShowBlood(true);
+      setTimeout(() => {
+        setAnim(prev => ({ ...prev, playerHit: false }));
+        setShowBlood(false);
+        setOverlayColor('none');
+      }, 2500);
     }
 
     if (isLive) {
@@ -278,13 +285,11 @@ export const useGameLogic = () => {
     setOverlayText(null);
     setAimTarget('IDLE');
 
-    // Handle Damage
+    // Handle Damage - Updated to remove delayed visual effects for player as they are now instant
     if (damage > 0) {
       if (target === 'PLAYER') {
         setPlayer(p => ({ ...p, hp: Math.max(0, p.hp - damage) }));
-        setOverlayColor('red');
-        setShowBlood(true);
-        setTimeout(() => setShowBlood(false), 3500);
+        // Visuals moved to instant block
       } else {
         const newHp = Math.max(0, dealer.hp - damage);
         setDealer(p => ({ ...p, hp: newHp }));
@@ -296,8 +301,8 @@ export const useGameLogic = () => {
           setAnim(prev => ({ ...prev, dealerDropping: false }));
           await wait(1000);
         }
+        setOverlayColor('none');
       }
-      setTimeout(() => setOverlayColor('none'), 500);
     }
 
     // Reset Saw
@@ -380,7 +385,7 @@ export const useGameLogic = () => {
     if (item === 'CUFFS') {
       const opponent = user === 'PLAYER' ? dealer : player;
       // Check if opponent is already cuffed OR if we just skipped their turn via cuffs
-      if (opponent.isHandcuffed || (user === 'PLAYER' && gameState.lastTurnWasSkipped)) {
+      if (opponent.isHandcuffed || gameState.lastTurnWasSkipped) {
         addLog(`${user === 'PLAYER' ? 'DEALER' : 'YOU'} CAN'T BE CUFFED AGAIN!`, 'info');
         if (user === 'PLAYER') {
           setPlayer(p => ({ ...p, items: [...p.items, 'CUFFS'] }));
@@ -460,6 +465,11 @@ export const useGameLogic = () => {
     setIsProcessing(false);
   };
 
+  // Helper to directly set game phase (useful for multiplayer)
+  const setGamePhase = (phase: GameState['phase']) => {
+    setGameState(prev => ({ ...prev, phase }));
+  };
+
   return {
     gameState,
     player,
@@ -486,6 +496,7 @@ export const useGameLogic = () => {
     processItemEffect,
     resetGame,
     setPlayerName, // Expose setter
-    pickupGun
+    pickupGun,
+    setGamePhase // For multiplayer phase control
   };
 };

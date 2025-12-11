@@ -67,7 +67,12 @@ export const setupLighting = (scene: THREE.Scene) => {
     roomRedLight.position.set(0, 10, 0);
     scene.add(roomRedLight);
 
-    return { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight: playerFill, ambient, bgRim, dealerRim };
+    // Creepy Under-Light for Dealer
+    const underLight = new THREE.PointLight(0x44ffaa, 2.0, 10);
+    underLight.position.set(0, -2, -12);
+    scene.add(underLight);
+
+    return { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight: playerFill, ambient, bgRim, dealerRim, underLight };
 };
 
 export const createEnvironment = (scene: THREE.Scene) => {
@@ -255,8 +260,30 @@ export const createGunModel = (scene: THREE.Scene) => {
     const sight = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.1), new THREE.MeshStandardMaterial({ color: 0xcccccc }));
     sight.position.set(0, 0.55, 9.5);
 
-    // Dynamic Muzzle Flash (Multi-plane Star)
-    const flashGeo = new THREE.PlaneGeometry(3.5, 3.5); // Bigger for Shotgun
+    // Shell Ejection Port
+    const port = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 1.2), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    port.position.set(0.26, 0.2, 3.5);
+    receiver.add(port);
+
+    // Bolts/Screws
+    const boltGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.1);
+    const boltMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const b1 = new THREE.Mesh(boltGeo, boltMat); b1.rotation.z = Math.PI / 2; b1.position.set(0.41, 0.3, 2.5);
+    const b2 = b1.clone(); b2.position.set(0.41, -0.2, 4.0);
+    const b3 = b1.clone(); b3.position.set(0.41, 0.3, 4.5);
+    receiver.add(b1, b2, b3);
+
+    // Trigger (Curved)
+    const triggerCurve = new THREE.CurvePath();
+    const triggerGeo = new THREE.TorusGeometry(0.15, 0.04, 8, 8, Math.PI / 2);
+    const trigger = new THREE.Mesh(triggerGeo, darkMetalMat);
+    trigger.rotation.z = Math.PI; trigger.rotation.y = Math.PI / 2;
+    trigger.position.set(0, -0.4, 3.2);
+
+    gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight, trigger);
+
+    // Dynamic Muzzle Flash (Multi-plane Star) -- Re-added
+    const flashGeo = new THREE.PlaneGeometry(3.5, 3.5);
     const flashMat = new THREE.MeshBasicMaterial({
         color: 0xffdd88, side: THREE.DoubleSide, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false
     });
@@ -265,14 +292,9 @@ export const createGunModel = (scene: THREE.Scene) => {
     const f3 = new THREE.Mesh(flashGeo, flashMat); f3.rotation.z = -Math.PI / 4;
     const muzzleFlash = new THREE.Group();
     muzzleFlash.add(f1, f2, f3);
-    muzzleFlash.position.set(0, 0.35, 10.0); // End of barrel (roughly)
+    muzzleFlash.position.set(0, 0.35, 10.0);
     muzzleFlash.visible = false;
     gunGroup.add(muzzleFlash);
-
-    gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight);
-
-    const hitbox = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 10), new THREE.MeshBasicMaterial({ visible: false }));
-    hitbox.userData = { type: 'GUN' }; gunGroup.add(hitbox);
 
     scene.add(gunGroup);
 
@@ -414,7 +436,7 @@ export const createProjectiles = (scene: THREE.Scene) => {
     return { bulletMesh, shellCasing };
 };
 
-export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string) => {
+export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string, hp: number = 4, maxHp: number = 4) => {
     const avatarGroup = new THREE.Group();
     avatarGroup.name = 'PLAYER_' + name;
     avatarGroup.position.copy(position);
@@ -423,17 +445,19 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.5 });
     const suitMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
 
-    // Body (Similar to Dealer but smaller/normal)
+    // Body
     const torso = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), suitMat);
     torso.position.set(0, 3, 0);
+    torso.castShadow = true;
     avatarGroup.add(torso);
 
     // Head (Normal Sphere)
     const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), skinMat);
     head.position.set(0, 7.5, 0);
+    head.castShadow = true;
     avatarGroup.add(head);
 
-    // Sunglasses / Eyes
+    // Sunglasses
     const glasses = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x111111 }));
     glasses.position.set(0, 7.6, 1.3);
     avatarGroup.add(glasses);
@@ -441,36 +465,106 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     // Arms
     const lArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
     lArm.position.set(-3, 3, 0); lArm.rotation.z = 0.2;
+    lArm.castShadow = true;
     avatarGroup.add(lArm);
     const rArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
     rArm.position.set(3, 3, 0); rArm.rotation.z = -0.2;
+    rArm.castShadow = true;
     avatarGroup.add(rArm);
 
-    // Name Tag (Canvas Sprite)
+    // === HEALTH BAR ===
+    const hpGroup = new THREE.Group();
+    hpGroup.position.set(0, 10.5, 0);
+
+    const hpBgGeo = new THREE.PlaneGeometry(4, 0.5);
+    const hpBg = new THREE.Mesh(hpBgGeo, new THREE.MeshBasicMaterial({ color: 0x331111, side: THREE.DoubleSide }));
+    hpGroup.add(hpBg);
+
+    const hpWidth = (hp / maxHp) * 3.8;
+    const hpFillGeo = new THREE.PlaneGeometry(hpWidth, 0.4);
+    const hpFill = new THREE.Mesh(hpFillGeo, new THREE.MeshBasicMaterial({ color: 0xff3333, side: THREE.DoubleSide }));
+    hpFill.position.x = (hpWidth - 3.8) / 2;
+    hpFill.position.z = 0.01;
+    hpGroup.add(hpFill);
+
+    avatarGroup.add(hpGroup);
+    avatarGroup.userData.hpGroup = hpGroup;
+    avatarGroup.userData.hpFill = hpFill;
+    avatarGroup.userData.maxHp = maxHp;
+
+    // === NAME TAG ===
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 64;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
         ctx.fillRect(0, 0, 256, 64);
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 30px monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 28px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(name, 128, 32);
+        ctx.fillText(name.toUpperCase(), 128, 32);
     }
     const nameTex = new THREE.CanvasTexture(canvas);
     const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true }));
-    nameSprite.position.set(0, 10, 0);
+    nameSprite.position.set(0, 11.5, 0);
     nameSprite.scale.set(4, 1, 1);
     avatarGroup.add(nameSprite);
 
-    // Chat Bubble Group (Empty initially)
+    // === CHAT BUBBLE ===
     const chatGroup = new THREE.Group();
-    chatGroup.position.set(0, 11, 0);
+    chatGroup.position.set(0, 13, 0);
     avatarGroup.add(chatGroup);
-    avatarGroup.userData = { chatGroup };
+    avatarGroup.userData.chatGroup = chatGroup;
+    avatarGroup.userData.playerName = name;
 
     scene.add(avatarGroup);
     return avatarGroup;
+};
+
+// Helper to update player health bar
+export const updatePlayerHealth = (avatarGroup: THREE.Group, hp: number) => {
+    const hpFill = avatarGroup.userData.hpFill as THREE.Mesh;
+    const maxHp = avatarGroup.userData.maxHp || 4;
+    if (hpFill) {
+        const hpWidth = Math.max(0.1, (hp / maxHp) * 3.8);
+        hpFill.scale.x = hp / maxHp;
+        hpFill.position.x = (hpWidth - 3.8) / 2;
+    }
+};
+
+// Helper to show chat bubble
+export const showChatBubble = (avatarGroup: THREE.Group, message: string) => {
+    const chatGroup = avatarGroup.userData.chatGroup as THREE.Group;
+    if (!chatGroup) return;
+
+    // Clear existing
+    while (chatGroup.children.length) chatGroup.remove(chatGroup.children[0]);
+
+    // Create bubble
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 512, 100, 20);
+        ctx.fill();
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const maxLen = 30;
+        const text = message.length > maxLen ? message.substring(0, maxLen) + '...' : message;
+        ctx.fillText(text, 256, 50);
+    }
+    const bubbleTex = new THREE.CanvasTexture(canvas);
+    const bubbleSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true }));
+    bubbleSprite.scale.set(6, 1.5, 1);
+    chatGroup.add(bubbleSprite);
+
+    // Auto-remove after delay
+    setTimeout(() => {
+        if (chatGroup.children.length) chatGroup.remove(bubbleSprite);
+    }, 4000);
 };
