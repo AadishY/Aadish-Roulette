@@ -132,53 +132,52 @@ export const createDealerModel = (scene: THREE.Scene) => {
     headGroup.add(mouthVoid);
 
     // === PROPER TEETH PLACEMENT ===
-    // Mouth void is at Z = 1.8. Skull radius ~2.4.
-    // Teeth need to be inside the void but visible. Z ~ 1.9 - 2.0.
+    // Moved slightly forward (2.1) to ensure visibility against the black void
+    // Added more teeth for a fuller, grinnier look
 
     // Upper teeth
     const upperTeeth = [
-        { x: -1.0, h: 0.6 },
-        { x: -0.8, h: 0.75 },
-        { x: -0.6, h: 0.55 },
-        { x: -0.4, h: 0.7 },
-        { x: -0.2, h: 0.5 },
-        { x: 0, h: 0.65 },
-        { x: 0.2, h: 0.5 },
-        { x: 0.4, h: 0.7 },
-        { x: 0.6, h: 0.55 },
-        { x: 0.8, h: 0.75 },
-        { x: 1.0, h: 0.6 },
+        { x: -1.0, h: 0.55 }, { x: -0.9, h: 0.45 },
+        { x: -0.8, h: 0.65 }, { x: -0.7, h: 0.5 },
+        { x: -0.6, h: 0.55 }, { x: -0.5, h: 0.4 },
+        { x: -0.4, h: 0.60 }, { x: -0.3, h: 0.45 },
+        { x: -0.2, h: 0.5 }, { x: -0.1, h: 0.4 },
+        { x: 0, h: 0.6 },
+        { x: 0.1, h: 0.4 }, { x: 0.2, h: 0.5 },
+        { x: 0.3, h: 0.45 }, { x: 0.4, h: 0.60 },
+        { x: 0.5, h: 0.4 }, { x: 0.6, h: 0.55 },
+        { x: 0.7, h: 0.5 }, { x: 0.8, h: 0.65 },
+        { x: 0.9, h: 0.45 }, { x: 1.0, h: 0.55 },
     ];
 
     for (const t of upperTeeth) {
-        const geo = new THREE.ConeGeometry(0.08, t.h, 4);
+        const geo = new THREE.ConeGeometry(0.06, t.h, 4);
         const mesh = new THREE.Mesh(geo, teethMat);
-        // Positioned at Z=2.0 (slightly protruding from void at 1.8)
-        mesh.position.set(t.x, -0.4, 2.0);
-        mesh.rotation.x = Math.PI - 0.1; // Point down and slightly in
+        mesh.position.set(t.x, -0.45, 2.15); // Moved to 2.15
+        mesh.rotation.x = Math.PI - 0.15;
         mesh.rotation.z = (Math.random() - 0.5) * 0.4;
         headGroup.add(mesh);
     }
 
     // Lower teeth
     const lowerTeeth = [
-        { x: -0.9, h: 0.55 },
-        { x: -0.7, h: 0.65 },
-        { x: -0.5, h: 0.45 },
-        { x: -0.3, h: 0.6 },
-        { x: -0.1, h: 0.4 },
-        { x: 0.1, h: 0.5 },
-        { x: 0.3, h: 0.45 },
-        { x: 0.5, h: 0.65 },
-        { x: 0.7, h: 0.55 },
-        { x: 0.9, h: 0.6 },
+        { x: -0.95, h: 0.5 }, { x: -0.85, h: 0.4 },
+        { x: -0.75, h: 0.6 }, { x: -0.65, h: 0.45 },
+        { x: -0.55, h: 0.5 }, { x: -0.45, h: 0.35 },
+        { x: -0.35, h: 0.55 }, { x: -0.25, h: 0.4 },
+        { x: -0.15, h: 0.45 }, { x: -0.05, h: 0.35 },
+        { x: 0.05, h: 0.45 }, { x: 0.15, h: 0.45 },
+        { x: 0.25, h: 0.4 }, { x: 0.35, h: 0.55 },
+        { x: 0.45, h: 0.35 }, { x: 0.55, h: 0.5 },
+        { x: 0.65, h: 0.45 }, { x: 0.75, h: 0.6 },
+        { x: 0.85, h: 0.4 }, { x: 0.95, h: 0.5 },
     ];
 
     for (const t of lowerTeeth) {
-        const geo = new THREE.ConeGeometry(0.07, t.h, 4);
+        const geo = new THREE.ConeGeometry(0.05, t.h, 4);
         const mesh = new THREE.Mesh(geo, teethMat);
-        mesh.position.set(t.x, -0.9, 1.95);
-        mesh.rotation.x = 0.1; // Point up and slightly in
+        mesh.position.set(t.x, -0.85, 2.1); // Moved to 2.1
+        mesh.rotation.x = 0.15;
         mesh.rotation.z = (Math.random() - 0.5) * 0.3;
         headGroup.add(mesh);
     }
@@ -219,8 +218,9 @@ export const createDealerModel = (scene: THREE.Scene) => {
     dealerGroup.add(rShoulder);
 
     // Arm Helpers
-    // We want hands at Z_POS+8, Y=-0.2 (Table), X=+/-3.2
-    // We want Elbows roughly mid-way
+    // Lowered Elbows and Hands as requested
+    // Previous: Elbow Y=0.5, Hand Y=-0.2
+    // New: Elbow Y=0.0, Hand Y=-0.4 (Table at -0.75, gives 0.35 clearance to center, ~0.1 clearance to bottom)
 
     const createLimb = (start: THREE.Vector3, end: THREE.Vector3, thickness: number) => {
         const len = start.distanceTo(end);
@@ -233,8 +233,8 @@ export const createDealerModel = (scene: THREE.Scene) => {
         return mesh;
     };
 
-    const HAND_Y = -0.2;
-    const ELBOW_Y = 0.5; // Slightly raised elbows
+    const HAND_Y = -0.4;
+    const ELBOW_Y = 0.0;
     const ELBOW_Z = Z_POS + 3; // Mid-way forward
 
     // LEFT ARM
