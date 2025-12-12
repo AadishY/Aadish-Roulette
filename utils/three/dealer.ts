@@ -107,9 +107,9 @@ export const createDealerModel = (scene: THREE.Scene) => {
     rEye.rotation.y = 0.3;
     headGroup.add(rEye);
 
-    // Red glowing pupils - SLIT SHAPE
+    // Red glowing pupils - SLIT SHAPE (Smaller)
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const pupilGeo = new THREE.CapsuleGeometry(0.15, 0.45, 4, 8);
+    const pupilGeo = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8);
 
     const lPupil = new THREE.Mesh(pupilGeo, pupilMat);
     lPupil.position.set(-1.2, 0.6, 1.9);
@@ -123,19 +123,19 @@ export const createDealerModel = (scene: THREE.Scene) => {
     rPupil.name = 'RIGHT_PUPIL';
     headGroup.add(rPupil);
 
-    // Pupil glow
+    // Pupil glow (Reduced)
     const glowMat = new THREE.MeshBasicMaterial({
         color: 0xff0000,
         transparent: true,
         opacity: 0.6
     });
 
-    const lGlow = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), glowMat);
+    const lGlow = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), glowMat);
     lGlow.position.set(-1.2, 0.6, 1.95);
     lGlow.name = 'LEFT_GLOW';
     headGroup.add(lGlow);
 
-    const rGlow = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), glowMat);
+    const rGlow = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), glowMat);
     rGlow.position.set(1.2, 0.6, 1.95);
     rGlow.name = 'RIGHT_GLOW';
     headGroup.add(rGlow);
@@ -235,68 +235,113 @@ export const createDealerModel = (scene: THREE.Scene) => {
     midTorso.castShadow = true;
     dealerGroup.add(midTorso);
 
-    // Arms - Longer and lanky but thick cloth
-    const upperArmGeo = new THREE.CylinderGeometry(0.6, 0.5, 3.5);
+    // Arms - Re-rigged to connect properly
+    const upperArmGeo = new THREE.CylinderGeometry(0.6, 0.5, 3.0);
 
     const lUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    lUpperArm.position.set(-3.2, -3.5, 0.5);
+    lUpperArm.position.set(-3.5, -3.0, 0.5); // Attached to shoulder
     lUpperArm.rotation.z = 0.3;
-    lUpperArm.rotation.x = -0.2;
+    lUpperArm.rotation.x = -0.3;
     lUpperArm.castShadow = true;
     dealerGroup.add(lUpperArm);
 
     const rUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    rUpperArm.position.set(3.2, -3.5, 0.5);
+    rUpperArm.position.set(3.5, -3.0, 0.5);
     rUpperArm.rotation.z = -0.3;
-    rUpperArm.rotation.x = -0.2;
+    rUpperArm.rotation.x = -0.3;
     rUpperArm.castShadow = true;
     dealerGroup.add(rUpperArm);
 
-    // Forearms
+    // Forearms - Connected to elbow
     const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.2);
 
     const lForearm = new THREE.Mesh(forearmGeo, suitMat);
-    lForearm.position.set(-4.2, -5.8, 2.0);
-    lForearm.rotation.x = -0.8;
-    lForearm.rotation.z = 0.2;
+    // Elbow pos approx: -3.5 + offset -> ~ -4.0, -4.2, 1.5
+    lForearm.position.set(-4.0, -4.5, 2.5);
+    lForearm.rotation.x = -1.2; // Pointing forward/down
+    lForearm.rotation.z = 0.1;
     lForearm.castShadow = true;
     dealerGroup.add(lForearm);
 
     const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(4.2, -5.8, 2.0);
-    rForearm.rotation.x = -0.8;
-    rForearm.rotation.z = -0.2;
+    rForearm.position.set(4.0, -4.5, 2.5);
+    rForearm.rotation.x = -1.2;
+    rForearm.rotation.z = -0.1;
     rForearm.castShadow = true;
     dealerGroup.add(rForearm);
 
-    // Hands - Giant Claws
-    const handGeo = new THREE.BoxGeometry(1.0, 0.5, 1.4);
+    // Hands - Giant Claws resting on table
+    const handGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
 
     const lHand = new THREE.Mesh(handGeo, skullMat);
-    lHand.position.set(-4.5, -6.8, 4.0);
-    lHand.rotation.x = -0.4;
+    // Wrist pos approx: -4.0, -4.5 + len... 
+    // Table is at ~ -3.7 relative height.
+    lHand.position.set(-4.2, -4.2, 4.2); // Resting on table
+    lHand.rotation.x = -0.1; // Flat
     lHand.castShadow = true;
     dealerGroup.add(lHand);
 
     const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(4.5, -6.8, 4.0);
-    rHand.rotation.x = -0.4;
+    rHand.position.set(4.2, -4.2, 4.2);
+    rHand.rotation.x = -0.1;
     rHand.castShadow = true;
     dealerGroup.add(rHand);
 
-    // Fingers - Long and creepy
-    const fingerGeo = new THREE.CylinderGeometry(0.09, 0.07, 0.8);
+    // Fingers - Sprawled on table
+    const fingerGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9);
     for (let i = 0; i < 4; i++) {
+        // Left fingers
         const lFinger = new THREE.Mesh(fingerGeo, skullMat);
-        lFinger.position.set(-4.9 + i * 0.25, -7.0, 4.6);
-        lFinger.rotation.x = -Math.PI / 2 - 0.2;
+        lFinger.position.set(-4.6 + i * 0.3, -4.4, 5.0);
+        lFinger.rotation.x = 0; // Flat
         dealerGroup.add(lFinger);
 
+        // Right fingers
         const rFinger = new THREE.Mesh(fingerGeo, skullMat);
-        rFinger.position.set(4.1 + i * 0.25, -7.0, 4.6);
-        rFinger.rotation.x = -Math.PI / 2 - 0.2;
+        rFinger.position.set(3.8 + i * 0.3, -4.4, 5.0);
+        rFinger.rotation.x = 0;
         dealerGroup.add(rFinger);
     }
+
+    // === DEALER FOG ===
+    // Localized volume around the dealer
+    const fogGeo = new THREE.BoxGeometry(12, 10, 8);
+    const fogMat = new THREE.MeshBasicMaterial({
+        color: 0x111111,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.BackSide, // Render inside
+        blending: THREE.NormalBlending
+    });
+    // Create a simple cloud sprite instead for better effect?
+    // Let's stick to a cloud of particles or sprites attached to dealer
+
+    // Add multiple fog sprites
+    const createFogSprite = () => {
+        const spriteMat = new THREE.SpriteMaterial({
+            map: createDirtySkinTexture(), // Reusing texture for noise roughly
+            color: 0x222222,
+            transparent: true,
+            opacity: 0.15,
+            blending: THREE.NormalBlending
+        });
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.scale.set(8, 8, 1);
+        return sprite;
+    };
+
+    const fogGroup = new THREE.Group();
+    for (let i = 0; i < 8; i++) {
+        const spr = createFogSprite();
+        spr.position.set(
+            (Math.random() - 0.5) * 8,
+            (Math.random() - 0.5) * 6 - 2,
+            (Math.random() - 0.5) * 4 + 1
+        );
+        fogGroup.add(spr);
+    }
+    dealerGroup.add(fogGroup);
+    // Animate fog slightly in loop if possible, but static is okay for now
 
     // Position the entire dealer group
     dealerGroup.position.set(0, 3.0, -8);
