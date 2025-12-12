@@ -13,7 +13,7 @@ interface InventoryProps {
     disabled?: boolean; // For multiplayer when not your turn
 }
 
-export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false }) => {
+const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false }) => {
     const isGunHeld = cameraView === 'GUN';
 
     return (
@@ -84,3 +84,5 @@ export const Inventory: React.FC<InventoryProps> = ({ player, dealer, gameState,
         </div>
     );
 };
+
+export const Inventory = React.memo(InventoryComponent);

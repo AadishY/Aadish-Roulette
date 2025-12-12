@@ -403,9 +403,9 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
     }, [currentPage]);
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-md p-2 md:p-4 perspective-1000">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-md p-1 md:p-4">
             <div
-                className="w-full max-w-2xl bg-gradient-to-b from-stone-900 to-stone-950 border border-stone-700/50 shadow-2xl shadow-black/50 relative flex flex-col h-[85vh] md:max-h-[90vh] rounded-sm overflow-hidden scale-[0.70] md:scale-100 origin-center transition-transform duration-300"
+                className="w-full max-w-2xl bg-gradient-to-b from-stone-900 to-stone-950 border border-stone-700/50 shadow-2xl shadow-black/50 relative flex flex-col h-[95vh] md:h-[90vh] md:max-h-[90vh] rounded-sm overflow-hidden scale-[0.85] sm:scale-[0.90] md:scale-100 origin-center"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}

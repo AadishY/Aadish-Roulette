@@ -17,7 +17,7 @@ interface ControlsProps {
     onMpShoot?: (targetId: string) => void;
 }
 
-export const Controls: React.FC<ControlsProps> = ({
+const ControlsComponent: React.FC<ControlsProps> = ({
     isGunHeld,
     isProcessing,
     onPickupGun,
@@ -124,3 +124,5 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
     );
 };
+
+export const Controls = React.memo(ControlsComponent);

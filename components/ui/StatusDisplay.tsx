@@ -9,7 +9,7 @@ interface StatusDisplayProps {
     gameState: GameState;
 }
 
-export const StatusDisplay: React.FC<StatusDisplayProps> = ({ player, dealer, playerName, gameState }) => {
+const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, playerName, gameState }) => {
     return (
         <div className="flex justify-between items-start w-full pointer-events-none">
             {/* Player Stats */}
@@ -62,3 +62,5 @@ export const StatusDisplay: React.FC<StatusDisplayProps> = ({ player, dealer, pl
         </div>
     );
 };
+
+export const StatusDisplay = React.memo(StatusDisplayComponent);
