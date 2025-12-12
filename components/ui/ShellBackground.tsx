@@ -51,26 +51,35 @@ const ShellBackground: React.FC = () => {
             alpha: false
         });
 
-        // Consistent resolution scaling
-        const pixelScale = isAndroid ? 2 : (isMobile ? 1.5 : 1);
+        // Consistent resolution scaling - MORE PIXELATED
+        const pixelScale = isAndroid ? 3 : (isMobile ? 2.5 : 2);
         renderer.setSize(width / pixelScale, height / pixelScale, false);
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
+        renderer.domElement.style.imageRendering = 'pixelated';
 
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.setPixelRatio(1); // Keep low for pixelated look
         container.appendChild(renderer.domElement);
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0x444444, 1.5);
+        const ambientLight = new THREE.AmbientLight(0x222222, 1.5);
         scene.add(ambientLight);
 
-        const redLight = new THREE.PointLight(0xff3333, 1.0, 60);
+        // Main Red Fill
+        const redLight = new THREE.PointLight(0xff3333, 2.0, 60);
         redLight.position.set(0, 5, 15);
         scene.add(redLight);
 
-        const topLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        // Top White Key
+        const topLight = new THREE.DirectionalLight(0xffffff, 1.0);
         topLight.position.set(0, 10, 5);
         scene.add(topLight);
+
+        // Blue Rim Light for contrast
+        const rimLight = new THREE.SpotLight(0x4488ff, 5.0);
+        rimLight.position.set(0, 10, -10);
+        rimLight.lookAt(0, 0, 0);
+        scene.add(rimLight);
 
         const leftLight = new THREE.PointLight(0xff6666, 0.5, 40);
         leftLight.position.set(-15, 5, 10);
@@ -80,15 +89,15 @@ const ShellBackground: React.FC = () => {
         rightLight.position.set(15, 5, 10);
         scene.add(rightLight);
 
-        // --- SHARED RESOURCES ---
-        const bodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.45, 8); // Reduced segments
-        const baseGeo = new THREE.CylinderGeometry(0.125, 0.125, 0.1, 8);
+        // --- SHARED RESOURCES - LOW POLY FOR PIXELATED LOOK ---
+        const bodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.45, 6); // Low poly (6 sides)
+        const baseGeo = new THREE.CylinderGeometry(0.125, 0.125, 0.1, 6);
         const primerGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.02, 6);
 
-        const liveMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6, metalness: 0.2 });
-        const blankMat = new THREE.MeshStandardMaterial({ color: 0x2a2a4a, roughness: 0.6, metalness: 0.2 });
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.8 });
-        const primerMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.5, metalness: 0.5 });
+        const liveMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.4, metalness: 0.5, flatShading: true });
+        const blankMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5a, roughness: 0.4, metalness: 0.4, flatShading: true });
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3, metalness: 0.8, flatShading: true }); // Gold
+        const primerMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.5, metalness: 0.6, flatShading: true });
 
         const disposables = [bodyGeo, baseGeo, primerGeo, liveMat, blankMat, baseMat, primerMat];
 
@@ -199,8 +208,8 @@ const ShellBackground: React.FC = () => {
             const h = containerRef.current.clientHeight;
             sceneRef.current.camera.aspect = w / h;
             sceneRef.current.camera.updateProjectionMatrix();
-            // Recalculate size with scale
-            const pxScale = isAndroid ? 2 : (isMobile ? 1.5 : 1);
+            // Recalculate size with scale - MORE PIXELATED
+            const pxScale = isAndroid ? 3 : (isMobile ? 2.5 : 2);
             sceneRef.current.renderer.setSize(w / pxScale, h / pxScale, false);
         };
         window.addEventListener('resize', handleResize);

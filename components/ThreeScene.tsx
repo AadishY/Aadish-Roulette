@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext } from '../types';
 import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline } from '../utils/threeHelpers';
 import { updateScene } from '../utils/sceneLogic';
+import { initThreeScene, cleanScene } from '../utils/three/sceneSetup';
+
 
 interface ThreeSceneProps {
     isSawed: boolean;
@@ -55,31 +57,13 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     const sceneRef = useRef<SceneContext | null>(null);
 
-    // Helper to recursively dispose objects
-    const cleanScene = (scene: THREE.Scene) => {
-        scene.traverse((object) => {
-            if (object instanceof THREE.Mesh) {
-                if (object.geometry) object.geometry.dispose();
-                if (object.material) {
-                    if (Array.isArray(object.material)) {
-                        object.material.forEach((mat) => mat.dispose());
-                    } else {
-                        object.material.dispose();
-                    }
-                }
-            }
-        });
-    };
+
 
     useEffect(() => {
         if (!containerRef.current) return;
 
         const initThree = () => {
             if (!containerRef.current) return;
-            const width = containerRef.current.clientWidth;
-            const height = containerRef.current.clientHeight;
-
-            if (width === 0 || height === 0) return;
 
             if (sceneRef.current) {
                 // Proper cleanup
@@ -90,173 +74,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 }
             }
 
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050505);
-
-            const isMultiplayer = propsRef.current.players && propsRef.current.players.length > 0;
-            const defaultFov = isMultiplayer ? 95 : 85;
-            const camera = new THREE.PerspectiveCamera(propsRef.current.settings.fov || defaultFov, width / height, 0.1, 100);
-            camera.position.set(0, 4, 14);
-
-            // Device Detection & Performance Tuning
-            const userAgent = navigator.userAgent.toLowerCase();
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || width < 900;
-            const isAndroid = userAgent.includes('android');
-            // Low end if mobile and low res or low pixel ratio
-            const isLowEndDevice = isMobile && (width < 600 || (window.devicePixelRatio || 1) < 2);
-
-            const renderer = new THREE.WebGLRenderer({
-                antialias: false, // Performance + Style
-                powerPreference: 'default', // 'low-power' can be too aggressive on some Androids causing stutter
-                alpha: false,
-                stencil: false,
-                depth: true,
-                precision: isLowEndDevice ? 'lowp' : 'mediump'
-            });
-
-            // Polished Resolution Scaling
-            // Android: Divisor 3 (decent balance) | Mobile: Divisor 2 | Desktop: User Setting (default 1-ish)
-            // Note: propsRef.current.settings.pixelScale is a divisor (1 = native, 2 = half res)
-            const mobilePixelScale = isAndroid ? 3 : 2;
-            const pixelScale = isMobile ? mobilePixelScale : (propsRef.current.settings.pixelScale || 3);
-
-            // Limit Max Pixel Ratio
-            const maxPixelRatio = isMobile ? 1.5 : window.devicePixelRatio;
-            renderer.setPixelRatio(Math.min(maxPixelRatio, window.devicePixelRatio));
-
-            renderer.setSize(width / pixelScale, height / pixelScale, false);
-            renderer.domElement.style.width = '100%';
-            renderer.domElement.style.height = '100%';
-            renderer.domElement.style.imageRendering = 'pixelated'; // Essential for aesthetic at low res
-
-            // Shadow Logic:
-            // Low End: No shadows.
-            // Mobile (Decent): BasicShadowMap (faster).
-            // Desktop: PCFSoftShadowMap (nicer).
-            renderer.shadowMap.enabled = !isLowEndDevice;
-            renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-
-            // Consistent Tone Mapping
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.1;
-
-            scene.userData.isMobile = isMobile;
-            scene.userData.isAndroid = isAndroid;
-            scene.userData.isLowEndDevice = isLowEndDevice;
-
-            containerRef.current.appendChild(renderer.domElement);
-
-            const { muzzleLight, roomRedLight, bulbLight, gunSpot, tableGlow, rimLight, fillLight, ambient, bgRim, dealerRim, underLight } = setupLighting(scene);
-            createEnvironment(scene, isMobile);
-            const dustParticles = createDust(scene, isMobile);
-            createTable(scene);
-            const { gunGroup, barrelMesh, muzzleFlash, pump, magTube } = createGunModel(scene);
-            const { bulletMesh, shellCasing, shellCasings, shellVelocities } = createProjectiles(scene);
-
-            // === ITEM MODELS ===
-            const itemBeer = createBeerCan(); itemBeer.visible = false; scene.add(itemBeer);
-            const itemCigs = createCigarette(); itemCigs.visible = false; scene.add(itemCigs);
-            const itemSaw = createSaw(); itemSaw.visible = false; scene.add(itemSaw);
-            const itemCuffs = createHandcuffs(); itemCuffs.visible = false; scene.add(itemCuffs);
-            const itemGlass = createMagnifyingGlass(); itemGlass.visible = false; scene.add(itemGlass);
-            const itemPhone = createPhone(); itemPhone.visible = false; scene.add(itemPhone);
-            const itemInverter = createInverter(); itemInverter.visible = false; scene.add(itemInverter);
-            const itemAdrenaline = createAdrenaline(); itemAdrenaline.visible = false; scene.add(itemAdrenaline);
-
-            const itemLight = new THREE.PointLight(0xffffee, 0, 25);
-            itemLight.position.set(0, 5, -12);
-            scene.add(itemLight);
-
-            const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemLight };
-
-            // === MULTIPLAYER AVATAR LOGIC ===
-            let dealerGroup = new THREE.Group();
-            const playerAvatars: THREE.Group[] = [];
-
-            const mpPlayers = propsRef.current.players || [];
-            const myId = propsRef.current.playerId;
-            const opponents = mpPlayers.filter(p => p.id !== myId && p.id);
-            const isMultiplayerGame = opponents.length > 0;
-
-            if (isMultiplayerGame) {
-                const positions = [
-                    { pos: new THREE.Vector3(0, -5, -14), rot: 0 },
-                    { pos: new THREE.Vector3(-14, -5, 0), rot: Math.PI / 2 },
-                    { pos: new THREE.Vector3(14, -5, 0), rot: -Math.PI / 2 }
-                ];
-                opponents.forEach((opp, i) => {
-                    if (i < positions.length) {
-                        const { pos, rot } = positions[i];
-                        const hp = opp.hp !== undefined ? opp.hp : 4;
-                        const maxHp = opp.maxHp !== undefined ? opp.maxHp : 4;
-                        const avatar = createPlayerAvatar(scene, pos, rot, opp.name, hp, maxHp);
-                        avatar.userData.playerId = opp.id;
-                        playerAvatars.push(avatar);
-                    }
-                });
-                camera.fov = opponents.length >= 2 ? 100 : 95;
-                camera.updateProjectionMatrix();
-            } else {
-                dealerGroup = createDealerModel(scene);
+            const context = initThreeScene(containerRef.current, propsRef.current);
+            if (context) {
+                sceneRef.current = context;
+                updateCameraResponsive();
             }
-
-            scene.userData.playerAvatars = playerAvatars;
-            scene.userData.isMultiplayer = isMultiplayerGame;
-
-            const gunLight = new THREE.PointLight(0xffeebb, 0, 15);
-            gunLight.position.set(0, 0.5, 0);
-            gunGroup.add(gunLight);
-
-            const baseLights = [
-                { light: bulbLight, baseIntensity: bulbLight.intensity },
-                { light: gunSpot, baseIntensity: gunSpot.intensity },
-                { light: tableGlow, baseIntensity: tableGlow.intensity },
-                { light: rimLight, baseIntensity: rimLight.intensity },
-                { light: fillLight, baseIntensity: fillLight.intensity },
-                { light: ambient, baseIntensity: ambient.intensity },
-                { light: bgRim, baseIntensity: bgRim.intensity },
-                { light: dealerRim, baseIntensity: dealerRim.intensity },
-                { light: underLight, baseIntensity: underLight.intensity }
-            ];
-
-            // Particles
-            const particleCount = isLowEndDevice ? 15 : (isMobile ? 30 : 150);
-            const particles = new THREE.BufferGeometry();
-            const pPositions = new Float32Array(particleCount * 3);
-            const pVelocities = new Float32Array(particleCount * 3);
-            for (let i = 0; i < particleCount * 3; i++) pPositions[i] = 9999;
-            particles.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
-            particles.setAttribute('velocity', new THREE.BufferAttribute(pVelocities, 3));
-            const pMat = new THREE.PointsMaterial({
-                color: 0xcc0000, size: 1.5, transparent: true, opacity: 0.9, sizeAttenuation: true, depthWrite: false, blending: THREE.NormalBlending
-            });
-            const bloodParticles = new THREE.Points(particles, pMat);
-            scene.add(bloodParticles);
-
-            const sparkCount = isLowEndDevice ? 10 : (isMobile ? 25 : 100);
-            const sparkGeo = new THREE.BufferGeometry();
-            const sPos = new Float32Array(sparkCount * 3);
-            const sVel = new Float32Array(sparkCount * 3);
-            for (let i = 0; i < sparkCount * 3; i++) sPos[i] = 9999;
-            sparkGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-            sparkGeo.setAttribute('velocity', new THREE.BufferAttribute(sVel, 3));
-            const sMat = new THREE.PointsMaterial({ color: 0xffffcc, size: 0.3, transparent: true, opacity: 1, blending: THREE.AdditiveBlending });
-            const sparkParticles = new THREE.Points(sparkGeo, sMat);
-            scene.add(sparkParticles);
-
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-
-            sceneRef.current = {
-                scene, camera, renderer, gunGroup, muzzleFlash, muzzleLight, roomRedLight, bulbLight, gunLight,
-                bulletMesh, dealerGroup, shellCasing, shellCasings, shellVelocities, mouse, raycaster, barrelMesh,
-                pumpMesh: pump, magTubeMesh: magTube,
-                bloodParticles, sparkParticles, dustParticles, baseLights, underLight,
-                itemsGroup,
-                nextShellIndex: 0
-            };
-
-            updateCameraResponsive();
         };
 
         const userAgent = navigator.userAgent.toLowerCase();

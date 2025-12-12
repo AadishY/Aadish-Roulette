@@ -1,7 +1,7 @@
 import React from 'react';
-import { GameState, PlayerState, TurnOwner, ShellType, ItemType, LogEntry } from '../types';
-import { wait } from './gameUtils';
-import { audioManager } from './audioManager';
+import { GameState, PlayerState, TurnOwner, ShellType, ItemType, LogEntry } from '../../types';
+import { wait } from '../gameUtils';
+import { audioManager } from '../audioManager';
 
 // Helper to update state safely
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
