@@ -80,17 +80,28 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const camera = new THREE.PerspectiveCamera(propsRef.current.settings.fov || defaultFov, width / height, 0.1, 100);
             camera.position.set(0, 4, 14);
 
-            // Detect mobile for performance optimization
+            // Detect mobile and Android specifically for performance optimization
+            const userAgent = navigator.userAgent.toLowerCase();
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || width < 900;
+            const isAndroid = userAgent.includes('android');
+            const isLowEndDevice = isMobile && (width < 700 || (window.devicePixelRatio && window.devicePixelRatio < 2));
 
             const renderer = new THREE.WebGLRenderer({
                 antialias: false,
-                powerPreference: isMobile ? 'low-power' : 'high-performance',
-                alpha: false
+                powerPreference: isAndroid ? 'low-power' : (isMobile ? 'low-power' : 'high-performance'),
+                alpha: false,
+                stencil: false, // Disable stencil buffer for performance
+                depth: true,
+                precision: isAndroid ? 'lowp' : 'mediump' // Lower precision on Android
             });
 
-            // Lower resolution on mobile for better performance
-            const pixelScale = isMobile ? 4 : (propsRef.current.settings.pixelScale || 3);
+            // Much lower resolution on Android for better performance
+            const pixelScale = isAndroid ? 5 : (isMobile ? 4 : (propsRef.current.settings.pixelScale || 3));
+
+            // Limit pixel ratio on mobile to prevent excessive GPU load
+            const maxPixelRatio = isAndroid ? 1 : (isMobile ? 1.5 : window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(maxPixelRatio, window.devicePixelRatio));
+
             renderer.setSize(width / pixelScale, height / pixelScale, false);
             renderer.domElement.style.width = '100%';
             renderer.domElement.style.height = '100%';
@@ -98,9 +109,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
             // Disable shadows on mobile for performance
             renderer.shadowMap.enabled = !isMobile;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+            renderer.toneMapping = isAndroid ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.1;
+
+            // Store mobile flags for later use
+            scene.userData.isMobile = isMobile;
+            scene.userData.isAndroid = isAndroid;
+            scene.userData.isLowEndDevice = isLowEndDevice;
 
             containerRef.current.appendChild(renderer.domElement);
 
@@ -184,8 +200,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 { light: underLight, baseIntensity: underLight.intensity }
             ];
 
-            // Particles setup (Reduced for mobile)
-            const particleCount = isMobile ? 40 : 150;
+            // Particles setup (Reduced significantly on Android)
+            const particleCount = isAndroid ? 20 : (isMobile ? 40 : 150);
             const particles = new THREE.BufferGeometry();
             const pPositions = new Float32Array(particleCount * 3);
             const pVelocities = new Float32Array(particleCount * 3);
@@ -198,7 +214,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const bloodParticles = new THREE.Points(particles, pMat);
             scene.add(bloodParticles);
 
-            const sparkCount = isMobile ? 30 : 100;
+            const sparkCount = isAndroid ? 15 : (isMobile ? 30 : 100);
             const sparkGeo = new THREE.BufferGeometry();
             const sPos = new Float32Array(sparkCount * 3);
             const sVel = new Float32Array(sparkCount * 3);
@@ -225,13 +241,16 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             updateCameraResponsive();
         };
 
-        // Detect mobile for FPS limiting (outside initThree for access in animate)
+        // Detect mobile and Android for FPS limiting (outside initThree for access in animate)
+        const userAgent = navigator.userAgent.toLowerCase();
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 900;
+        const isAndroid = userAgent.includes('android');
 
         let frameId = 0;
         let time = 0;
         let lastTime = performance.now();
-        const targetFPS = isMobile ? 30 : 60; // Limit FPS on mobile
+        // Lower FPS on Android for battery and performance (24fps feels smooth for this game)
+        const targetFPS = isAndroid ? 24 : (isMobile ? 30 : 60);
         const frameInterval = 1000 / targetFPS;
         let lastFrameTime = 0;
 
