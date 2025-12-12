@@ -17,7 +17,6 @@ export const handleBeer = async (
     startRound: () => void
 ): Promise<boolean> => {
     setTriggerDrink(p => p + 1); // Visual cue
-    audioManager.playSound('blankshell');
     await wait(1500); // Wait for drinking animation
 
     const shell = gameState.chamber[gameState.currentShellIndex];
@@ -60,7 +59,7 @@ export const handleCigs = async (
     setTriggerHeal: StateSetter<number>
 ) => {
     setTriggerHeal(p => p + 1);
-    audioManager.playSound('grab', { playbackRate: 1.5 }); // Lighter sound
+    // audioManager.playSound('grab', { playbackRate: 1.5 }); // Lighter sound
     await wait(2500); // Wait for smoking animation to complete
     if (user === 'PLAYER') setPlayer(p => ({ ...p, hp: Math.min(p.maxHp, p.hp + 1) }));
     else setDealer(d => ({ ...d, hp: Math.min(d.maxHp, d.hp + 1) }));
@@ -76,7 +75,7 @@ export const handleSaw = async (
 ) => {
     setIsSawing(true);
     setTriggerSparks(p => p + 1);
-    audioManager.playSound('blankshell', { playbackRate: 0.5 }); // Heavy mechanical
+    // audioManager.playSound('blankshell', { playbackRate: 0.5 }); // Heavy mechanical
     await wait(1500); // Wait for saw animation
     setIsSawing(false);
 
@@ -92,7 +91,7 @@ export const handleCuffs = async (
     setTriggerCuff: StateSetter<number>
 ) => {
     setTriggerCuff(p => p + 1);
-    audioManager.playSound('blankshell', { playbackRate: 2.0 }); // High click
+    // audioManager.playSound('blankshell', { playbackRate: 2.0 }); // High click
     await wait(1500); // Wait for cuff animation to complete
     if (user === 'PLAYER') setDealer(d => ({ ...d, isHandcuffed: true }));
     else setPlayer(p => ({ ...p, isHandcuffed: true }));
@@ -108,7 +107,7 @@ export const handleGlass = async (
 ) => {
     // 1. Instant Animation Trigger
     setTriggerGlass(p => p + 1);
-    audioManager.playSound('grab', { playbackRate: 1.2 }); // Glass click
+    // audioManager.playSound('grab', { playbackRate: 1.2 }); // Glass click
 
 
     // 2. Delay for lift up animation
@@ -138,7 +137,7 @@ export const handlePhone = async (
     setOverlayText?: StateSetter<string | null>
 ) => {
     setTriggerPhone(p => p + 1);
-    audioManager.playSound('grab', { playbackRate: 0.8 }); // Heavy plastic
+    // audioManager.playSound('grab', { playbackRate: 0.8 }); // Heavy plastic
     await wait(2500); // Wait for phone animation
 
     const checkLimit = gameState.chamber.length;
@@ -200,7 +199,7 @@ export const handleInverter = async (
     setOverlayText?: StateSetter<string | null>
 ) => {
     setTriggerInverter(p => p + 1);
-    audioManager.playSound('blankshell', { playbackRate: 1.8 }); // Electronic click
+    // audioManager.playSound('blankshell', { playbackRate: 1.8 }); // Electronic click
     await wait(1500); // Wait for animation to play
 
     const currentShell = gameState.chamber[gameState.currentShellIndex];
@@ -239,7 +238,7 @@ export const handleAdrenaline = async (
     setOverlayText?: StateSetter<string | null>
 ) => {
     setTriggerAdrenaline(p => p + 1);
-    audioManager.playSound('grab', { playbackRate: 1.0 }); // Normal grab
+    // audioManager.playSound('grab', { playbackRate: 1.0 }); // Normal grab
 
     await wait(1800); // Wait for injection animation
 

@@ -22,6 +22,18 @@ class AudioManager {
             click: '/sound/grab1.ogg',
             blankshell: '/sound/blankshellshoot.wav',
             liveshell: '/sound/liveshellshoot.mp3',
+            // New Animation Sounds
+            standing: '/sound/AnimationSounds/Standing.mp3',
+            dropping: '/sound/AnimationSounds/droping.mp3',
+            checkhandcuffs: '/sound/AnimationSounds/checkhandcuffs.mp3',
+            handcuffed: '/sound/AnimationSounds/handcuffed.mp3',
+            adrenaline: '/sound/AnimationSounds/adrenaline.mp3',
+            beer: '/sound/AnimationSounds/beer.mp3',
+            cig: '/sound/AnimationSounds/cig.mp3',
+            glass: '/sound/AnimationSounds/glass.mp3',
+            inverter: '/sound/AnimationSounds/inverter.mp3',
+            phone: '/sound/AnimationSounds/phone.mp3',
+            saw: '/sound/AnimationSounds/saw.mp3',
         };
         const musicFiles = {
             menu: '/sound/menu.mp3',

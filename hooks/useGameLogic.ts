@@ -431,6 +431,7 @@ export const useGameLogic = () => {
         const message = `${nextPersonName} CUFFED. SKIPPING.`;
         addLog(message, 'info');
         setOverlayText(`${nextOwner} CUFFED`);
+        audioManager.playSound('checkhandcuffs');
 
         // Shake Animation - Just text/overlay handles this now
         // setAnim(p => ({ ...p, triggerCuff: p.triggerCuff + 1 }));

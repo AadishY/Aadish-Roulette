@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SceneContext, SceneProps } from '../types';
+import { audioManager } from './audioManager';
 
 export function updateScene(context: SceneContext, props: SceneProps, time: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
@@ -170,6 +171,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     if (animState.playerHit) {
         // Falling over - Dramatic Instant Drop
+        if (!scene.userData.hasPlayedDrop) {
+            audioManager.playSound('dropping');
+            scene.userData.hasPlayedDrop = true;
+            scene.userData.hasPlayedStand = false;
+        }
         targetCamPos.set(3, -5.5, 9); // Hit floor
         // We override LookAt effectively by setting rotation manually or letting lookAt handle it then adding Z shake
         camera.lookAt(0, 10, -5); // Look WAY UP at light/dealer
@@ -177,11 +183,20 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         scene.userData.cameraShake = 0.5;
     } else if (!animState.playerHit && camera.position.y < -4) {
         // Recovering (Stand up slowly) - Groggy effect
+        if (!scene.userData.hasPlayedStand) {
+            audioManager.playSound('standing');
+            scene.userData.hasPlayedStand = true;
+        }
         const recoverSpeed = 0.02; // Slow recovery
         camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, recoverSpeed);
         // Dizzy Wobble - Pitch and Roll
         camera.rotation.z += Math.sin(time * 3) * 0.003;
         camera.rotation.x += Math.cos(time * 2.5) * 0.002; // Nodding slightly
+    } else {
+        // Reset flags when back to normal
+        if (camera.position.y > -2) {
+            scene.userData.hasPlayedDrop = false;
+        }
     }
 
     // Camera Lerp
@@ -593,6 +608,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             scene.userData.lastGlass = animState.triggerGlass;
             scene.userData.glassStart = time;
             items.itemGlass.visible = true;
+            audioManager.playSound('glass');
         }
 
         const glassTime = time - (scene.userData.glassStart || -999);
@@ -642,6 +658,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         if (animState.triggerDrink > scene.userData.lastDrink) {
             scene.userData.lastDrink = animState.triggerDrink;
             scene.userData.drinkStart = time;
+            audioManager.playSound('beer');
         }
         const drinkTime = time - (scene.userData.drinkStart || -999);
         if (drinkTime >= 0 && drinkTime < 3.5) {
@@ -716,6 +733,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         if (animState.triggerHeal > scene.userData.lastHeal) {
             scene.userData.lastHeal = animState.triggerHeal;
             scene.userData.healStart = time;
+            audioManager.playSound('cig');
         }
         const healTime = time - (scene.userData.healStart || -999);
         if (healTime >= 0 && healTime < 4.0) {
@@ -813,7 +831,10 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         // SAW ANIMATION (Restored)
         if (animState.triggerSparks < scene.userData.lastSaw) scene.userData.lastSaw = animState.triggerSparks;
         if (animState.isSawing || (animState.triggerSparks > scene.userData.lastSaw)) {
-            if (animState.triggerSparks > scene.userData.lastSaw) scene.userData.lastSaw = animState.triggerSparks;
+            if (animState.triggerSparks > scene.userData.lastSaw) {
+                scene.userData.lastSaw = animState.triggerSparks;
+                audioManager.playSound('saw');
+            }
             items.itemSaw.visible = true;
 
             // Attach to Gun
@@ -839,6 +860,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
         if (animState.triggerCuff > scene.userData.lastCuff) {
             scene.userData.lastCuff = animState.triggerCuff;
             scene.userData.cuffStart = time;
+            audioManager.playSound('handcuffed');
         }
         const cuffTime = time - (scene.userData.cuffStart || -999);
 
@@ -881,6 +903,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             scene.userData.lastPhone = animState.triggerPhone;
             scene.userData.phoneStart = time;
             items.itemPhone.visible = true;
+            audioManager.playSound('phone');
         }
         const phoneTime = time - (scene.userData.phoneStart || -999);
         if (phoneTime < 3.5) {
@@ -959,6 +982,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             scene.userData.inverterStart = time;
             items.itemInverter.visible = true;
             scene.userData.cameraShake = 0.4;
+            audioManager.playSound('inverter');
         }
         const invTime = time - (scene.userData.inverterStart || -999);
         if (invTime < 2.5) {
@@ -1020,6 +1044,7 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             scene.userData.lastAdrenaline = animState.triggerAdrenaline;
             scene.userData.adrStart = time;
             items.itemAdrenaline.visible = true;
+            audioManager.playSound('adrenaline');
         }
         const adrTime = time - (scene.userData.adrStart || -999);
         if (adrTime < 2.5) {
