@@ -13,11 +13,12 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(ambient);
 
     // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════
     // MAIN OVERHEAD SPOTLIGHT - The primary light source
     // Creates the dramatic cone of light hitting the table
     // ═══════════════════════════════════════════════════════════════
 
-    const mainSpotlight = new THREE.SpotLight(0xffddaa, 2500); // Warm tungsten
+    const mainSpotlight = new THREE.SpotLight(0xffddaa, 3200); // Warm tungsten (Boosted)
     mainSpotlight.position.set(0, 18, -2);
     mainSpotlight.target.position.set(0, -1, 0);
     mainSpotlight.angle = 0.35; // Tighter cone
@@ -61,7 +62,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     // ═══════════════════════════════════════════════════════════════
 
     // Warm rim from back-right (cinematic edge lighting)
-    const bgRim = new THREE.SpotLight(0xff4422, 12);
+    const bgRim = new THREE.SpotLight(0xff4422, 20); // Boosted
     bgRim.position.set(18, 8, -22);
     bgRim.target.position.set(0, 2, -10);
     bgRim.angle = 0.8;
@@ -70,7 +71,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(bgRim.target);
 
     // Cold rim from back-left (contrast rim)
-    const coldRim = new THREE.SpotLight(0x223355, 8);
+    const coldRim = new THREE.SpotLight(0x223355, 10);
     coldRim.position.set(-18, 8, -22);
     coldRim.target.position.set(0, 2, -10);
     coldRim.angle = 0.8;
@@ -79,7 +80,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(coldRim.target);
 
     // Dealer backlight - Strong silhouette rim
-    const dealerRim = new THREE.SpotLight(0xffaa66, 15);
+    const dealerRim = new THREE.SpotLight(0xffaa66, 25); // Boosted
     dealerRim.position.set(0, 12, -30);
     dealerRim.target.position.set(0, 4, -14);
     dealerRim.angle = 0.5;
@@ -148,7 +149,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(roomRedLight);
 
     // Under-lighting for dealer face (horror effect)
-    const underLight = new THREE.PointLight(0xff2222, 1.2, 8);
+    const underLight = new THREE.PointLight(0xff2222, 3.5, 12); // Much stronger horror uplight
     underLight.position.set(0, -2, -12);
     scene.add(underLight);
 

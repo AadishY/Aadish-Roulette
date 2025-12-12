@@ -11,23 +11,25 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const dt = delta || 0.016; // Fallback to ~60fps if undefined
 
     // --- BRIGHTNESS & FOV ---
+    // --- BRIGHTNESS & FOV ---
     const brightnessMult = settings.brightness || 1.0;
-    // Fix brightness issue: Set a higher base exposure.
-    renderer.toneMappingExposure = 1.2 + (brightnessMult * 0.8);
 
-    // PERFORMANCE: Only update base light intensities occasionally (not every frame)
-    if (!scene.userData.lastLightUpdate || time - scene.userData.lastLightUpdate > 0.1) {
-        for (const bl of baseLights) {
-            if (bl.light instanceof THREE.PointLight || bl.light instanceof THREE.SpotLight || bl.light instanceof THREE.DirectionalLight || bl.light instanceof THREE.AmbientLight) {
-                bl.light.intensity = bl.baseIntensity;
-            }
+    // Smoothly update toneMapping exposure based on brightness setting
+    renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 1.8 * brightnessMult, 0.1);
+
+    // Apply brightness to all static lights
+    for (const bl of baseLights) {
+        if (bl.light && bl.baseIntensity !== undefined) {
+            // Directly scale the intensity
+            bl.light.intensity = bl.baseIntensity * brightnessMult;
         }
-        scene.userData.lastLightUpdate = time;
     }
 
     // PERFORMANCE: Cache bulbBase lookup (only compute once)
     if (scene.userData.cachedBulbBase === undefined) {
-        scene.userData.cachedBulbBase = baseLights.find(b => b.light === bulbLight)?.baseIntensity || 45.0;
+        // Safe check in case bulbLight isn't in baseLights for some reason
+        const found = baseLights.find(b => b.light === bulbLight);
+        scene.userData.cachedBulbBase = found ? found.baseIntensity : 45.0;
     }
     const bulbBase = scene.userData.cachedBulbBase;
 
@@ -35,10 +37,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     let target = bulbBase;
     if (Math.random() > 0.96) target = bulbBase * (0.5 + Math.random() * 0.8); // Drop or spike
 
-    // Smooth flickering
-    const currentBase = bulbLight.intensity / brightnessMult;
-    const flicker = THREE.MathUtils.lerp(currentBase, target, 0.2);
-    bulbLight.intensity = flicker * brightnessMult;
+    // Smooth flickering + brightness scaling
+    // We treat 'currentBase' as the intensity WITHOUT brightness for lerping logic
+    const flickerBase = THREE.MathUtils.lerp(bulbLight.userData.flickerBase || bulbBase, target, 0.2);
+    bulbLight.userData.flickerBase = flickerBase; // Store state
+    bulbLight.intensity = flickerBase * brightnessMult;
 
     // SWAY LOGIC - PERFORMANCE: Cache bulbGroup lookup
     if (!scene.userData.cachedBulbGroup) {

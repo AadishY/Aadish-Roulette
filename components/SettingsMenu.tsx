@@ -145,6 +145,19 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                         />
                     </div>
 
+                    {/* Brightness */}
+                    <div className="space-y-0.5">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
+                            <span className="flex items-center gap-1.5"><Eye size={12} /> BRIGHTNESS</span>
+                            <span>{(settings.brightness * 100).toFixed(0)}%</span>
+                        </div>
+                        <CustomSlider
+                            min={0.1} max={2.0} step={0.1}
+                            value={settings.brightness}
+                            onChange={(val) => handleChange('brightness', val)}
+                        />
+                    </div>
+
                     {/* UI Scale */}
                     <div className="space-y-0.5">
                         <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">

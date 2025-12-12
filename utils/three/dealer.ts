@@ -51,6 +51,8 @@ export const createDealerModel = (scene: THREE.Scene) => {
         }
 
         const tex = new THREE.CanvasTexture(canvas);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
         return tex;
     };
 
@@ -194,7 +196,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
     // Dark, ill-fitting suit - Buckshot style (Black/Dark Grey)
     const suitMat = new THREE.MeshStandardMaterial({
         color: 0x080808, // Almost black
-        roughness: 0.7,  // Worn fabric
+        roughness: 0.5,  // Worn fabric (Reduced for highlights)
         metalness: 0.1,
         emissive: 0x000000,
         emissiveIntensity: 0
@@ -239,66 +241,64 @@ export const createDealerModel = (scene: THREE.Scene) => {
     const upperArmGeo = new THREE.CylinderGeometry(0.6, 0.5, 3.0);
 
     const lUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    lUpperArm.position.set(-3.5, -3.0, 0.5); // Attached to shoulder
+    lUpperArm.position.set(-3.5, -3.2, 0.2); // Lower attachment
     lUpperArm.rotation.z = 0.3;
-    lUpperArm.rotation.x = -0.3;
+    lUpperArm.rotation.x = 0; // Vertical
     lUpperArm.castShadow = true;
     dealerGroup.add(lUpperArm);
 
     const rUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    rUpperArm.position.set(3.5, -3.0, 0.5);
+    rUpperArm.position.set(3.5, -3.2, 0.2);
     rUpperArm.rotation.z = -0.3;
-    rUpperArm.rotation.x = -0.3;
+    rUpperArm.rotation.x = 0;
     rUpperArm.castShadow = true;
     dealerGroup.add(rUpperArm);
 
-    // Forearms - Connected to elbow
-    const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.2);
+    // Forearms - Resting flat on table near dealer
+    const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.0);
 
     const lForearm = new THREE.Mesh(forearmGeo, suitMat);
-    // Elbow pos approx: -3.5 + offset -> ~ -4.0, -4.2, 1.5
-    lForearm.position.set(-4.0, -4.5, 2.5);
-    lForearm.rotation.x = -1.2; // Pointing forward/down
+    // Elbow ~ -4.2, Hand near table
+    lForearm.position.set(-4.2, -4.5, 1.0);
+    lForearm.rotation.x = -Math.PI / 2; // Flat forward
     lForearm.rotation.z = 0.1;
     lForearm.castShadow = true;
     dealerGroup.add(lForearm);
 
     const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(4.0, -4.5, 2.5);
-    rForearm.rotation.x = -1.2;
+    rForearm.position.set(4.2, -4.5, 1.0);
+    rForearm.rotation.x = -Math.PI / 2;
     rForearm.rotation.z = -0.1;
     rForearm.castShadow = true;
     dealerGroup.add(rForearm);
 
-    // Hands - Giant Claws resting on table
+    // Hands - Giant Claws resting on table edge
     const handGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
 
     const lHand = new THREE.Mesh(handGeo, skullMat);
-    // Wrist pos approx: -4.0, -4.5 + len... 
-    // Table is at ~ -3.7 relative height.
-    lHand.position.set(-4.2, -4.2, 4.2); // Resting on table
-    lHand.rotation.x = -0.1; // Flat
+    lHand.position.set(-4.4, -4.8, 2.5); // Resting on table edge
+    lHand.rotation.x = 0;
     lHand.castShadow = true;
     dealerGroup.add(lHand);
 
     const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(4.2, -4.2, 4.2);
-    rHand.rotation.x = -0.1;
+    rHand.position.set(4.4, -4.8, 2.5);
+    rHand.rotation.x = 0;
     rHand.castShadow = true;
     dealerGroup.add(rHand);
 
-    // Fingers - Sprawled on table
+    // Fingers - Sprawled
     const fingerGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9);
     for (let i = 0; i < 4; i++) {
         // Left fingers
         const lFinger = new THREE.Mesh(fingerGeo, skullMat);
-        lFinger.position.set(-4.6 + i * 0.3, -4.4, 5.0);
-        lFinger.rotation.x = 0; // Flat
+        lFinger.position.set(-4.8 + i * 0.3, -5.0, 3.3);
+        lFinger.rotation.x = 0;
         dealerGroup.add(lFinger);
 
         // Right fingers
         const rFinger = new THREE.Mesh(fingerGeo, skullMat);
-        rFinger.position.set(3.8 + i * 0.3, -4.4, 5.0);
+        rFinger.position.set(4.0 + i * 0.3, -5.0, 3.3);
         rFinger.rotation.x = 0;
         dealerGroup.add(rFinger);
     }

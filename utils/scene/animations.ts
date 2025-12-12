@@ -209,7 +209,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 if (glassTime < 0.4) {
                     // Rise at dealer position
                     const p = glassTime / 0.4;
-                    items.itemGlass.position.set(0, 3 + p * 2, -8); // Near dealer at z=-12
+                    items.itemGlass.position.set(0, -1 + p * 6, -8); // From table Y=-1 to Y=5
                     items.itemGlass.rotation.set(-0.2, 0, 0);
                 } else if (glassTime < 1.5) {
                     // Looking through glass
@@ -271,7 +271,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 if (drinkTime < 0.5) {
                     // Beer rises at dealer position
                     const p = drinkTime / 0.5;
-                    items.itemBeer.position.set(0.5, 3 + p * 2, -8); // Near dealer at z=-12
+                    items.itemBeer.position.set(0.5, -1 + p * 6, -8);
                     items.itemBeer.rotation.set(-0.3, 0, 0); // Tilt toward dealer
                 } else if (drinkTime < 2.5) {
                     // Drinking motion - tilt away from camera (negative X)
@@ -358,7 +358,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemCigs.scale.setScalar(2.0);
                 if (healTime < 0.5) {
                     const p = healTime / 0.5;
-                    items.itemCigs.position.set(0.3, 3 + p * 2, -8);
+                    items.itemCigs.position.set(0.3, -1 + p * 6, -8); // Rise from table
                     items.itemCigs.rotation.set(0, 0.2, 0.3);
                 } else if (healTime < 3.0) {
                     items.itemCigs.position.set(0.3, 5 + Math.sin(healTime * 2) * 0.1, -8);
@@ -438,7 +438,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 start = new THREE.Vector3(2, -2, 10);
                 end = new THREE.Vector3(0, 2, -8);
             } else {
-                start = new THREE.Vector3(0, 5, -12);
+                start = new THREE.Vector3(0, -1, -8); // From dealer table
                 end = new THREE.Vector3(0, 0, 8);
             }
 
@@ -500,7 +500,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemPhone.scale.setScalar(2.5);
                 if (phoneTime < 0.5) {
                     const p = phoneTime / 0.5;
-                    items.itemPhone.position.set(0, 4 + p * 2, -14);
+                    items.itemPhone.position.set(0, -1 + p * 7, -14); // Rise from table
                     items.itemPhone.rotation.set(0.5, 0, 0);
                 } else if (phoneTime < 2.5) {
                     const floatY = Math.sin(phoneTime * 2) * 0.1;
@@ -559,7 +559,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemInverter.scale.setScalar(2.0);
                 if (invTime < 0.5) {
                     const p = invTime / 0.5;
-                    items.itemInverter.position.set(0, 3 + p * 3, -8);
+                    items.itemInverter.position.set(0, -1 + p * 7, -8); // Rise from table
                     items.itemInverter.rotation.y = invTime * 8;
                 } else if (invTime < 1.8) {
                     const spinSpeed = 0.4;
@@ -613,7 +613,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemAdrenaline.scale.setScalar(2.0);
                 if (adrTime < 0.5) {
                     const p = adrTime / 0.5;
-                    items.itemAdrenaline.position.set(0.5, 3 + p * 3, -8);
+                    items.itemAdrenaline.position.set(0.5, -1 + p * 7, -8); // Rise from table
                     items.itemAdrenaline.rotation.set(0.3, 0, 0.3);
                 } else if (adrTime < 1.5) {
                     items.itemAdrenaline.position.set(0.5, 6 + Math.sin(adrTime * 3) * 0.1, -8);

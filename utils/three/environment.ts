@@ -58,6 +58,8 @@ function createBrickTexture() {
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
     return tex;
 }
 
@@ -230,9 +232,9 @@ function createTableTexture() {
     ctx.fillRect(0, 0, 2048, 2048);
 
     const tex = new THREE.CanvasTexture(canvas);
-    tex.anisotropy = 8;
-    tex.minFilter = THREE.LinearMipmapLinearFilter;
-    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = 0;
+    tex.minFilter = THREE.NearestFilter; // Sharp pixels
+    tex.magFilter = THREE.NearestFilter;
     return tex;
 }
 
@@ -298,6 +300,8 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
         tex.wrapS = THREE.RepeatWrapping;
         tex.wrapT = THREE.RepeatWrapping;
         tex.repeat.set(4, 4);
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
         return tex;
     };
 
@@ -361,6 +365,8 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
         const tex = new THREE.CanvasTexture(canvas);
         tex.wrapS = THREE.RepeatWrapping;
         tex.wrapT = THREE.RepeatWrapping;
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
         return tex;
     };
 
@@ -645,6 +651,70 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     // Right Stack Clutter - closer
     const clutter2 = new THREE.Mesh(boxGeo, boxMat); clutter2.position.set(12, -6.5, -18); clutter2.rotation.y = -0.3; scene.add(clutter2);
     const clutter3 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 2), boxMat); clutter3.position.set(10, -5, -19); clutter3.rotation.y = 0.4; scene.add(clutter3);
+
+    // === LEFT CUPBOARD PROPS ===
+    const cupboardGroup = new THREE.Group();
+    // Position against left wall, mid-ground
+    cupboardGroup.position.set(-14, -6.5, 0);
+    cupboardGroup.rotation.y = 0.2;
+
+    // Body
+    const cupboardMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
+    const cupboardBody = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 2), cupboardMat);
+    cupboardGroup.add(cupboardBody);
+
+    // Doors detail
+    const doorGeo = new THREE.BoxGeometry(1.8, 4.8, 0.1);
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x2d1b15, roughness: 0.95 });
+
+    const leftDoor = new THREE.Mesh(doorGeo, doorMat);
+    leftDoor.position.set(-0.95, 0, 1.05);
+    cupboardGroup.add(leftDoor);
+
+    const rightDoor = new THREE.Mesh(doorGeo, doorMat);
+    rightDoor.position.set(0.95, 0, 1.05);
+    cupboardGroup.add(rightDoor);
+
+    // Knobs
+    const knobGeo = new THREE.SphereGeometry(0.1, 8, 8);
+    const knobMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63 });
+    const leftKnob = new THREE.Mesh(knobGeo, knobMat);
+    leftKnob.position.set(-0.2, 0, 1.15);
+    cupboardGroup.add(leftKnob);
+
+    const rightKnob = new THREE.Mesh(knobGeo, knobMat);
+    rightKnob.position.set(0.2, 0, 1.15);
+    cupboardGroup.add(rightKnob);
+
+    // === ITEMS ON TOP ===
+    // 1. Beer Can
+    const beerProp = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.8, 12), new THREE.MeshStandardMaterial({ color: 0xcc0000 }));
+    beerProp.position.set(-1.2, 2.9, 0.5);
+    cupboardGroup.add(beerProp);
+
+    // 2. Papers / Files
+    const paperGeo = new THREE.BoxGeometry(0.8, 0.05, 1.0);
+    const paperMat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+    const paperStack = new THREE.Group();
+    paperStack.position.set(0.8, 2.55, 0.2);
+    for (let i = 0; i < 3; i++) {
+        const p = new THREE.Mesh(paperGeo, paperMat);
+        p.position.y = i * 0.06;
+        p.rotation.y = (Math.random() - 0.5) * 0.5;
+        paperStack.add(p);
+    }
+    cupboardGroup.add(paperStack);
+
+    // 3. Cigarette Pack
+    const cigPack = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+    cigPack.position.set(0.2, 2.6, 0.8);
+    cigPack.rotation.y = 0.5;
+    cupboardGroup.add(cigPack);
+    const cigLabel = new THREE.Mesh(new THREE.BoxGeometry(0.41, 0.05, 0.2), new THREE.MeshStandardMaterial({ color: 0xcc0000 }));
+    cigLabel.position.y = 0.06;
+    cigPack.add(cigLabel);
+
+    scene.add(cupboardGroup);
 
     // Center Back - Metal Drum / Barrel - brighter
     const drumGeo = new THREE.CylinderGeometry(1.5, 1.5, 4, 16);

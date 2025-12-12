@@ -165,7 +165,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const isMob = window.innerWidth < 900;
             const isAnd = navigator.userAgent.toLowerCase().includes('android');
             const mobScale = isAnd ? 3 : 2;
-            const pxScale = isMob ? mobScale : (propsRef.current.settings.pixelScale || 3);
+            // Default to 4 for stronger pixelation on desktop
+            const pxScale = isMob ? mobScale : (propsRef.current.settings.pixelScale || 4);
 
             sceneRef.current.renderer.setSize(width / pxScale, height / pxScale, false);
 
