@@ -253,20 +253,47 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const targetFPS = isAndroid ? 24 : (isMobile ? 30 : 60);
         const frameInterval = 1000 / targetFPS;
         let lastFrameTime = 0;
+        let isTabVisible = true;
+
+        // Handle tab visibility changes to prevent animation jumps
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                isTabVisible = false;
+            } else {
+                // Reset timing when returning to tab
+                isTabVisible = true;
+                lastTime = performance.now();
+                lastFrameTime = performance.now();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         const animate = (currentTime: number = 0) => {
             frameId = requestAnimationFrame(animate);
             if (!sceneRef.current) return;
+
+            // Skip animation when tab is not visible
+            if (!isTabVisible) {
+                lastTime = currentTime;
+                lastFrameTime = currentTime;
+                return;
+            }
 
             // Frame rate limiting for mobile
             const elapsed = currentTime - lastFrameTime;
             if (elapsed < frameInterval) return;
             lastFrameTime = currentTime - (elapsed % frameInterval);
 
-            // Delta time for smooth animations (capped to prevent jumps)
-            const delta = Math.min((currentTime - lastTime) / 1000, 0.05);
+            // Delta time for smooth animations (capped to prevent jumps after tab switch)
+            // Cap at 100ms (0.1s) to prevent huge time jumps
+            const rawDelta = (currentTime - lastTime) / 1000;
+            const delta = Math.min(rawDelta, 0.1);
             lastTime = currentTime;
-            time += delta;
+
+            // Only advance time if delta is reasonable (prevents jumps)
+            if (rawDelta < 0.5) {
+                time += delta;
+            }
 
             updateScene(sceneRef.current, propsRef.current, time);
         };
@@ -322,6 +349,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         return () => {
             clearTimeout(timeout);
             cancelAnimationFrame(frameId);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('click', handleClick);
             resizeObserver.disconnect();
