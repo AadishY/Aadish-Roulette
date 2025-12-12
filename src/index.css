@@ -1,3 +1,68 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Shell background animations */
+@keyframes shell-fall {
+    0% {
+        transform: translateY(0) translateX(0) rotateZ(0deg);
+        opacity: 0;
+    }
+    3% {
+        opacity: 0.9;
+    }
+    25% {
+        transform: translateY(30vh) translateX(15px) rotateZ(10deg);
+    }
+    50% {
+        transform: translateY(60vh) translateX(-10px) rotateZ(-5deg);
+    }
+    75% {
+        transform: translateY(90vh) translateX(20px) rotateZ(8deg);
+    }
+    95% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(125vh) translateX(5px) rotateZ(-3deg);
+        opacity: 0;
+    }
+}
+
+@keyframes shell-spin {
+    0% {
+        transform: rotate(0deg) rotateY(0deg);
+    }
+    25% {
+        transform: rotate(90deg) rotateY(20deg);
+    }
+    50% {
+        transform: rotate(180deg) rotateY(0deg);
+    }
+    75% {
+        transform: rotate(270deg) rotateY(-20deg);
+    }
+    100% {
+        transform: rotate(360deg) rotateY(0deg);
+    }
+}
+
+.shell-fall {
+    animation: shell-fall linear infinite;
+    will-change: transform, opacity;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .shell-fall {
+        animation: none;
+        opacity: 0.5;
+    }
+}
+
+/* Disable on very low-power mobile */
+@media (max-width: 480px) {
+    .shell-fall {
+        animation-duration: 30s !important;
+    }
+}
