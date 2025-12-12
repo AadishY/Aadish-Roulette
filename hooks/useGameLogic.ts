@@ -327,6 +327,14 @@ export const useGameLogic = () => {
 
     if (item === 'CUFFS' && dealer.isHandcuffed) return;
 
+    if (item === 'ADRENALINE') {
+      const stealableItems = dealer.items.filter(i => i !== 'ADRENALINE' && i !== null);
+      if (stealableItems.length === 0) {
+        addLog("NOTHING TO STEAL", 'info');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     const newItems = [...player.items];

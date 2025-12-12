@@ -131,54 +131,55 @@ export const createDealerModel = (scene: THREE.Scene) => {
     mouthVoid.scale.set(1.0, 0.55, 0.6);
     headGroup.add(mouthVoid);
 
-    // === SHARP TEETH - Positioned VISIBLY ===
-    // Moved Z forward significantly to protrude from the dark void
+    // === PROPER TEETH PLACEMENT ===
+    // Mouth void is at Z = 1.8. Skull radius ~2.4.
+    // Teeth need to be inside the void but visible. Z ~ 1.9 - 2.0.
 
     // Upper teeth
     const upperTeeth = [
-        { x: -1.0, h: 0.5 },
-        { x: -0.8, h: 0.6 },
-        { x: -0.6, h: 0.4 },
-        { x: -0.4, h: 0.55 },
-        { x: -0.2, h: 0.35 },
-        { x: 0, h: 0.5 },
-        { x: 0.2, h: 0.4 },
-        { x: 0.4, h: 0.55 },
-        { x: 0.6, h: 0.45 },
-        { x: 0.8, h: 0.65 },
-        { x: 1.0, h: 0.5 },
+        { x: -1.0, h: 0.6 },
+        { x: -0.8, h: 0.75 },
+        { x: -0.6, h: 0.55 },
+        { x: -0.4, h: 0.7 },
+        { x: -0.2, h: 0.5 },
+        { x: 0, h: 0.65 },
+        { x: 0.2, h: 0.5 },
+        { x: 0.4, h: 0.7 },
+        { x: 0.6, h: 0.55 },
+        { x: 0.8, h: 0.75 },
+        { x: 1.0, h: 0.6 },
     ];
 
     for (const t of upperTeeth) {
-        const geo = new THREE.ConeGeometry(0.06, t.h, 4); // Slightly thicker, 4 sides
+        const geo = new THREE.ConeGeometry(0.08, t.h, 4);
         const mesh = new THREE.Mesh(geo, teethMat);
-        // Move Z to ~2.25 to sit on lip/skull boundary
-        mesh.position.set(t.x, -0.45, 2.25);
-        mesh.rotation.x = Math.PI + 0.2; // Angle out slightly
-        mesh.rotation.z = (Math.random() - 0.5) * 0.3;
+        // Positioned at Z=2.0 (slightly protruding from void at 1.8)
+        mesh.position.set(t.x, -0.4, 2.0);
+        mesh.rotation.x = Math.PI - 0.1; // Point down and slightly in
+        mesh.rotation.z = (Math.random() - 0.5) * 0.4;
         headGroup.add(mesh);
     }
 
     // Lower teeth
     const lowerTeeth = [
-        { x: -0.9, h: 0.4 },
-        { x: -0.7, h: 0.5 },
-        { x: -0.5, h: 0.35 },
-        { x: -0.3, h: 0.45 },
-        { x: -0.1, h: 0.3 },
-        { x: 0.1, h: 0.4 },
-        { x: 0.3, h: 0.35 },
-        { x: 0.5, h: 0.5 },
-        { x: 0.7, h: 0.4 },
-        { x: 0.9, h: 0.45 },
+        { x: -0.9, h: 0.55 },
+        { x: -0.7, h: 0.65 },
+        { x: -0.5, h: 0.45 },
+        { x: -0.3, h: 0.6 },
+        { x: -0.1, h: 0.4 },
+        { x: 0.1, h: 0.5 },
+        { x: 0.3, h: 0.45 },
+        { x: 0.5, h: 0.65 },
+        { x: 0.7, h: 0.55 },
+        { x: 0.9, h: 0.6 },
     ];
 
     for (const t of lowerTeeth) {
-        const geo = new THREE.ConeGeometry(0.05, t.h, 4);
+        const geo = new THREE.ConeGeometry(0.07, t.h, 4);
         const mesh = new THREE.Mesh(geo, teethMat);
-        mesh.position.set(t.x, -0.85, 2.2);
-        mesh.rotation.x = -0.2; // Angle out
-        mesh.rotation.z = (Math.random() - 0.5) * 0.25;
+        mesh.position.set(t.x, -0.9, 1.95);
+        mesh.rotation.x = 0.1; // Point up and slightly in
+        mesh.rotation.z = (Math.random() - 0.5) * 0.3;
         headGroup.add(mesh);
     }
 
@@ -193,7 +194,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
 
     dealerGroup.add(headGroup);
 
-    // === BODY ===
+    // === BODY & ARMS (Re-Rigged) ===
 
     // Torso
     const torso = new THREE.Mesh(
@@ -205,46 +206,63 @@ export const createDealerModel = (scene: THREE.Scene) => {
     torso.castShadow = true;
     dealerGroup.add(torso);
 
-    // Shoulders
+    // Shoulders - Fixed positions
     const shoulderGeo = new THREE.SphereGeometry(1.6, 16, 16);
+    const shoulderY = HEAD_Y - 2.5;
 
     const lShoulder = new THREE.Mesh(shoulderGeo, suitMat);
-    lShoulder.position.set(-4, HEAD_Y - 2.5, Z_POS);
+    lShoulder.position.set(-4, shoulderY, Z_POS);
     dealerGroup.add(lShoulder);
 
     const rShoulder = new THREE.Mesh(shoulderGeo, suitMat);
-    rShoulder.position.set(4, HEAD_Y - 2.5, Z_POS);
+    rShoulder.position.set(4, shoulderY, Z_POS);
     dealerGroup.add(rShoulder);
 
-    // Upper Arms
-    const upperArmGeo = new THREE.CylinderGeometry(0.8, 0.6, 5, 12);
+    // Arm Helpers
+    // We want hands at Z_POS+8, Y=-0.2 (Table), X=+/-3.2
+    // We want Elbows roughly mid-way
 
-    const lUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    lUpperArm.position.set(-4.5, HEAD_Y - 5, Z_POS + 2);
-    lUpperArm.rotation.x = 0.5;
-    lUpperArm.rotation.z = -0.2;
+    const createLimb = (start: THREE.Vector3, end: THREE.Vector3, thickness: number) => {
+        const len = start.distanceTo(end);
+        const geo = new THREE.CylinderGeometry(thickness, thickness * 0.8, len, 12);
+        geo.translate(0, len / 2, 0); // Pivot at bottom (start)
+        const mesh = new THREE.Mesh(geo, suitMat);
+        mesh.position.copy(start);
+        mesh.lookAt(end);
+        mesh.rotateX(Math.PI / 2); // Align cylinder Y with LookAt vector
+        return mesh;
+    };
+
+    const HAND_Y = -0.2;
+    const ELBOW_Y = 0.5; // Slightly raised elbows
+    const ELBOW_Z = Z_POS + 3; // Mid-way forward
+
+    // LEFT ARM
+    const lShoulderPos = new THREE.Vector3(-4, shoulderY, Z_POS);
+    const lElbowPos = new THREE.Vector3(-4.5, ELBOW_Y, ELBOW_Z);
+    const lHandPos = new THREE.Vector3(-3.2, HAND_Y, Z_POS + 8);
+
+    // Upper Arm
+    const lUpperArm = createLimb(lShoulderPos, lElbowPos, 0.8);
     dealerGroup.add(lUpperArm);
 
-    const rUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    rUpperArm.position.set(4.5, HEAD_Y - 5, Z_POS + 2);
-    rUpperArm.rotation.x = 0.5;
-    rUpperArm.rotation.z = 0.2;
-    dealerGroup.add(rUpperArm);
-
-    // Forearms
-    const forearmGeo = new THREE.CylinderGeometry(0.6, 0.45, 5, 12);
-
-    const lForearm = new THREE.Mesh(forearmGeo, suitMat);
-    lForearm.position.set(-3.8, HEAD_Y - 7.5, Z_POS + 5);
-    lForearm.rotation.x = 1.1;
-    lForearm.rotation.z = -0.1;
+    // Forearm
+    const lForearm = createLimb(lElbowPos, lHandPos, 0.6);
     dealerGroup.add(lForearm);
 
-    const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(3.8, HEAD_Y - 7.5, Z_POS + 5);
-    rForearm.rotation.x = 1.1;
-    rForearm.rotation.z = 0.1;
+    // RIGHT ARM
+    const rShoulderPos = new THREE.Vector3(4, shoulderY, Z_POS);
+    const rElbowPos = new THREE.Vector3(4.5, ELBOW_Y, ELBOW_Z);
+    const rHandPos = new THREE.Vector3(3.2, HAND_Y, Z_POS + 8);
+
+    // Upper Arm
+    const rUpperArm = createLimb(rShoulderPos, rElbowPos, 0.8);
+    dealerGroup.add(rUpperArm);
+
+    // Forearm
+    const rForearm = createLimb(rElbowPos, rHandPos, 0.6);
     dealerGroup.add(rForearm);
+
 
     // Hands - Simple blocks
     const handMat = new THREE.MeshStandardMaterial({
@@ -252,15 +270,11 @@ export const createDealerModel = (scene: THREE.Scene) => {
         roughness: 0.75
     });
 
-    // Raising HAND_Y to ensure no clipping with table (Table top is approx -0.75)
-    // Hand height is 0.5 (Box Y after rotation). Center at -0.4 keeps bottom at -0.65, clearance of 0.1.
-    const HAND_Y = -0.4;
-
     const lHand = new THREE.Mesh(
         new THREE.BoxGeometry(1.0, 1.2, 0.5),
         handMat
     );
-    lHand.position.set(-3.2, HAND_Y, Z_POS + 8);
+    lHand.position.copy(lHandPos);
     lHand.rotation.x = Math.PI / 2; // Flat on table
     lHand.rotation.z = -0.2;
     dealerGroup.add(lHand);
@@ -269,7 +283,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
         new THREE.BoxGeometry(1.0, 1.2, 0.5),
         handMat
     );
-    rHand.position.set(3.2, HAND_Y, Z_POS + 8);
+    rHand.position.copy(rHandPos);
     rHand.rotation.x = Math.PI / 2;
     rHand.rotation.z = 0.2;
     dealerGroup.add(rHand);
