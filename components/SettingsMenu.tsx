@@ -9,6 +9,77 @@ interface SettingsMenuProps {
     onResetDefaults: () => void;
 }
 
+// Custom Slider Component to prevent accidental clicks
+const CustomSlider: React.FC<{
+    min: number;
+    max: number;
+    step: number;
+    value: number;
+    onChange: (val: number) => void;
+}> = ({ min, max, step, value, onChange }) => {
+    const trackRef = React.useRef<HTMLDivElement>(null);
+    const [isDragging, setIsDragging] = React.useState(false);
+
+    const updateValue = (clientX: number) => {
+        if (!trackRef.current) return;
+        const rect = trackRef.current.getBoundingClientRect();
+        const percent = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+        const rawValue = min + percent * (max - min);
+        // Stick to step
+        const steppedValue = Math.round(rawValue / step) * step;
+        const clampedValue = Math.min(max, Math.max(min, steppedValue));
+        onChange(clampedValue);
+    };
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        // Only allow dragging if clicking the thumb area
+        e.preventDefault(); // Prevent scrolling while dragging
+        setIsDragging(true);
+        const target = e.target as HTMLElement;
+        target.setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging) return;
+        updateValue(e.clientX);
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        setIsDragging(false);
+        const target = e.target as HTMLElement;
+        target.releasePointerCapture(e.pointerId);
+    };
+
+    // Calculate percent for visual rendering
+    const percent = ((value - min) / (max - min)) * 100;
+
+    return (
+        <div
+            className="relative w-full h-8 flex items-center touch-none select-none"
+            ref={trackRef}
+        >
+            {/* Track Background */}
+            <div className="absolute w-full h-2 bg-stone-800 rounded-full overflow-hidden">
+                {/* Fill */}
+                <div
+                    className="h-full bg-stone-600"
+                    style={{ width: `${percent}%` }}
+                />
+            </div>
+
+            {/* Thumb - The Red Dot */}
+            <div
+                className="absolute w-6 h-6 bg-red-600 rounded-full border-2 border-stone-200 cursor-grab active:cursor-grabbing shadow-lg shadow-black/50 z-10 hover:scale-110 transition-transform"
+                style={{ left: `calc(${percent}% - 12px)` }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+            // touch-action none is important for the thumb to prevent browser scrolling while dragging
+            />
+        </div>
+    );
+};
+
 export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSettings, onClose, onResetDefaults }) => {
     const [scale, setScale] = useState(1);
 
@@ -62,77 +133,67 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
 
                 <div className="space-y-6 flex-1 overflow-y-auto px-4 pr-2">
                     {/* Pixelation */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm mb-1">
                             <span className="flex items-center gap-2"><Monitor size={16} /> RENDER RES</span>
                             <span>{settings.pixelScale.toFixed(1)}x</span>
                         </div>
-                        <input
-                            type="range"
-                            min="1" max="6" step="0.5"
+                        <CustomSlider
+                            min={1} max={6} step={0.5}
                             value={settings.pixelScale}
-                            onChange={(e) => handleChange('pixelScale', parseFloat(e.target.value))}
-                            className="w-full touch-pan-y h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                            onChange={(val) => handleChange('pixelScale', val)}
                         />
                     </div>
 
                     {/* UI Scale */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm mb-1">
                             <span className="flex items-center gap-2"><Scaling size={16} /> HUD SCALE</span>
                             <span>{settings.uiScale.toFixed(2)}x</span>
                         </div>
-                        <input
-                            type="range"
-                            min="0.6" max="1.4" step="0.1"
+                        <CustomSlider
+                            min={0.6} max={1.4} step={0.1}
                             value={settings.uiScale}
-                            onChange={(e) => handleChange('uiScale', parseFloat(e.target.value))}
-                            className="w-full touch-pan-y h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                            onChange={(val) => handleChange('uiScale', val)}
                         />
                     </div>
 
                     {/* FOV */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm mb-1">
                             <span className="flex items-center gap-2"><Eye size={16} /> FOV</span>
                             <span>{settings.fov || 85}°</span>
                         </div>
-                        <input
-                            type="range"
-                            min="60" max="110" step="1"
+                        <CustomSlider
+                            min={60} max={110} step={1}
                             value={settings.fov || 85}
-                            onChange={(e) => handleChange('fov', parseInt(e.target.value))}
-                            className="w-full touch-pan-y h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                            onChange={(val) => handleChange('fov', val)}
                         />
                     </div>
 
                     {/* Music Volume */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm mb-1">
                             <span className="flex items-center gap-2">🎵 MUSIC</span>
                             <span>{Math.round((settings.musicVolume ?? 0.5) * 100)}%</span>
                         </div>
-                        <input
-                            type="range"
-                            min="0" max="1" step="0.1"
+                        <CustomSlider
+                            min={0} max={1} step={0.1}
                             value={settings.musicVolume ?? 0.5}
-                            onChange={(e) => handleChange('musicVolume', parseFloat(e.target.value))}
-                            className="w-full touch-pan-y h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                            onChange={(val) => handleChange('musicVolume', val)}
                         />
                     </div>
 
                     {/* SFX Volume */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm mb-1">
                             <span className="flex items-center gap-2">🔊 SFX</span>
                             <span>{Math.round((settings.sfxVolume ?? 0.7) * 100)}%</span>
                         </div>
-                        <input
-                            type="range"
-                            min="0" max="1" step="0.1"
+                        <CustomSlider
+                            min={0} max={1} step={0.1}
                             value={settings.sfxVolume ?? 0.7}
-                            onChange={(e) => handleChange('sfxVolume', parseFloat(e.target.value))}
-                            className="w-full touch-pan-y h-2 bg-stone-800 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-red-600"
+                            onChange={(val) => handleChange('sfxVolume', val)}
                         />
                     </div>
                 </div>
