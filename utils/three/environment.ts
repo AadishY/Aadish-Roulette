@@ -16,14 +16,14 @@ function generateGlowTexture() {
     return texture;
 }
 
-// procedural brick texture
+// procedural brick texture - brighter for visibility
 function createBrickTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 512; canvas.height = 512;
     const ctx = canvas.getContext('2d');
     if (!ctx) return new THREE.CanvasTexture(canvas);
 
-    ctx.fillStyle = '#2a1a15'; // Dark reddish brown base
+    ctx.fillStyle = '#3a2a25'; // Brighter reddish brown base
     ctx.fillRect(0, 0, 512, 512);
 
     const brickH = 32;
@@ -33,25 +33,25 @@ function createBrickTexture() {
         // Offset every other row
         const offset = (y / brickH) % 2 === 0 ? 0 : 32;
         for (let x = -32; x < 512; x += brickW) {
-            // Brick color variation
-            const shade = 20 + Math.random() * 30;
-            ctx.fillStyle = `rgb(${shade + 30}, ${shade + 10}, ${shade})`;
+            // Brick color variation - brighter
+            const shade = 35 + Math.random() * 40;
+            ctx.fillStyle = `rgb(${shade + 45}, ${shade + 25}, ${shade + 15})`;
 
             // Draw brick with mortar gap
             ctx.fillRect(x + offset + 2, y + 2, brickW - 4, brickH - 4);
 
             // Add grunge/noise
             if (Math.random() > 0.5) {
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
                 ctx.fillRect(x + offset + 5 + Math.random() * 40, y + 5 + Math.random() * 20, 10, 10);
             }
         }
     }
 
-    // Vignette/Dirt overlay
+    // Light vignette
     const grad = ctx.createRadialGradient(256, 256, 128, 256, 256, 512);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.8)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.4)'); // Less dark
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 512, 512);
 
@@ -63,78 +63,332 @@ function createBrickTexture() {
 
 function createTableTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024; canvas.height = 1024;
+    canvas.width = 2048; canvas.height = 2048; // Higher resolution
     const ctx = canvas.getContext('2d');
     if (!ctx) return new THREE.CanvasTexture(canvas);
 
-    // Background - Dirty Green
-    ctx.fillStyle = '#2b422a';
-    ctx.fillRect(0, 0, 1024, 1024);
+    // ═══════════════════════════════════════════════════════════════
+    // BUCKSHOT ROULETTE STYLE TABLE - Dark worn green with amber lines
+    // ═══════════════════════════════════════════════════════════════
 
-    // Noise/Grunge
-    for (let i = 0; i < 20000; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? '#203020' : '#355030';
-        ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
+    // Base - Very dark olive/military green
+    ctx.fillStyle = '#1a2a1a';
+    ctx.fillRect(0, 0, 2048, 2048);
+
+    // Felt texture layer - subtle variation
+    for (let i = 0; i < 50000; i++) {
+        const shade = Math.random();
+        if (shade > 0.7) {
+            ctx.fillStyle = '#253525'; // Lighter green spots
+        } else if (shade > 0.4) {
+            ctx.fillStyle = '#1e2e1e'; // Mid tone
+        } else {
+            ctx.fillStyle = '#142014'; // Dark spots
+        }
+        const size = 1 + Math.random() * 3;
+        ctx.fillRect(Math.random() * 2048, Math.random() * 2048, size, size);
     }
 
-    // Grid Lines
-    ctx.strokeStyle = 'rgba(200, 200, 200, 0.4)';
-    ctx.lineWidth = 4;
+    // Add wear patterns / scratches
+    ctx.strokeStyle = 'rgba(10, 15, 10, 0.6)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 80; i++) {
+        ctx.beginPath();
+        const x1 = Math.random() * 2048;
+        const y1 = Math.random() * 2048;
+        const len = 20 + Math.random() * 100;
+        const angle = Math.random() * Math.PI * 2;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x1 + Math.cos(angle) * len, y1 + Math.sin(angle) * len);
+        ctx.stroke();
+    }
 
-    // Center Line
-    ctx.beginPath();
-    ctx.moveTo(512, 0); ctx.lineTo(512, 1024);
-    ctx.stroke();
+    // Coffee/liquid stains
+    for (let i = 0; i < 8; i++) {
+        const x = 300 + Math.random() * 1448;
+        const y = 300 + Math.random() * 1448;
+        const r = 30 + Math.random() * 80;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, 'rgba(25, 15, 10, 0.3)');
+        grad.addColorStop(0.6, 'rgba(20, 12, 8, 0.15)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
 
-    // Center Circle
-    ctx.beginPath();
-    ctx.arc(512, 512, 100, 0, Math.PI * 2);
-    ctx.stroke();
+    // ═══════════════════════════════════════════════════════════════
+    // GLOWING AMBER/GOLD GRID LINES - Like the reference
+    // ═══════════════════════════════════════════════════════════════
 
-    // Grid Boxes (roughly matching the UI slots)
-    // Left Side (Player Items?)
-    ctx.strokeRect(100, 600, 300, 300);
-    ctx.strokeRect(100, 100, 300, 300);
+    // Helper for glowing lines
+    const drawGlowLine = (x1: number, y1: number, x2: number, y2: number, width: number = 3) => {
+        // Outer glow
+        ctx.strokeStyle = 'rgba(180, 150, 80, 0.2)';
+        ctx.lineWidth = width + 12;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
 
-    // Right Side
-    ctx.strokeRect(624, 600, 300, 300);
-    ctx.strokeRect(624, 100, 300, 300);
+        // Mid glow
+        ctx.strokeStyle = 'rgba(200, 170, 100, 0.4)';
+        ctx.lineWidth = width + 6;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
 
-    // Item Slots (Small boxes)
+        // Core line
+        ctx.strokeStyle = 'rgba(220, 200, 140, 0.8)';
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    };
+
+    const drawGlowCircle = (x: number, y: number, r: number, width: number = 3) => {
+        // Outer glow
+        ctx.strokeStyle = 'rgba(180, 150, 80, 0.2)';
+        ctx.lineWidth = width + 12;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Mid glow
+        ctx.strokeStyle = 'rgba(200, 170, 100, 0.4)';
+        ctx.lineWidth = width + 6;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Core line
+        ctx.strokeStyle = 'rgba(220, 200, 140, 0.8)';
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+    };
+
+    const drawGlowRect = (x: number, y: number, w: number, h: number, width: number = 2) => {
+        drawGlowLine(x, y, x + w, y, width);
+        drawGlowLine(x + w, y, x + w, y + h, width);
+        drawGlowLine(x + w, y + h, x, y + h, width);
+        drawGlowLine(x, y + h, x, y, width);
+    };
+
+    // Center dividing line
+    drawGlowLine(1024, 100, 1024, 1948, 4);
+
+    // Large central roulette circle
+    drawGlowCircle(1024, 1024, 280, 5);
+    drawGlowCircle(1024, 1024, 200, 3);
+
+    // Inner design - cross pattern
+    drawGlowLine(1024 - 180, 1024, 1024 + 180, 1024, 2);
+    drawGlowLine(1024, 1024 - 180, 1024, 1024 + 180, 2);
+
+    // Corner markings
+    drawGlowLine(100, 100, 200, 100, 2);
+    drawGlowLine(100, 100, 100, 200, 2);
+
+    drawGlowLine(1948, 100, 1848, 100, 2);
+    drawGlowLine(1948, 100, 1948, 200, 2);
+
+    drawGlowLine(100, 1948, 200, 1948, 2);
+    drawGlowLine(100, 1948, 100, 1848, 2);
+
+    drawGlowLine(1948, 1948, 1848, 1948, 2);
+    drawGlowLine(1948, 1948, 1948, 1848, 2);
+
+    // Item placement zones - Left side (dealer)
+    drawGlowRect(150, 300, 350, 250, 2);
+    drawGlowRect(150, 600, 350, 250, 2);
+
+    // Item placement zones - Right side (player)
+    drawGlowRect(1548, 300, 350, 250, 2);
+    drawGlowRect(1548, 600, 350, 250, 2);
+
+    // Small item slots at bottom (player side)
     for (let i = 0; i < 4; i++) {
-        ctx.strokeRect(40 + i * 80, 900, 60, 60); // Player inventory hint?
-        ctx.strokeRect(664 + i * 80, 900, 60, 60);
+        drawGlowRect(1200 + i * 100, 1700, 80, 80, 2);
     }
+
+    // Small item slots at top (dealer side)
+    for (let i = 0; i < 4; i++) {
+        drawGlowRect(648 + i * 100, 250, 80, 80, 2);
+    }
+
+    // Gun placement area (center)
+    drawGlowRect(874, 900, 300, 150, 3);
+
+    // Vignette effect - darker edges
+    const vignette = ctx.createRadialGradient(1024, 1024, 400, 1024, 1024, 1400);
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, 2048, 2048);
 
     const tex = new THREE.CanvasTexture(canvas);
-    tex.anisotropy = 4;
+    tex.anisotropy = 8;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
     return tex;
 }
 
 export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false) => {
-    // Floor
+    // ═══════════════════════════════════════════════════════════════
+    // BUCKSHOT ROULETTE BUNKER ENVIRONMENT
+    // Dark industrial underground aesthetic
+    // ═══════════════════════════════════════════════════════════════
+
+    // Create procedural concrete texture for floor
+    const createConcreteTexture = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024; canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return new THREE.CanvasTexture(canvas);
+
+        // Brighter base concrete
+        ctx.fillStyle = '#1a1816';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // Concrete variation - brighter
+        for (let i = 0; i < 15000; i++) {
+            const shade = Math.random();
+            if (shade > 0.7) {
+                ctx.fillStyle = '#252220';
+            } else if (shade > 0.4) {
+                ctx.fillStyle = '#1e1c1a';
+            } else {
+                ctx.fillStyle = '#161412';
+            }
+            ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2 + Math.random() * 6, 2 + Math.random() * 6);
+        }
+
+        // Cracks
+        ctx.strokeStyle = 'rgba(10, 8, 6, 0.8)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 20; i++) {
+            ctx.beginPath();
+            let x = Math.random() * 1024;
+            let y = Math.random() * 1024;
+            ctx.moveTo(x, y);
+            for (let j = 0; j < 5; j++) {
+                x += (Math.random() - 0.5) * 80;
+                y += (Math.random() - 0.5) * 80;
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        // Oil/grime stains
+        for (let i = 0; i < 12; i++) {
+            const x = Math.random() * 1024;
+            const y = Math.random() * 1024;
+            const r = 20 + Math.random() * 60;
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+            grad.addColorStop(0, 'rgba(25, 20, 15, 0.4)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(4, 4);
+        return tex;
+    };
+
+    // Floor - Industrial concrete (brighter)
+    const floorTex = createConcreteTexture();
     const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(100, 100),
-        new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.8, metalness: 0.2 })
+        new THREE.MeshStandardMaterial({
+            map: floorTex,
+            color: 0x1a1614, // Brighter
+            roughness: 0.9,
+            metalness: 0.1
+        })
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -8;
+    floor.position.y = -9;
     floor.receiveShadow = !isMobile;
     scene.add(floor);
 
-    // Grunge Back Wall (Behind the Cage)
+    // Ceiling - Very dark with void feel
+    const ceiling = new THREE.Mesh(
+        new THREE.PlaneGeometry(100, 100),
+        new THREE.MeshStandardMaterial({ color: 0x020202, roughness: 1.0, side: THREE.BackSide })
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = 20;
+    scene.add(ceiling);
 
-    const backWallMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.95 });
-    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), backWallMat);
-    backWall.position.set(0, 5, -28);
+    // Grunge Back Wall - Near black industrial
+    const createWallTexture = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return new THREE.CanvasTexture(canvas);
+
+        // Brighter base for visibility
+        ctx.fillStyle = '#1a1614';
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Grimy patches - brighter
+        for (let i = 0; i < 500; i++) {
+            ctx.fillStyle = Math.random() > 0.5 ? '#252220' : '#1c1a18';
+            ctx.fillRect(Math.random() * 512, Math.random() * 512, 3 + Math.random() * 15, 3 + Math.random() * 15);
+        }
+
+        // Water stains running down
+        for (let i = 0; i < 8; i++) {
+            ctx.strokeStyle = 'rgba(40, 35, 30, 0.4)';
+            ctx.lineWidth = 2 + Math.random() * 5;
+            ctx.beginPath();
+            const x = Math.random() * 512;
+            ctx.moveTo(x, 0);
+            let cx = x;
+            for (let y = 0; y < 512; y += 20) {
+                cx += (Math.random() - 0.5) * 15;
+                ctx.lineTo(cx, y);
+            }
+            ctx.stroke();
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        return tex;
+    };
+
+    const wallTex = createWallTexture();
+    // Back wall with emissive so it's always visible
+    const backWallMat = new THREE.MeshStandardMaterial({
+        map: wallTex,
+        color: 0x3a3530,
+        roughness: 0.85,
+        emissive: 0x151210,
+        emissiveIntensity: 0.15 // Reduced slightly for spookiness
+    });
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(80, 50), backWallMat);
+    backWall.position.set(0, 5, -28); // Moved back (was -22)
     backWall.receiveShadow = !isMobile;
     scene.add(backWall);
 
-    const crateMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
+    // Crate material with slight emissive for visibility
+    const crateMat = new THREE.MeshStandardMaterial({
+        color: 0x3a3530,
+        roughness: 0.8,
+        emissive: 0x0a0808,
+        emissiveIntensity: 0.15
+    });
 
     // Background Stacks (Fill the void)
-    const makeStack = (x: number, z: number, y: number, r: number) => {
-        const box = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), crateMat);
+    const makeStack = (x: number, z: number, y: number, r: number, scale: number = 1) => {
+        const box = new THREE.Mesh(new THREE.BoxGeometry(4 * scale, 4 * scale, 4 * scale), crateMat);
         box.position.set(x, y, z);
         box.rotation.y = r;
         if (!isMobile) {
@@ -145,39 +399,76 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
         return box;
     };
 
-    // Left Stack
-    makeStack(-15, -5, -6, 0.5);
-    makeStack(-15, -5, -2, 0.5);
-    makeStack(-15, -1, -5, 0.2); // Top
+    // Left Stack - More crates for density
+    makeStack(-15, -5, -7, 0.5);
+    makeStack(-15, -5, -3, 0.5);
+    makeStack(-15, -1, -5, 0.2);
+    makeStack(-17, -7, -5, 0.3, 0.8);
 
     // Right Stack
-    makeStack(16, -6, -5, -0.2);
-    makeStack(18, -6, -1, -0.4);
-    makeStack(17, -2, -3, 0.1); // Top
+    makeStack(16, -6, -6, -0.2);
+    makeStack(18, -6, -2, -0.4);
+    makeStack(17, -2, -4, 0.1);
+    makeStack(19, -7, -4, -0.3, 0.7);
 
-    // Far Back Props (Silhouettes)
-    const shelf = new THREE.Mesh(new THREE.BoxGeometry(12, 10, 1), crateMat);
-    shelf.position.set(0, -3, -20);
+    // Far Back Props (Silhouettes for depth)
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(14, 12, 2), crateMat);
+    shelf.position.set(0, -2, -25);
     shelf.receiveShadow = !isMobile;
     scene.add(shelf);
 
-    // Left Foreground - Medical/Tool Cart
+    // Left Foreground - Industrial Cart with items
     const cartGroup = new THREE.Group();
-    cartGroup.position.set(-9, -5, 5);
-    cartGroup.rotation.y = 0.5;
-    const cartFrame = new THREE.Mesh(new THREE.BoxGeometry(3, 4, 2), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 }));
+    cartGroup.position.set(-10, -5, 6);
+    cartGroup.rotation.y = 0.4;
+
+    const cartMat = new THREE.MeshStandardMaterial({ color: 0x252220, metalness: 0.6, roughness: 0.7 });
+    const cartFrame = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4.5, 2.5), cartMat);
     cartGroup.add(cartFrame);
+
     // Tray top
-    const cartTray = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.2, 2.2), new THREE.MeshStandardMaterial({ color: 0x555555 }));
-    cartTray.position.y = 2.1;
+    const cartTray = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.15, 2.8), new THREE.MeshStandardMaterial({ color: 0x3a3530, metalness: 0.5 }));
+    cartTray.position.y = 2.3;
     cartGroup.add(cartTray);
+
+    // Wheels
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151210 });
+    const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8);
+    [[-1.2, -2, -0.8], [1.2, -2, -0.8], [-1.2, -2, 0.8], [1.2, -2, 0.8]].forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(pos[0], pos[1], pos[2]);
+        cartGroup.add(wheel);
+    });
     scene.add(cartGroup);
 
-    // Right Foreground - File Cabinet
-    const fileCab = new THREE.Mesh(new THREE.BoxGeometry(3, 5, 3), new THREE.MeshStandardMaterial({ color: 0x2e2e2e, roughness: 0.5 }));
-    fileCab.position.set(10, -5, 4);
-    fileCab.rotation.y = -0.3;
-    scene.add(fileCab);
+    // Right Foreground - Industrial Cabinet with LED display
+    const cabinetGroup = new THREE.Group();
+    cabinetGroup.position.set(11, -4.5, 5);
+    cabinetGroup.rotation.y = -0.35;
+
+    const cabMat = new THREE.MeshStandardMaterial({ color: 0x1a1815, roughness: 0.8 });
+    const cabinet = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 3), cabMat);
+    cabinetGroup.add(cabinet);
+
+    // LED display panel (green glow like reference)
+    const displayMat = new THREE.MeshStandardMaterial({
+        color: 0x001500,
+        emissive: 0x00ff00,
+        emissiveIntensity: 0.3
+    });
+    const display = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.2), displayMat);
+    display.position.set(0, 1, 1.51);
+    cabinetGroup.add(display);
+
+    // LED indicator lights
+    const ledMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    for (let i = 0; i < 5; i++) {
+        const led = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.05), ledMat);
+        led.position.set(-1 + i * 0.5, 0, 1.52);
+        cabinetGroup.add(led);
+    }
+    scene.add(cabinetGroup);
 
 
 
@@ -251,20 +542,20 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
         bulb.add(glowSprite);
     }
 
-    // --- ENHANCED BACKGROUND PROPS ---
+    // --- ENHANCED BACKGROUND PROPS --- (Brighter)
     const boxGeo = new THREE.BoxGeometry(3, 3, 3);
-    const boxMat = new THREE.MeshStandardMaterial({ color: 0x443322, roughness: 0.9 });
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.85 });
 
-    // === AMP RACK (Left Side) ===
+    // === AMP RACK (Left Side - pushed back) ===
     const rackGroup = new THREE.Group();
-    rackGroup.position.set(-15, -1, -12);
+    rackGroup.position.set(-18, -1, -15);
     rackGroup.rotation.y = 0.5;
 
-    const rackFrame = new THREE.Mesh(new THREE.BoxGeometry(5, 8, 4), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+    const rackFrame = new THREE.Mesh(new THREE.BoxGeometry(5, 8, 4), new THREE.MeshStandardMaterial({ color: 0x353030 }));
     rackGroup.add(rackFrame);
 
-    // Amp faces
-    const ampMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    // Amp faces - brighter
+    const ampMat = new THREE.MeshStandardMaterial({ color: 0x252222 });
     const lightMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 
     for (let i = 0; i < 3; i++) {
@@ -279,29 +570,69 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
             amp.add(l);
         }
 
-        // Dials
-        const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+        // Dials - brighter
+        const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x777777 }));
         dial.rotation.x = Math.PI / 2;
         dial.position.set(1.5, 0, 0.2);
         amp.add(dial);
     }
 
-    // Big Speaker at bottom
-    const sub = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+    // Big Speaker at bottom - brighter
+    const sub = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshStandardMaterial({ color: 0x1a1818 }));
     sub.position.set(0, -2.5, 2.05);
     rackGroup.add(sub);
-
     scene.add(rackGroup);
 
-    // Right Stack Clutter
-    const clutter2 = new THREE.Mesh(boxGeo, boxMat); clutter2.position.set(12, -6.5, -22); clutter2.rotation.y = -0.3; scene.add(clutter2);
-    const clutter3 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 2), boxMat); clutter3.position.set(10, -5, -23); clutter3.rotation.y = 0.4; scene.add(clutter3);
+    // === EXTRA LEFT PROPS ===
+    const leftStack = new THREE.Group();
+    leftStack.position.set(-22, -4, -8);
+    leftStack.rotation.y = 0.8;
+    const box1 = new THREE.Mesh(new THREE.BoxGeometry(3, 4, 3), new THREE.MeshStandardMaterial({ color: 0x4a3a2a }));
+    const box2 = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), new THREE.MeshStandardMaterial({ color: 0x3a2a1a }));
+    box2.position.y = 3.2; box2.rotation.y = 0.5;
+    leftStack.add(box1); leftStack.add(box2);
+    scene.add(leftStack);
 
-    // Center Back - Metal Drum / Barrel
+
+    // === RIGHT GENERATOR STACK ===
+    const genGroup = new THREE.Group();
+    genGroup.position.set(20, -3, -10);
+    genGroup.rotation.y = -0.6;
+
+    const genBase = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 4), new THREE.MeshStandardMaterial({ color: 0x334433 }));
+    genGroup.add(genBase);
+
+    // Coils / Vents
+    const ventMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    for (let i = 0; i < 3; i++) {
+        const vent = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.5, 16), ventMat);
+        vent.rotation.x = Math.PI / 2;
+        vent.position.set(0, 1.5 - i * 1.5, 2.1);
+        genGroup.add(vent);
+    }
+    scene.add(genGroup);
+
+    // Random Cables hanging
+    const cableCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-15, 15, -5),
+        new THREE.Vector3(-5, 9, -5),
+        new THREE.Vector3(5, 12, -5),
+        new THREE.Vector3(15, 15, -5),
+    ]);
+    const cableGeo = new THREE.TubeGeometry(cableCurve, 20, 0.1, 8, false);
+    const cableMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const looseCable = new THREE.Mesh(cableGeo, cableMat);
+    scene.add(looseCable);
+
+    // Right Stack Clutter - closer
+    const clutter2 = new THREE.Mesh(boxGeo, boxMat); clutter2.position.set(12, -6.5, -18); clutter2.rotation.y = -0.3; scene.add(clutter2);
+    const clutter3 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 2), boxMat); clutter3.position.set(10, -5, -19); clutter3.rotation.y = 0.4; scene.add(clutter3);
+
+    // Center Back - Metal Drum / Barrel - brighter
     const drumGeo = new THREE.CylinderGeometry(1.5, 1.5, 4, 16);
-    const drumMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.7, metalness: 0.6 });
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.65, metalness: 0.5 });
     const drum = new THREE.Mesh(drumGeo, drumMat);
-    drum.position.set(2, -6, -26);
+    drum.position.set(2, -6, -22);
     scene.add(drum);
 
     // Floor Debris (Random papers/scraps)
@@ -339,9 +670,9 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     scene.add(bgBlueRim);
     scene.add(bgBlueRim.target);
 
-    // --- INDUSTRIAL PIPES & VENTS ---
-    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6, metalness: 0.8 });
-    const rustMat = new THREE.MeshStandardMaterial({ color: 0x3d2618, roughness: 0.9 });
+    // --- INDUSTRIAL PIPES & VENTS --- (Brighter materials)
+    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3a3535, roughness: 0.6, metalness: 0.7 });
+    const rustMat = new THREE.MeshStandardMaterial({ color: 0x5d4638, roughness: 0.85 });
 
     // Ceiling Piping
     const pipe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 40), pipeMat);
@@ -354,48 +685,50 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
 
     // Vertical pipes in background
     const vPipe1 = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 20), pipeMat);
-    vPipe1.position.set(-18, 5, -25);
+    vPipe1.position.set(-18, 5, -22);
     scene.add(vPipe1);
 
     const vPipe2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 20), rustMat);
-    vPipe2.position.set(15, 5, -24);
+    vPipe2.position.set(15, 5, -22);
     scene.add(vPipe2);
 
-    // Vent Fan (Non-animated for perf, just distinct shape)
-    const fanHousing = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 2), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
-    fanHousing.position.set(8, 5, -28);
+    // Vent Fan (brighter materials)
+    const fanHousing = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 2), new THREE.MeshStandardMaterial({ color: 0x2a2828 }));
+    fanHousing.position.set(8, 5, -25);
     scene.add(fanHousing);
-    const fanBlades = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x050505 }));
-    fanBlades.rotation.x = Math.PI / 2; fanBlades.position.set(8, 5, -27);
+    const fanBlades = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x1a1818 }));
+    fanBlades.rotation.x = Math.PI / 2; fanBlades.position.set(8, 5, -24);
     scene.add(fanBlades);
 
-    // Grimy Monitor/Terminal
-    const terminal = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 2), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-    terminal.position.set(-10, -5, -22); terminal.rotation.y = 0.4;
+    // Grimy Monitor/Terminal (brighter)
+    const terminal = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 2), new THREE.MeshStandardMaterial({ color: 0x252222 }));
+    terminal.position.set(-10, -5, -20); terminal.rotation.y = 0.4;
     scene.add(terminal);
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.8), new THREE.MeshStandardMaterial({ color: 0x003300, emissive: 0x00ff00, emissiveIntensity: 0.2 }));
-    screen.position.set(-10, -5, -20.9); screen.rotation.y = 0.4;
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.8), new THREE.MeshStandardMaterial({ color: 0x004400, emissive: 0x00ff00, emissiveIntensity: 0.4 }));
+    screen.position.set(-10, -5, -18.9); screen.rotation.y = 0.4;
     scene.add(screen);
 
-    // === BRICK WALLS ===
+    // === BRICK WALLS === (With emissive for visibility)
     const brickTex = createBrickTexture();
     brickTex.repeat.set(2, 2);
     const brickMat = new THREE.MeshStandardMaterial({
         map: brickTex,
-        color: 0x885555,
-        roughness: 0.9,
-        metalness: 0.1
+        color: 0xbb8877,
+        roughness: 0.8,
+        metalness: 0.1,
+        emissive: 0x1a1210,
+        emissiveIntensity: 0.15 // Reduced slightly
     });
 
-    // Side Walls
+    // Side Walls - further away for open feel
     const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), brickMat);
-    leftWall.position.set(-22, 5, -10);
+    leftWall.position.set(-20, 5, -12); // Moved out and back (was -15, -5)
     leftWall.rotation.y = Math.PI / 2;
     leftWall.receiveShadow = !isMobile;
     scene.add(leftWall);
 
     const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 40), brickMat);
-    rightWall.position.set(22, 5, -10);
+    rightWall.position.set(20, 5, -12); // Moved out and back
     rightWall.rotation.y = -Math.PI / 2;
     rightWall.receiveShadow = !isMobile;
     scene.add(rightWall);
@@ -553,72 +886,200 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
 };
 
 export const createDust = (scene: THREE.Scene, isMobile: boolean = false) => {
-    const particleCount = isMobile ? 5 : 20;
+    // ═══════════════════════════════════════════════════════════════
+    // ATMOSPHERIC DUST PARTICLES - Subtle and sparse
+    // ═══════════════════════════════════════════════════════════════
+
+    const particleCount = isMobile ? 5 : 20; // Reduced particle count
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
 
     for (let i = 0; i < particleCount; i++) {
+        // Spread particles in the scene
         positions[i * 3] = (Math.random() - 0.5) * 30;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 20 + 5;
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
-        velocities[i * 3] = (Math.random() - 0.5) * 0.02;
-        velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
-        velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
+        positions[i * 3 + 1] = Math.random() * 15 + 2;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 25;
+
+        // Slow, lazy drifting
+        velocities[i * 3] = (Math.random() - 0.5) * 0.01;
+        velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.005;
+        velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.01;
     }
+
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
 
+    // Subtle dust color
     const material = new THREE.PointsMaterial({
-        color: 0x88aabb, // Slightly blueish dust
-        size: 0.15, // Larger particles
+        color: 0xbbaa88,
+        size: 0.12, // Smaller
         transparent: true,
-        opacity: 0.15, // Faint
+        opacity: 0.2, // Less visible
         blending: THREE.AdditiveBlending,
         sizeAttenuation: true,
         depthWrite: false
     });
+
     const particles = new THREE.Points(geometry, material);
+    particles.name = 'DUST_PARTICLES';
     scene.add(particles);
+
     return particles;
 };
 
 export const createTable = (scene: THREE.Scene) => {
     const tableGroup = new THREE.Group();
+    tableGroup.name = 'TABLE_GROUP';
 
-    // Generate Procedural Table Texture (Buckshot Roulette Style)
+    // ═══════════════════════════════════════════════════════════════
+    // BUCKSHOT ROULETTE STYLE TABLE - Industrial worn metal & felt
+    // ═══════════════════════════════════════════════════════════════
+
+    // Generate Procedural Table Texture
     const tableTex = createTableTexture();
 
-    // Table Top - Grungy Green Felt
+    // Table Top - Worn green felt with glowing lines
     const tableMat = new THREE.MeshStandardMaterial({
         map: tableTex,
-        color: 0x888888, // Tint the texture
-        roughness: 0.9,
-        metalness: 0.1
+        color: 0x666655, // Slightly desaturated
+        roughness: 0.85,
+        metalness: 0.05,
+        emissiveMap: tableTex,
+        emissive: 0x443322, // Subtle glow for lines
+        emissiveIntensity: 0.15
     });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 22), tableMat);
-    top.position.y = -1; top.receiveShadow = true; top.castShadow = true;
+
+    const top = new THREE.Mesh(new THREE.BoxGeometry(26, 0.6, 22), tableMat);
+    top.position.y = -1;
+    top.receiveShadow = true;
+    top.castShadow = true;
     tableGroup.add(top);
 
-    // Metal Rim/Border
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5, metalness: 0.8 });
-    const rimGeo = new THREE.BoxGeometry(26.5, 0.6, 22.5);
-    // Subtraction logic isn't easy here, so just 4 border pieces
-    // Front/Back
-    const rimF = new THREE.Mesh(new THREE.BoxGeometry(26.4, 0.8, 0.5), rimMat); rimF.position.set(0, -1, 11.2); tableGroup.add(rimF);
-    const rimB = new THREE.Mesh(new THREE.BoxGeometry(26.4, 0.8, 0.5), rimMat); rimB.position.set(0, -1, -11.2); tableGroup.add(rimB);
-    // Left/Right
-    const rimL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 22), rimMat); rimL.position.set(-13.1, -1, 0); tableGroup.add(rimL);
-    const rimR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 22), rimMat); rimR.position.set(13.1, -1, 0); tableGroup.add(rimR);
+    // ═══════════════════════════════════════════════════════════════
+    // WORN INDUSTRIAL METAL RIM
+    // ═══════════════════════════════════════════════════════════════
 
-    // Legs - Reinforced
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 });
-    const legGeo = new THREE.CylinderGeometry(0.8, 0.6, 10, 8);
-    const leg1 = new THREE.Mesh(legGeo, legMat); leg1.position.set(-12, -6, -10);
-    const leg2 = new THREE.Mesh(legGeo, legMat); leg2.position.set(12, -6, -10);
-    const leg3 = new THREE.Mesh(legGeo, legMat); leg3.position.set(-12, -6, 10);
-    const leg4 = new THREE.Mesh(legGeo, legMat); leg4.position.set(12, -6, 10);
-    tableGroup.add(leg1, leg2, leg3, leg4);
+    // Create worn metal texture
+    const createRimTexture = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256; canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return new THREE.CanvasTexture(canvas);
+
+        // Base rusty metal
+        ctx.fillStyle = '#1a1815';
+        ctx.fillRect(0, 0, 256, 256);
+
+        // Rust spots
+        for (let i = 0; i < 200; i++) {
+            const shade = Math.random();
+            if (shade > 0.8) {
+                ctx.fillStyle = '#3d2a1a'; // Rust color
+            } else if (shade > 0.5) {
+                ctx.fillStyle = '#252220'; // Dark metal
+            } else {
+                ctx.fillStyle = '#1c1916'; // Very dark
+            }
+            ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 8, 2 + Math.random() * 8);
+        }
+
+        // Scratches
+        ctx.strokeStyle = 'rgba(40, 35, 30, 0.5)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 30; i++) {
+            ctx.beginPath();
+            const x = Math.random() * 256;
+            const y = Math.random() * 256;
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40);
+            ctx.stroke();
+        }
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        return tex;
+    };
+
+    const rimTex = createRimTexture();
+    const rimMat = new THREE.MeshStandardMaterial({
+        map: rimTex,
+        color: 0x2a2520,
+        roughness: 0.75,
+        metalness: 0.7
+    });
+
+    // Thicker industrial rim
+    const rimHeight = 1.2;
+    const rimThickness = 0.8;
+
+    // Front/Back rims
+    const rimF = new THREE.Mesh(new THREE.BoxGeometry(27, rimHeight, rimThickness), rimMat);
+    rimF.position.set(0, -0.6, 11.4);
+    rimF.castShadow = true;
+    tableGroup.add(rimF);
+
+    const rimB = new THREE.Mesh(new THREE.BoxGeometry(27, rimHeight, rimThickness), rimMat);
+    rimB.position.set(0, -0.6, -11.4);
+    rimB.castShadow = true;
+    tableGroup.add(rimB);
+
+    // Left/Right rims
+    const rimL = new THREE.Mesh(new THREE.BoxGeometry(rimThickness, rimHeight, 22), rimMat);
+    rimL.position.set(-13.5, -0.6, 0);
+    rimL.castShadow = true;
+    tableGroup.add(rimL);
+
+    const rimR = new THREE.Mesh(new THREE.BoxGeometry(rimThickness, rimHeight, 22), rimMat);
+    rimR.position.set(13.5, -0.6, 0);
+    rimR.castShadow = true;
+    tableGroup.add(rimR);
+
+    // ═══════════════════════════════════════════════════════════════
+    // HEAVY INDUSTRIAL LEGS
+    // ═══════════════════════════════════════════════════════════════
+
+    const legMat = new THREE.MeshStandardMaterial({
+        color: 0x151210,
+        roughness: 0.8,
+        metalness: 0.4
+    });
+
+    // Chunky square legs
+    const legGeo = new THREE.BoxGeometry(1.2, 8, 1.2);
+    const legPositions = [
+        [-12, -5, -10],
+        [12, -5, -10],
+        [-12, -5, 10],
+        [12, -5, 10]
+    ];
+
+    legPositions.forEach(pos => {
+        const leg = new THREE.Mesh(legGeo, legMat);
+        leg.position.set(pos[0], pos[1], pos[2]);
+        leg.castShadow = true;
+        tableGroup.add(leg);
+
+        // Add decorative bolts
+        const boltMat = new THREE.MeshStandardMaterial({ color: 0x3a3530, metalness: 0.8, roughness: 0.4 });
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 6), boltMat);
+        bolt.rotation.x = Math.PI / 2;
+        bolt.position.set(pos[0], pos[1] + 3, pos[2] + 0.6);
+        tableGroup.add(bolt);
+    });
+
+    // Cross-braces under table
+    const braceMat = new THREE.MeshStandardMaterial({ color: 0x1a1512, roughness: 0.8 });
+    const braceGeo = new THREE.BoxGeometry(0.5, 0.5, 20);
+
+    const brace1 = new THREE.Mesh(braceGeo, braceMat);
+    brace1.position.set(-12, -3, 0);
+    tableGroup.add(brace1);
+
+    const brace2 = new THREE.Mesh(braceGeo, braceMat);
+    brace2.position.set(12, -3, 0);
+    tableGroup.add(brace2);
 
     scene.add(tableGroup);
     return top;

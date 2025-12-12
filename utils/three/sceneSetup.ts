@@ -24,7 +24,8 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     if (width === 0 || height === 0) return null;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050505);
+    // Visible dark background - NOT black so you can always see something
+    scene.background = new THREE.Color(0x151210);
 
     const isMultiplayer = props.players && props.players.length > 0;
     const defaultFov = isMultiplayer ? 95 : 85;
@@ -46,8 +47,9 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
         precision: isLowEndDevice ? 'lowp' : 'mediump'
     });
 
-    const mobilePixelScale = isAndroid ? 3 : 2;
-    const pixelScale = isMobile ? mobilePixelScale : (props.settings.pixelScale || 3);
+    // Reduced pixel scale for better background visibility while keeping pixelation
+    const mobilePixelScale = isAndroid ? 2 : 2;
+    const pixelScale = isMobile ? mobilePixelScale : (props.settings.pixelScale || 2); // 2 instead of 3
     const maxPixelRatio = isMobile ? 1.5 : window.devicePixelRatio;
     renderer.setPixelRatio(Math.min(maxPixelRatio, window.devicePixelRatio));
     renderer.setSize(width / pixelScale, height / pixelScale, false);
@@ -57,8 +59,9 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
 
     renderer.shadowMap.enabled = !isLowEndDevice;
     renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+    // Maximum exposure for visibility
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.8; // Maximum brightness
 
     scene.userData.isMobile = isMobile;
     scene.userData.isAndroid = isAndroid;
