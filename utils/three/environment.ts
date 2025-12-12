@@ -652,6 +652,55 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     const clutter2 = new THREE.Mesh(boxGeo, boxMat); clutter2.position.set(12, -6.5, -18); clutter2.rotation.y = -0.3; scene.add(clutter2);
     const clutter3 = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 2), boxMat); clutter3.position.set(10, -5, -19); clutter3.rotation.y = 0.4; scene.add(clutter3);
 
+    // === DEALER LAIR FOG (Static/Environmental) ===
+    const createDirtySkinTexture = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        // Pale dead skin base
+        ctx.fillStyle = '#e0c0b0';
+        ctx.fillRect(0, 0, 512, 512);
+        // Dirty noise
+        for (let i = 0; i < 1000; i++) {
+            ctx.fillStyle = 'rgba(50, 40, 30, 0.2)';
+            ctx.fillRect(Math.random() * 512, Math.random() * 512, 4, 4);
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.magFilter = THREE.NearestFilter;
+        return tex;
+    };
+    const createFogSprite = () => {
+        const spriteMat = new THREE.SpriteMaterial({
+            map: createDirtySkinTexture(), // Recycling texture for noise
+            color: 0x1a1a1a, // Dark Grey
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.NormalBlending
+        });
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.scale.set(8, 8, 1);
+        return sprite;
+    };
+
+    const envFogGroup = new THREE.Group();
+    envFogGroup.name = 'ENV_DEALER_FOG';
+    // Center it where the dealer sits
+    envFogGroup.position.set(0, 3, -8);
+
+    for (let i = 0; i < 16; i++) {
+        const spr = createFogSprite();
+        // Spread it around the dealer's general area
+        spr.position.set(
+            (Math.random() - 0.5) * 8,    // Wider spread
+            -2 + (Math.random() - 0.5) * 6,
+            (Math.random() - 0.5) * 6
+        );
+        spr.scale.setScalar(8 + Math.random() * 5);
+        envFogGroup.add(spr);
+    }
+    scene.add(envFogGroup);
+
     // === LEFT CUPBOARD PROPS ===
     // === LEFT SIDE - ROD CUPBOARD / SHELF ===
     // === LEFT SIDE - ROD CUPBOARD / SHELF ===

@@ -294,64 +294,18 @@ export const createDealerModel = (scene: THREE.Scene) => {
     for (let i = 0; i < 4; i++) {
         // Left fingers
         const lFinger = new THREE.Mesh(fingerGeo, skullMat);
-        lFinger.position.set(-2.2 + i * 0.25, -5.0, 5.1); // In front of hand
+        lFinger.position.set(-3.9 + i * 0.25, -5.0, 5.1); // Adjusted for new hand pos
         lFinger.rotation.x = Math.PI / 2;
-        lFinger.rotation.y = 0.2; // splay
+        lFinger.rotation.y = 0.2;
         dealerGroup.add(lFinger);
 
         // Right fingers
         const rFinger = new THREE.Mesh(fingerGeo, skullMat);
-        rFinger.position.set(1.4 + i * 0.25, -5.0, 5.1);
+        rFinger.position.set(3.1 + i * 0.25, -5.0, 5.1);
         rFinger.rotation.x = Math.PI / 2;
         rFinger.rotation.y = -0.2; // splay
         dealerGroup.add(rFinger);
     }
-
-    // === DEALER FOG ===
-    // Localized volume around the dealer
-    const fogGeo = new THREE.BoxGeometry(12, 10, 8);
-    const fogMat = new THREE.MeshBasicMaterial({
-        color: 0x111111,
-        transparent: true,
-        opacity: 0.3,
-        side: THREE.BackSide, // Render inside
-        blending: THREE.NormalBlending
-    });
-    // Create a simple cloud sprite instead for better effect?
-    // Let's stick to a cloud of particles or sprites attached to dealer
-
-    // Add multiple fog sprites
-    const createFogSprite = () => {
-        const spriteMat = new THREE.SpriteMaterial({
-            map: createDirtySkinTexture(), // Reusing texture for noise roughly
-            color: 0x222222,
-            transparent: true,
-            opacity: 0.15,
-            blending: THREE.NormalBlending
-        });
-        const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(8, 8, 1);
-        return sprite;
-    };
-
-    const fogGroup = new THREE.Group();
-    fogGroup.name = 'DEALER_FOG'; // Tag for updates if needed
-
-    for (let i = 0; i < 12; i++) { // More sprites
-        const spr = createFogSprite();
-        // Tighter cluster around the dealer's body (0, -3, 0)
-        spr.position.set(
-            (Math.random() - 0.5) * 5,    // Width
-            -3 + (Math.random() - 0.5) * 5, // Height centered on torso
-            (Math.random() - 0.5) * 3     // Depth
-        );
-        // Randomize scale for variety
-        spr.scale.setScalar(6 + Math.random() * 4);
-        fogGroup.add(spr);
-    }
-    // Directly add to dealerGroup so it inherits all position/rotation/knockback animation
-    dealerGroup.add(fogGroup);
-    // Animate fog slightly in loop if possible, but static is okay for now
 
     // Position the entire dealer group
     dealerGroup.position.set(0, 3.0, -8);

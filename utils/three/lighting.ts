@@ -6,10 +6,10 @@ export const setupLighting = (scene: THREE.Scene) => {
     // ═══════════════════════════════════════════════════════════════
 
     // Slight fog for depth, denser with slightly darker color
-    scene.fog = new THREE.FogExp2(0x080606, 0.02);
+    scene.fog = new THREE.FogExp2(0x080606, 0.025); // Denser fog
 
     // Strong ambient but slightly reduced for contrast
-    const ambient = new THREE.AmbientLight(0x444040, 0.5);
+    const ambient = new THREE.AmbientLight(0x444040, 0.3); // Darker ambient
     scene.add(ambient);
 
     // ═══════════════════════════════════════════════════════════════
@@ -80,7 +80,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(coldRim.target);
 
     // Dealer backlight - Strong silhouette rim
-    const dealerRim = new THREE.SpotLight(0xffaa66, 40); // Stronger rim
+    const dealerRim = new THREE.SpotLight(0xffaa66, 30); // Slightly reduced from 40 for spookiness
     dealerRim.position.set(0, 12, -30);
     dealerRim.target.position.set(0, 4, -14);
     dealerRim.angle = 0.5;
@@ -149,8 +149,8 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(roomRedLight);
 
     // Under-lighting for dealer face (horror effect)
-    const underLight = new THREE.PointLight(0xff1111, 5.0, 15); // Intense Deep Red
-    underLight.position.set(0, -2, -12);
+    const underLight = new THREE.PointLight(0xff1111, 4.0, 15); // Intense Deep Red, positioned closer
+    underLight.position.set(0, -2, -10);
     scene.add(underLight);
 
     // ═══════════════════════════════════════════════════════════════
@@ -158,7 +158,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     // ═══════════════════════════════════════════════════════════════
 
     // Hemisphere light - Reduced for better shadows
-    const hemiLight = new THREE.HemisphereLight(0x443333, 0x221111, 0.6);
+    const hemiLight = new THREE.HemisphereLight(0x443333, 0x221111, 0.4); // Darker
     scene.add(hemiLight);
 
     // Background fill - Stronger for props
@@ -213,6 +213,20 @@ export const setupLighting = (scene: THREE.Scene) => {
     const cameraFill = new THREE.PointLight(0x443333, 10, 40);
     cameraFill.position.set(0, 10, 15);
     scene.add(cameraFill);
+
+    // ═══════════════════════════════════════════════════════════════
+    // PROP HIGHLIGHTS - Soft light on background items
+    // ═══════════════════════════════════════════════════════════════
+
+    // Left Cupboard Highlight (Warm/Dusty)
+    const leftPropLight = new THREE.PointLight(0xaa8877, 8.0, 25);
+    leftPropLight.position.set(-10, 0, 5);
+    scene.add(leftPropLight);
+
+    // Right Rack Highlight (Cool/Industrial)
+    const rightPropLight = new THREE.PointLight(0x7788aa, 8.0, 25);
+    rightPropLight.position.set(12, 2, 5);
+    scene.add(rightPropLight);
 
     return {
         muzzleLight,
