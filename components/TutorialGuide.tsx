@@ -18,15 +18,15 @@ const ItemCard: React.FC<{
     color: string;
     effect?: string;
 }> = ({ icon, name, description, color, effect }) => (
-    <div className="bg-gradient-to-r from-stone-900/90 to-stone-800/50 border border-stone-700/50 p-3 md:p-4 flex gap-3 md:gap-4 items-start hover:border-stone-500 transition-all hover:shadow-lg hover:shadow-black/20 rounded-sm">
-        <div className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-stone-900 border border-stone-600 shrink-0 ${color} rounded-sm shadow-inner`}>
+    <div className="bg-gradient-to-r from-stone-900/90 to-stone-800/50 border border-stone-700/50 p-2 md:p-3 flex gap-2 md:gap-3 items-start hover:border-stone-500 transition-all hover:shadow-lg hover:shadow-black/20 rounded-sm">
+        <div className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-stone-900 border border-stone-600 shrink-0 ${color} rounded-sm shadow-inner`}>
             {icon}
         </div>
         <div className="flex-1 min-w-0">
-            <h4 className="font-black text-stone-100 tracking-wider mb-1 text-sm md:text-base">{name}</h4>
-            <p className="text-stone-400 text-xs md:text-sm leading-relaxed">{description}</p>
+            <h4 className="font-black text-stone-100 tracking-wider mb-0.5 text-xs md:text-sm">{name}</h4>
+            <p className="text-stone-400 text-[10px] md:text-xs leading-tight">{description}</p>
             {effect && (
-                <div className="mt-2 text-xs font-bold text-amber-500 bg-amber-950/30 px-2 py-1 inline-block rounded-sm">
+                <div className="mt-1 text-[10px] font-bold text-amber-500 bg-amber-950/30 px-1.5 py-0.5 inline-block rounded-sm">
                     {effect}
                 </div>
             )}
@@ -54,6 +54,29 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
     const [currentPage, setCurrentPage] = useState(0);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [scale, setScale] = useState(1);
+
+    useEffect(() => {
+        const handleResize = () => {
+            const targetWidth = 1000; // Reference width - Wide for grid, but can be scaled
+            const targetHeight = 420; // Reference height - EVEN LOWER to aggressively scale up on short screens
+
+            const wScale = Math.min(1, (window.innerWidth - 20) / targetWidth);
+            const hScale = Math.min(1, (window.innerHeight - 20) / targetHeight);
+
+            let newScale = Math.min(wScale, hScale);
+
+            if (newScale < 0.6) newScale = 0.6;
+
+            // Removed complex tightHeightScale logic as simply lowering targetHeight is more effective for this case
+
+            setScale(newScale);
+        };
+
+        window.addEventListener('resize', handleResize);
+        handleResize();
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Swipe detection for mobile
     const minSwipeDistance = 50;
@@ -96,10 +119,12 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <p className="text-xs md:text-sm text-stone-500 mt-1">A deadly game of chance and strategy</p>
                     </div>
 
-                    <div className="grid gap-3">
-                        <InfoCard icon={<Target size={16} />} title="OBJECTIVE" color="border-red-600">
-                            Survive by depleting your opponent's health to zero before they do the same to you. Simple, brutal, deadly.
-                        </InfoCard>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="md:col-span-2">
+                            <InfoCard icon={<Target size={16} />} title="OBJECTIVE" color="border-red-600">
+                                Survive by depleting your opponent's health to zero before they do the same to you. Simple, brutal, deadly.
+                            </InfoCard>
+                        </div>
 
                         <InfoCard icon={<CircleDot size={16} />} title="THE SHOTGUN" color="border-amber-500">
                             The shotgun is loaded with <span className="text-red-500 font-bold">LIVE</span> and <span className="text-blue-400 font-bold">BLANK</span> shells. You'll see the count of each before your turn.
@@ -133,37 +158,39 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         🎯 Use items <span className="text-amber-400 font-bold">before shooting</span> for strategic advantage!
                     </p>
 
-                    <ItemCard
-                        icon={<Eye size={20} />}
-                        name="MAGNIFYING GLASS"
-                        description="Reveals the current shell type in the chamber. Know exactly what you're dealing with before choosing your target."
-                        color="text-cyan-400"
-                        effect="→ REVEALS LIVE/BLANK"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <ItemCard
+                            icon={<Eye size={20} />}
+                            name="MAGNIFYING GLASS"
+                            description="Reveals the current shell type in the chamber."
+                            color="text-cyan-400"
+                            effect="→ REVEALS LIVE/BLANK"
+                        />
 
-                    <ItemCard
-                        icon={<Beer size={20} />}
-                        name="BEER"
-                        description="Racks the shotgun to eject the current shell without firing. Skip unwanted shells or cycle through the chamber."
-                        color="text-amber-500"
-                        effect="→ EJECTS SHELL"
-                    />
+                        <ItemCard
+                            icon={<Beer size={20} />}
+                            name="BEER"
+                            description="Racks the shotgun to eject the current shell without firing."
+                            color="text-amber-500"
+                            effect="→ EJECTS SHELL"
+                        />
 
-                    <ItemCard
-                        icon={<Cigarette size={20} />}
-                        name="CIGARETTES"
-                        description="Light up to restore 1 health point (up to maximum). When you're low on health, this can save your life."
-                        color="text-red-400"
-                        effect="→ +1 HP"
-                    />
+                        <ItemCard
+                            icon={<Cigarette size={20} />}
+                            name="CIGARETTES"
+                            description="Light up to restore 1 health point (up to maximum)."
+                            color="text-red-400"
+                            effect="→ +1 HP"
+                        />
 
-                    <ItemCard
-                        icon={<Link size={20} />}
-                        name="HANDCUFFS"
-                        description="Restrains your opponent, forcing them to skip their next turn. Perfect for maintaining control."
-                        color="text-stone-400"
-                        effect="→ SKIP ENEMY TURN"
-                    />
+                        <ItemCard
+                            icon={<Link size={20} />}
+                            name="HANDCUFFS"
+                            description="Restrains your opponent, forcing them to skip their next turn."
+                            color="text-stone-400"
+                            effect="→ SKIP ENEMY TURN"
+                        />
+                    </div>
                 </div>
             )
         },
@@ -178,37 +205,39 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         ⚡ Advanced items that can <span className="text-red-400 font-bold">turn the tide</span> of battle!
                     </p>
 
-                    <ItemCard
-                        icon={<Scissors size={20} />}
-                        name="HAND SAW"
-                        description="Saws off the shotgun barrel, DOUBLING the damage of your next shot. A LIVE shell deals 2 damage instead of 1!"
-                        color="text-orange-500"
-                        effect="→ 2X DAMAGE"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <ItemCard
+                            icon={<Scissors size={20} />}
+                            name="HAND SAW"
+                            description="Saws off the shotgun barrel, DOUBLING damage."
+                            color="text-orange-500"
+                            effect="→ 2X DAMAGE"
+                        />
 
-                    <ItemCard
-                        icon={<Phone size={20} />}
-                        name="BURNER PHONE"
-                        description="Mysterious caller reveals a random future shell position. WARNING: The caller is unreliable and has a 5% chance of lying!"
-                        color="text-blue-300"
-                        effect="→ REVEALS FUTURE SHELL (95% ACCURATE)"
-                    />
+                        <ItemCard
+                            icon={<Phone size={20} />}
+                            name="BURNER PHONE"
+                            description="Mysterious caller reveals a random future shell position."
+                            color="text-blue-300"
+                            effect="→ REVEALS FUTURE SHELL"
+                        />
 
-                    <ItemCard
-                        icon={<RefreshCw size={20} />}
-                        name="POLARITY INVERTER"
-                        description="Swaps the current shell polarity: LIVE becomes BLANK, BLANK becomes LIVE. Combine with Glass for guaranteed plays!"
-                        color="text-green-400"
-                        effect="→ SWAPS SHELL TYPE"
-                    />
+                        <ItemCard
+                            icon={<RefreshCw size={20} />}
+                            name="POLARITY INVERTER"
+                            description="Swaps the current shell: LIVE becomes BLANK."
+                            color="text-green-400"
+                            effect="→ SWAPS SHELL TYPE"
+                        />
 
-                    <ItemCard
-                        icon={<Zap size={20} />}
-                        name="ADRENALINE"
-                        description="Steal one item from your opponent and USE IT IMMEDIATELY! Take their best item when they least expect it."
-                        color="text-pink-500"
-                        effect="→ STEAL + USE ITEM"
-                    />
+                        <ItemCard
+                            icon={<Zap size={20} />}
+                            name="ADRENALINE"
+                            description="Steal and use an item from your opponent."
+                            color="text-pink-500"
+                            effect="→ STEAL + USE ITEM"
+                        />
+                    </div>
                 </div>
             )
         },
@@ -226,7 +255,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <p className="text-sm md:text-base text-stone-300">Customize your experience</p>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="bg-stone-900/60 border border-stone-700 p-3 md:p-4 rounded-sm flex gap-3 items-start">
                             <Monitor size={20} className="text-stone-400 shrink-0 mt-0.5" />
                             <div>
@@ -256,12 +285,12 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                 </p>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="bg-gradient-to-r from-amber-950/30 to-transparent border border-amber-900/30 p-3 md:p-4 rounded-sm">
-                            <p className="text-amber-400 text-xs md:text-sm font-bold flex items-center gap-2">
-                                <Smartphone size={16} /> TIP: Play in FULLSCREEN + LANDSCAPE for best experience!
-                            </p>
-                        </div>
+                    <div className="bg-gradient-to-r from-amber-950/30 to-transparent border border-amber-900/30 p-3 md:p-4 rounded-sm">
+                        <p className="text-amber-400 text-xs md:text-sm font-bold flex items-center gap-2">
+                            <Smartphone size={16} /> TIP: Play in FULLSCREEN + LANDSCAPE for best experience!
+                        </p>
                     </div>
                 </div>
             )
@@ -280,13 +309,13 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <p className="text-sm md:text-base text-stone-300">Play against real opponents online!</p>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <InfoCard icon={<Users size={14} />} title="JOINING" color="border-blue-500">
-                            Enter your name and click MULTIPLAYER to connect. You'll be placed in a lobby with other players.
+                            Enter name and click MULTIPLAYER to connect. Placed in a lobby with other players.
                         </InfoCard>
 
                         <InfoCard icon={<Settings size={14} />} title="LOBBY" color="border-green-500">
-                            See connected players, chat, and wait for everyone to ready up. Host configures match settings.
+                            See connected players, chat, and wait for ready. Host configures match settings.
                         </InfoCard>
 
                         <InfoCard icon={<Shield size={14} />} title="HOST CONTROLS" color="border-amber-500">
@@ -294,14 +323,14 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         </InfoCard>
 
                         <InfoCard icon={<Target size={14} />} title="READY UP" color="border-purple-500">
-                            All players must mark READY before host can start. Once ready, the deadly game begins!
+                            All players must mark READY before host can start. Once ready, the game begins!
                         </InfoCard>
+                    </div>
 
-                        <div className="bg-gradient-to-r from-blue-950/30 to-transparent border border-blue-900/30 p-3 rounded-sm">
-                            <p className="text-blue-400 text-xs md:text-sm">
-                                💬 Use in-game chat to communicate with opponents!
-                            </p>
-                        </div>
+                    <div className="bg-gradient-to-r from-blue-950/30 to-transparent border border-blue-900/30 p-3 rounded-sm">
+                        <p className="text-blue-400 text-xs md:text-sm">
+                            💬 Use in-game chat to communicate with opponents!
+                        </p>
                     </div>
                 </div>
             )
@@ -405,7 +434,8 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-md p-1 md:p-4">
             <div
-                className="w-full max-w-2xl bg-gradient-to-b from-stone-900 to-stone-950 border border-stone-700/50 shadow-2xl shadow-black/50 relative flex flex-col h-[95vh] md:h-[90vh] md:max-h-[90vh] rounded-sm overflow-hidden scale-[0.85] sm:scale-[0.90] md:scale-100 origin-center"
+                className="w-full max-w-6xl bg-gradient-to-b from-stone-900 to-stone-950 border border-stone-700/50 shadow-2xl shadow-black/50 relative flex flex-col h-[95vh] md:h-[90vh] md:max-h-[90vh] rounded-sm overflow-hidden origin-center transition-transform duration-100"
+                style={{ transform: `scale(${scale})` }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -434,54 +464,55 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                 </div>
 
                 {/* Footer - Navigation */}
-                <div className="shrink-0 p-3 md:p-4 border-t border-stone-800 bg-stone-900/80">
-                    {/* Page Indicators */}
-                    <div className="flex justify-center gap-1.5 md:gap-2 mb-3">
-                        {pages.map((page, index) => (
-                            <button
-                                key={index}
-                                onClick={() => goToPage(index)}
-                                className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full transition-all ${index === currentPage
-                                    ? 'bg-red-500 scale-125 shadow-lg shadow-red-500/50'
-                                    : 'bg-stone-700 hover:bg-stone-500'
-                                    }`}
-                                aria-label={`Go to page ${index + 1}`}
-                            />
-                        ))}
-                    </div>
-
-                    {/* Navigation Buttons */}
-                    <div className="flex justify-between items-center gap-2 md:gap-4">
-                        <button
-                            onClick={prevPage}
-                            disabled={currentPage === 0}
-                            className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 md:py-3 font-bold tracking-wider transition-all text-sm md:text-base rounded-sm ${currentPage === 0
-                                ? 'text-stone-700 cursor-not-allowed'
-                                : 'text-stone-300 hover:text-white hover:bg-stone-800 border border-stone-700 hover:border-stone-500'
-                                }`}
-                        >
-                            <ChevronLeft size={18} />
-                            <span className="hidden sm:inline">PREV</span>
-                        </button>
-
-                        <div className="flex flex-col items-center">
-                            <span className="text-stone-500 font-mono text-xs md:text-sm">
-                                {currentPage + 1} / {pages.length}
-                            </span>
-                            <span className="text-stone-700 text-[10px] hidden sm:block">SWIPE OR ARROWS</span>
+                {/* Footer - Navigation - Compacted */}
+                <div className="shrink-0 p-2 border-t border-stone-800 bg-stone-900/95">
+                    {/* Combined Navigation & Indicators */}
+                    <div className="flex flex-col gap-1.5">
+                        {/* Page Indicators */}
+                        <div className="flex justify-center gap-1">
+                            {pages.map((page, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => goToPage(index)}
+                                    className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all ${index === currentPage
+                                        ? 'bg-red-500 scale-110 shadow-sm shadow-red-500/50'
+                                        : 'bg-stone-700 hover:bg-stone-500'
+                                        }`}
+                                    aria-label={`Go to page ${index + 1}`}
+                                />
+                            ))}
                         </div>
 
-                        <button
-                            onClick={nextPage}
-                            disabled={currentPage === pages.length - 1}
-                            className={`flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 md:py-3 font-bold tracking-wider transition-all text-sm md:text-base rounded-sm ${currentPage === pages.length - 1
-                                ? 'text-stone-700 cursor-not-allowed'
-                                : 'text-stone-300 hover:text-white hover:bg-stone-800 border border-stone-700 hover:border-stone-500'
-                                }`}
-                        >
-                            <span className="hidden sm:inline">NEXT</span>
-                            <ChevronRight size={18} />
-                        </button>
+                        {/* Buttons & Counter */}
+                        <div className="flex justify-between items-center">
+                            <button
+                                onClick={prevPage}
+                                disabled={currentPage === 0}
+                                className={`flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 font-bold tracking-wider transition-all text-xs rounded-sm ${currentPage === 0
+                                    ? 'text-stone-700 cursor-not-allowed hidden' // Hide if disabled to save visual clutter? Or just dim. Let's keep dim but small.
+                                    : 'text-stone-400 hover:text-white hover:bg-stone-800'
+                                    } ${currentPage === 0 ? 'opacity-0' : 'opacity-100'}`} // Use opacity to scale checks layout
+                            >
+                                <ChevronLeft size={14} />
+                                <span>PREV</span>
+                            </button>
+
+                            <span className="text-stone-600 font-mono text-[10px]">
+                                {currentPage + 1} / {pages.length}
+                            </span>
+
+                            <button
+                                onClick={nextPage}
+                                disabled={currentPage === pages.length - 1}
+                                className={`flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 font-bold tracking-wider transition-all text-xs rounded-sm ${currentPage === pages.length - 1
+                                    ? 'text-stone-700 cursor-not-allowed opacity-0'
+                                    : 'text-stone-400 hover:text-white hover:bg-stone-800'
+                                    }`}
+                            >
+                                <span>NEXT</span>
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
