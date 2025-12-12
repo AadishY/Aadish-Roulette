@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { audioManager } from '../../utils/audioManager';
 
-export const BootScreen: React.FC = () => {
+interface BootScreenProps {
+    onContinue?: () => void;
+}
+
+export const BootScreen: React.FC<BootScreenProps> = ({ onContinue }) => {
     const [bootLines, setBootLines] = useState<string[]>([]);
     const [loadingProgress, setLoadingProgress] = useState(0);
+    const [loadingComplete, setLoadingComplete] = useState(false);
 
+    // Run boot sequence immediately
     useEffect(() => {
         setBootLines([]);
         setLoadingProgress(0);
@@ -21,22 +27,63 @@ export const BootScreen: React.FC = () => {
         sequence.forEach(({ text, delay }) => {
             timeouts.push(setTimeout(() => {
                 setBootLines(prev => [...prev, text]);
-                // Subtle BIOS beep
-                audioManager.playSound('blankshell', { volume: 0.2, playbackRate: 3.0 });
             }, delay));
         });
+
+        // Mark loading as complete after progress bar fills
         const interval = setInterval(() => {
-            setLoadingProgress(p => p >= 100 ? 100 : p + 5);
+            setLoadingProgress(p => {
+                if (p >= 100) {
+                    clearInterval(interval);
+                    // Small delay before showing title screen
+                    setTimeout(() => setLoadingComplete(true), 500);
+                    return 100;
+                }
+                return p + 5;
+            });
         }, 100);
+
         return () => {
             timeouts.forEach(clearTimeout);
             clearInterval(interval);
         };
     }, []);
 
+    const handleContinue = async () => {
+        if (!loadingComplete) return;
+        // Initialize audio on user click
+        await audioManager.initialize();
+        audioManager.playSound('click');
+        // Notify parent to transition to INTRO
+        if (onContinue) onContinue();
+    };
+
+    // After loading completes, show title screen
+    if (loadingComplete) {
+        return (
+            <div
+                className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono cursor-pointer"
+                onClick={handleContinue}
+            >
+                <div className="text-center">
+                    <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-stone-100 mb-8 tracking-tighter leading-none">
+                        AADISH<br /><span className="text-red-600">ROULETTE</span>
+                    </h1>
+                    <div className="text-stone-500 text-sm md:text-lg animate-pulse tracking-widest">
+                        [ CLICK ANYWHERE TO CONTINUE ]
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Boot sequence screen
     return (
         <div className="absolute inset-0 z-[100] bg-black flex flex-col justify-between p-8 md:p-12 font-mono">
-            <div className="flex justify-between items-start text-stone-600 text-xs"><span>AADISH_OS v1.0.0</span><span>MEM: 65536KB OK</span></div>
+            <div className="flex justify-between items-start text-stone-600 text-xs">
+                <span>AADISH_OS v1.0.0</span>
+                <span>MEM: 65536KB OK</span>
+            </div>
             <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full gap-4">
                 <div className="text-green-500 text-sm md:text-base space-y-1 h-64 overflow-hidden flex flex-col justify-end">
                     {bootLines.map((line, i) => <div key={i} className="typewriter">{`> ${line}`}</div>)}

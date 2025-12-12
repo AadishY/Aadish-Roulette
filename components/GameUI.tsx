@@ -50,6 +50,7 @@ interface GameUIProps {
     mpMyPlayerId?: string | null;
     onMpShoot?: (targetId: string) => void;
     onStealItem?: (index: number) => void;
+    onBootComplete?: () => void;
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -101,7 +102,8 @@ export const GameUI: React.FC<GameUIProps> = ({
     mpGameState,
     mpMyPlayerId,
     onMpShoot,
-    onStealItem
+    onStealItem,
+    onBootComplete
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
     const [chatMsg, setChatMsg] = useState('');
@@ -168,7 +170,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
     return (
         <>
-            {gameState.phase === 'BOOT' && <BootScreen />}
+            {gameState.phase === 'BOOT' && <BootScreen onContinue={onBootComplete} />}
 
             {/* FX Layers */}
             <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 z-10 ${overlayColor === 'red' ? 'bg-red-900/40' : overlayColor === 'green' ? 'bg-green-900/20' : overlayColor === 'scan' ? 'bg-cyan-900/20' : ''}`} />

@@ -23,7 +23,10 @@ export default function App() {
 
   // Try to initialize audio ASAP (will only succeed if browser allows)
   useEffect(() => {
-    audioManager.initialize().catch(() => { });
+    audioManager.initialize().then(() => {
+      // If successful, ensure menu music starts immediately without waiting for state update cycle
+      audioManager.playMusic('menu');
+    }).catch(() => { });
   }, []);
   const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
 
@@ -110,6 +113,12 @@ export default function App() {
   });
 
   const handleResetSettings = () => setSettings(DEFAULT_SETTINGS);
+
+  // Called when user clicks 'Continue' on the boot/title screen
+  const handleBootComplete = useCallback(() => {
+    spGame.setGamePhase('INTRO');
+    audioManager.playMusic('menu');
+  }, [spGame]);
 
   const handleStartSP = () => {
     setIsMultiplayerMode(false);
@@ -271,6 +280,7 @@ export default function App() {
         mpMyPlayerId={socket.myPlayerId}
         onMpShoot={socket.shootPlayer}
         onStealItem={spGame.stealItem}
+        onBootComplete={handleBootComplete}
       />
 
       {/* MP Game Over Screen */}

@@ -61,17 +61,11 @@ export const useGameLogic = () => {
     playerHit: false
   });
 
-  // Load name on mount and handle boot
+  // Load name on mount
   useEffect(() => {
     const saved = localStorage.getItem('aadish_roulette_name');
     if (saved) setPlayerName(saved);
-
-    // Simulate System Boot
-    if (gameState.phase === 'BOOT') {
-      setTimeout(() => {
-        setGameState(prev => ({ ...prev, phase: 'INTRO' }));
-      }, 5500);
-    }
+    // Boot-to-Intro transition is now handled by user click in BootScreen
   }, []);
 
   // Helpers for Animation State (to keep code clean)

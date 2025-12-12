@@ -20,9 +20,9 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     }, []);
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 overflow-y-auto pointer-events-auto">
-            <div className="text-center max-w-lg w-full p-4 md:p-6 flex flex-col justify-center min-h-[350px]">
-                <h1 className="text-5xl md:text-8xl lg:text-9xl font-black mb-6 md:mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br /><span className="text-red-600">ROULETTE</span></h1>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden pointer-events-auto">
+            <div className="text-center max-w-lg w-full p-2 flex flex-col justify-center min-h-screen md:min-h-[350px] scale-[0.65] md:scale-100 origin-center transition-transform duration-300">
+                <h1 className="text-6xl md:text-8xl lg:text-9xl font-black mb-4 md:mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br /><span className="text-red-600">ROULETTE</span></h1>
                 <div className="flex flex-col gap-4 md:gap-6">
                     <input ref={nameInputRef} type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="ENTER NAME..." maxLength={12} className="bg-stone-900 border-2 border-stone-700 p-3 md:p-4 text-xl md:text-2xl font-black text-white outline-none focus:border-red-600 tracking-widest uppercase text-center" />
                     <button onClick={() => {
