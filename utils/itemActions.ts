@@ -75,7 +75,6 @@ export const handleSaw = async (
 ) => {
     setIsSawing(true);
     setTriggerSparks(p => p + 1);
-    // audioManager.playSound('blankshell', { playbackRate: 0.5 }); // Heavy mechanical
     await wait(1500); // Wait for saw animation
     setIsSawing(false);
 
