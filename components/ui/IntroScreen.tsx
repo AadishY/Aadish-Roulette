@@ -25,7 +25,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
 
 
 
-            <div className="relative z-10 text-center max-w-lg w-full p-2 md:p-4 flex flex-col justify-center scale-[0.55] sm:scale-[0.75] md:scale-100 origin-center">
+            <div className="relative z-10 text-center max-w-lg w-full p-2 md:p-4 flex flex-col justify-center scale-[0.45] sm:scale-[0.75] md:scale-100 origin-center">
                 <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black mb-3 md:mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br /><span className="text-red-600">ROULETTE</span></h1>
                 <div className="flex flex-col gap-4 md:gap-6">
                     <input ref={nameInputRef} type="text" value={inputName} onChange={(e) => setInputName(e.target.value)} placeholder="ENTER NAME..." maxLength={12} className="bg-stone-900 border-2 border-stone-700 p-2 md:p-4 text-lg md:text-2xl font-black text-white outline-none focus:border-red-600 tracking-widest uppercase text-center" />
