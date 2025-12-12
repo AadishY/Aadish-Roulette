@@ -16,6 +16,14 @@ export const createGunModel = (scene: THREE.Scene) => {
     barrelMesh.rotation.x = Math.PI / 2; barrelMesh.position.set(0, 0.35, 5.0); barrelMesh.castShadow = true;
     barrelMesh.name = 'BARREL';
 
+    // Barrel Hole (Black Void Cap)
+    const holeGeo = new THREE.CircleGeometry(0.18, 16);
+    const holeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const holeMesh = new THREE.Mesh(holeGeo, holeMat);
+    holeMesh.rotation.x = -Math.PI / 2;
+    holeMesh.position.set(0, 4.51, 0); // Slightly above end of barrel
+    barrelMesh.add(holeMesh);
+
     // Pump mechanism (the wooden foregrip - gets cut too)
     const pumpGeo = new THREE.CylinderGeometry(0.35, 0.4, 3.5, 16);
     const pump = new THREE.Mesh(pumpGeo, woodMat);

@@ -254,52 +254,56 @@ export const createDealerModel = (scene: THREE.Scene) => {
     rUpperArm.castShadow = true;
     dealerGroup.add(rUpperArm);
 
-    // Forearms - Resting flat on table near dealer
-    const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.0);
+    // Forearms - Reaching forward onto the table
+    const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.5);
 
     const lForearm = new THREE.Mesh(forearmGeo, suitMat);
-    // Elbow ~ -4.2, Hand near table
-    lForearm.position.set(-4.2, -4.5, 1.0);
-    lForearm.rotation.x = -Math.PI / 2; // Flat forward
-    lForearm.rotation.z = 0.1;
+    // Adjust to reach from shoulder to table
+    lForearm.position.set(-2.8, -4.0, 2.5);
+    lForearm.rotation.x = -Math.PI / 2 + 0.4; // Tilted down towards table
+    lForearm.rotation.z = 0.4; // Angled inward
     lForearm.castShadow = true;
     dealerGroup.add(lForearm);
 
     const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(4.2, -4.5, 1.0);
-    rForearm.rotation.x = -Math.PI / 2;
-    rForearm.rotation.z = -0.1;
+    rForearm.position.set(2.8, -4.0, 2.5);
+    rForearm.rotation.x = -Math.PI / 2 + 0.4;
+    rForearm.rotation.z = -0.4; // Angled inward
     rForearm.castShadow = true;
     dealerGroup.add(rForearm);
 
-    // Hands - Giant Claws resting on table edge
+    // Hands - Resting on table in front of dealer
     const handGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
 
     const lHand = new THREE.Mesh(handGeo, skullMat);
-    lHand.position.set(-4.4, -4.8, 2.5); // Resting on table edge
-    lHand.rotation.x = 0;
+    lHand.position.set(-1.8, -4.8, 4.2); // Near center table edge
+    lHand.rotation.x = 0.1;
+    lHand.rotation.z = 0.2;
     lHand.castShadow = true;
     dealerGroup.add(lHand);
 
     const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(4.4, -4.8, 2.5);
-    rHand.rotation.x = 0;
+    rHand.position.set(1.8, -4.8, 4.2);
+    rHand.rotation.x = 0.1;
+    rHand.rotation.z = -0.2;
     rHand.castShadow = true;
     dealerGroup.add(rHand);
 
-    // Fingers - Sprawled
+    // Fingers - Sprawled on table
     const fingerGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9);
     for (let i = 0; i < 4; i++) {
         // Left fingers
         const lFinger = new THREE.Mesh(fingerGeo, skullMat);
-        lFinger.position.set(-4.8 + i * 0.3, -5.0, 3.3);
-        lFinger.rotation.x = 0;
+        lFinger.position.set(-2.2 + i * 0.25, -5.0, 5.1); // In front of hand
+        lFinger.rotation.x = Math.PI / 2;
+        lFinger.rotation.y = 0.2; // splay
         dealerGroup.add(lFinger);
 
         // Right fingers
         const rFinger = new THREE.Mesh(fingerGeo, skullMat);
-        rFinger.position.set(4.0 + i * 0.3, -5.0, 3.3);
-        rFinger.rotation.x = 0;
+        rFinger.position.set(1.4 + i * 0.25, -5.0, 5.1);
+        rFinger.rotation.x = Math.PI / 2;
+        rFinger.rotation.y = -0.2; // splay
         dealerGroup.add(rFinger);
     }
 
@@ -331,15 +335,21 @@ export const createDealerModel = (scene: THREE.Scene) => {
     };
 
     const fogGroup = new THREE.Group();
-    for (let i = 0; i < 8; i++) {
+    fogGroup.name = 'DEALER_FOG'; // Tag for updates if needed
+
+    for (let i = 0; i < 12; i++) { // More sprites
         const spr = createFogSprite();
+        // Tighter cluster around the dealer's body (0, -3, 0)
         spr.position.set(
-            (Math.random() - 0.5) * 8,
-            (Math.random() - 0.5) * 6 - 2,
-            (Math.random() - 0.5) * 4 + 1
+            (Math.random() - 0.5) * 5,    // Width
+            -3 + (Math.random() - 0.5) * 5, // Height centered on torso
+            (Math.random() - 0.5) * 3     // Depth
         );
+        // Randomize scale for variety
+        spr.scale.setScalar(6 + Math.random() * 4);
         fogGroup.add(spr);
     }
+    // Directly add to dealerGroup so it inherits all position/rotation/knockback animation
     dealerGroup.add(fogGroup);
     // Animate fog slightly in loop if possible, but static is okay for now
 
