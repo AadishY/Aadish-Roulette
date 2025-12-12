@@ -50,6 +50,8 @@ export interface AnimationState {
   dealerHit: boolean;
   dealerDropping: boolean;
   playerHit: boolean;
+  playerRecovering: boolean; // Player is standing back up after being knocked
+  dealerRecovering: boolean; // Dealer is standing back up after being knocked
 }
 
 export interface GameSettings {
@@ -98,6 +100,7 @@ export interface SceneContext {
     itemPhone: THREE.Group;
     itemInverter: THREE.Group;
     itemAdrenaline: THREE.Group;
+    itemLight: THREE.PointLight; // Light for illuminating items during animations
   };
 }
 

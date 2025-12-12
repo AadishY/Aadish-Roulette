@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GameState, PlayerState, ShellType, ItemType, TurnOwner, AimTarget, CameraView } from '../types';
+import { GameState, PlayerState, ShellType, ItemType, TurnOwner, AimTarget, CameraView, AnimationState } from '../types';
 import { wait } from '../utils/gameUtils';
 
 interface DealerAIProps {
@@ -7,6 +7,7 @@ interface DealerAIProps {
     dealer: PlayerState;
     player: PlayerState;
     knownShell: ShellType | null;
+    animState: AnimationState; // Added for recovery state checking
     fireShot: (shooter: TurnOwner, target: TurnOwner) => Promise<void>;
     processItemEffect: (user: TurnOwner, item: ItemType) => Promise<boolean>;
     setDealer: React.Dispatch<React.SetStateAction<PlayerState>>;
@@ -22,6 +23,7 @@ export const useDealerAI = ({
     dealer,
     player,
     knownShell,
+    animState,
     fireShot,
     processItemEffect,
     setDealer,
@@ -42,6 +44,12 @@ export const useDealerAI = ({
         }
     }, [gameState.phase]);
 
+    // Use a ref to track current animState so the async loop sees the latest values
+    const animStateRef = useRef(animState);
+    useEffect(() => {
+        animStateRef.current = animState;
+    }, [animState]);
+
     useEffect(() => {
         // Skip AI logic if in multiplayer mode
         if (isMultiplayer) {
@@ -55,6 +63,14 @@ export const useDealerAI = ({
 
             const runAITurn = async () => {
                 try {
+                    // WAIT FOR PLAYER RECOVERY - Dealer waits if player is knocked down/recovering
+                    // Use ref to check mutable current state, not the stale closure variable
+                    let waitCount = 0;
+                    while ((animStateRef.current.playerHit || animStateRef.current.playerRecovering) && waitCount < 20) {
+                        await wait(500); // Check every 500ms
+                        waitCount++;
+                    }
+
                     await wait(800); // Faster thinking
 
                     const lives = gameState.liveCount;

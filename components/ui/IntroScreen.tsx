@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Globe, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
 import { audioManager } from '../../utils/audioManager';
-import ShellBackground from './ShellBackground';
+
 
 interface IntroScreenProps {
     playerName: string;
@@ -21,9 +21,9 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     }, []);
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 overflow-hidden pointer-events-auto">
-            {/* Falling shells background */}
-            <ShellBackground />
+        <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden pointer-events-auto">
+
+
 
             <div className="relative z-10 text-center max-w-lg w-full p-2 md:p-4 flex flex-col justify-center scale-[0.55] sm:scale-[0.75] md:scale-100 origin-center">
                 <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black mb-3 md:mb-12 text-stone-100 tracking-tighter text-glitch leading-none">AADISH<br /><span className="text-red-600">ROULETTE</span></h1>

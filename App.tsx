@@ -102,6 +102,7 @@ export default function App() {
     dealer: spGame.dealer,
     player: spGame.player,
     knownShell: spGame.knownShell,
+    animState: spGame.animState, // Added for recovery state checking
     fireShot: spGame.fireShot,
     processItemEffect: spGame.processItemEffect,
     setDealer: spGame.setDealer,
@@ -252,6 +253,7 @@ export default function App() {
         cameraView={game.cameraView}
         aimTarget={game.aimTarget}
         isProcessing={game.isProcessing}
+        isRecovering={game.animState.playerHit || game.animState.playerRecovering || game.animState.dealerDropping || game.animState.dealerRecovering}
         settings={settings}
         onStartGame={handleStartSP}
         onStartMultiplayer={handleStartMP}

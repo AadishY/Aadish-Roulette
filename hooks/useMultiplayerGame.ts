@@ -92,7 +92,9 @@ export const useMultiplayerGame = ({
         isLiveShot: false,
         dealerHit: false,
         dealerDropping: false,
-        playerHit: false
+        playerHit: false,
+        playerRecovering: false,
+        dealerRecovering: false
     });
 
     const setAnim = (update: Partial<AnimationState> | ((prev: AnimationState) => Partial<AnimationState>)) => {
@@ -221,21 +223,35 @@ export const useMultiplayerGame = ({
 
                 if (isLive) {
                     if (iAmTarget) {
-                        setAnim(prev => ({ ...prev, playerHit: true }));
+                        setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: true }));
                         setOverlayColor('red');
                         setShowBlood(true);
                         setTimeout(() => {
                             setShowBlood(false);
                             setAnim(prev => ({ ...prev, playerHit: false }));
+                            // Recovery continues for another 2s
+                            setTimeout(() => {
+                                setAnim(prev => ({ ...prev, playerRecovering: false }));
+                            }, 2000);
                         }, 2000);
                     } else if (!iAmShooter || !iAmTarget) {
                         setAnim(prev => ({
                             ...prev,
                             dealerHit: true,
-                            dealerDropping: lastAction.targetHp <= 0
+                            dealerDropping: lastAction.targetHp <= 0,
+                            dealerRecovering: lastAction.targetHp > 0 // Mark recovering if not dead
                         }));
                         setOverlayColor('green');
                         setTimeout(() => setAnim(prev => ({ ...prev, dealerHit: false })), 200);
+                        // Recovery animation for dealer
+                        if (lastAction.targetHp > 0) {
+                            setTimeout(() => {
+                                setAnim(prev => ({ ...prev, dealerDropping: false }));
+                                setTimeout(() => {
+                                    setAnim(prev => ({ ...prev, dealerRecovering: false }));
+                                }, 1500);
+                            }, 2000);
+                        }
                     }
 
                     setShowFlash(true);
@@ -360,6 +376,12 @@ export const useMultiplayerGame = ({
     // Pickup gun
     const pickupGun = () => {
         if (isProcessing) return;
+        // PREVENT GUN PICKUP WHILE ANYONE IS KNOCKED DOWN OR RECOVERING
+        if (animState.playerHit || animState.playerRecovering ||
+            animState.dealerDropping || animState.dealerRecovering) {
+            addLog('WAIT FOR RECOVERY...', 'info');
+            return;
+        }
         setCameraView('GUN');
         if (onGrabGun) onGrabGun();
     };

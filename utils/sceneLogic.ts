@@ -12,15 +12,23 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // Fix brightness issue: Set a higher base exposure.
     renderer.toneMappingExposure = 1.2 + (brightnessMult * 0.8);
 
-    for (const bl of baseLights) {
-        if (bl.light instanceof THREE.PointLight || bl.light instanceof THREE.SpotLight || bl.light instanceof THREE.DirectionalLight || bl.light instanceof THREE.AmbientLight) {
-            bl.light.intensity = bl.baseIntensity;
+    // PERFORMANCE: Only update base light intensities occasionally (not every frame)
+    if (!scene.userData.lastLightUpdate || time - scene.userData.lastLightUpdate > 0.1) {
+        for (const bl of baseLights) {
+            if (bl.light instanceof THREE.PointLight || bl.light instanceof THREE.SpotLight || bl.light instanceof THREE.DirectionalLight || bl.light instanceof THREE.AmbientLight) {
+                bl.light.intensity = bl.baseIntensity;
+            }
         }
+        scene.userData.lastLightUpdate = time;
     }
 
-    // Bulb Flicker - Electrical Instability
-    const bulbBase = baseLights.find(b => b.light === bulbLight)?.baseIntensity || 45.0;
-    // Occasional deeper dimming or bright sparks
+    // PERFORMANCE: Cache bulbBase lookup (only compute once)
+    if (scene.userData.cachedBulbBase === undefined) {
+        scene.userData.cachedBulbBase = baseLights.find(b => b.light === bulbLight)?.baseIntensity || 45.0;
+    }
+    const bulbBase = scene.userData.cachedBulbBase;
+
+    // Bulb Flicker - Electrical Instability (throttled randomness)
     let target = bulbBase;
     if (Math.random() > 0.96) target = bulbBase * (0.5 + Math.random() * 0.8); // Drop or spike
 
@@ -29,23 +37,20 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const flicker = THREE.MathUtils.lerp(currentBase, target, 0.2);
     bulbLight.intensity = flicker * brightnessMult;
 
-    // SWAY LOGIC
-    const bulbGroup = scene.getObjectByName('HANGING_LIGHT');
+    // SWAY LOGIC - PERFORMANCE: Cache bulbGroup lookup
+    if (!scene.userData.cachedBulbGroup) {
+        scene.userData.cachedBulbGroup = scene.getObjectByName('HANGING_LIGHT');
+    }
+    const bulbGroup = scene.userData.cachedBulbGroup;
     if (bulbGroup) {
         // Pendulum Swing
         bulbGroup.rotation.z = Math.sin(time * 0.8) * 0.05;
         bulbGroup.rotation.x = Math.sin(time * 0.6) * 0.03;
 
         // Sync Light Source Position to Mesh (Approximation for shadows)
-        // Wire length approx 14 (from y=14 to y=0) - wait, wire is len 6, pos -3. Bulb is at -6.
-        // Distance from Pivot (0,0,0 of HANGING_LIGHT) to Bulb (-6 y) is 6 units.
         const len = 6;
-        // Transform 0,-6,0 by rotation Z then X
-        // Simple approx:
         bulbLight.position.x = bulbGroup.position.x + (len * Math.sin(bulbGroup.rotation.z));
         bulbLight.position.z = bulbGroup.position.z - (len * Math.sin(bulbGroup.rotation.x));
-        // bulbLight.position.y is roughly constant or handled by setup, but we should sync it if Y moves. 
-        // For small angles, Y change is negligible.
     }
 
     // FOV Handling
@@ -175,27 +180,44 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             audioManager.playSound('dropping');
             scene.userData.hasPlayedDrop = true;
             scene.userData.hasPlayedStand = false;
+            scene.userData.recoveryStartTime = null;
         }
         targetCamPos.set(3, -5.5, 9); // Hit floor
         // We override LookAt effectively by setting rotation manually or letting lookAt handle it then adding Z shake
         camera.lookAt(0, 10, -5); // Look WAY UP at light/dealer
         camera.rotation.z = -0.9 + (Math.random() * 0.1);
         scene.userData.cameraShake = 0.5;
-    } else if (!animState.playerHit && camera.position.y < -4) {
-        // Recovering (Stand up slowly) - Groggy effect
+    } else if (animState.playerRecovering || (!animState.playerHit && camera.position.y < -4)) {
+        // Recovering (Stand up slowly) - Groggy effect with improved visual feedback
         if (!scene.userData.hasPlayedStand) {
             audioManager.playSound('standing');
             scene.userData.hasPlayedStand = true;
+            scene.userData.recoveryStartTime = time;
         }
-        const recoverSpeed = 0.02; // Slow recovery
+
+        // Calculate recovery progress (0 to 1)
+        const recoveryDuration = 2.5; // seconds
+        const recoveryElapsed = time - (scene.userData.recoveryStartTime || time);
+        const recoveryProgress = Math.min(1, recoveryElapsed / recoveryDuration);
+
+        // Slower recovery speed based on progress - starts slow, speeds up
+        const recoverSpeed = 0.015 + (recoveryProgress * 0.025);
         camera.rotation.z = THREE.MathUtils.lerp(camera.rotation.z, 0, recoverSpeed);
-        // Dizzy Wobble - Pitch and Roll
-        camera.rotation.z += Math.sin(time * 3) * 0.003;
-        camera.rotation.x += Math.cos(time * 2.5) * 0.002; // Nodding slightly
+
+        // Dizzy Wobble - Decreases as recovery progresses
+        const wobbleIntensity = 1 - (recoveryProgress * 0.7);
+        camera.rotation.z += Math.sin(time * 3) * 0.004 * wobbleIntensity;
+        camera.rotation.x += Math.cos(time * 2.5) * 0.003 * wobbleIntensity; // Nodding slightly
+
+        // Add slight vignette/blur effect during recovery (handled via camera shake decay)
+        if (recoveryProgress < 0.5) {
+            scene.userData.cameraShake = 0.05 * (1 - recoveryProgress * 2);
+        }
     } else {
         // Reset flags when back to normal
         if (camera.position.y > -2) {
             scene.userData.hasPlayedDrop = false;
+            scene.userData.recoveryStartTime = null;
         }
     }
 
@@ -222,9 +244,34 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         scene.userData.cameraShake = shake;
     }
 
-    // Dealer Animation
-    const dealerTargetY = dealerGroup.userData.targetY ?? (Math.sin(time) * 0.05);
-    dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * 0.25;
+    // Dealer Animation - Enhanced with better drop/recovery
+    let dealerTargetY = dealerGroup.userData.targetY ?? (Math.sin(time) * 0.05);
+
+    // DEALER RECOVERY ANIMATION - Add wobble during recovery phase
+    if (animState.dealerRecovering && !animState.dealerDropping) {
+        // Dealer is getting back up - add groggy wobble
+        const wobble = Math.sin(time * 4) * 0.15;
+        dealerTargetY = wobble;
+
+        // Track recovery start time for smooth transition
+        if (!scene.userData.dealerRecoveryStart) {
+            scene.userData.dealerRecoveryStart = time;
+        }
+        const recoveryProgress = Math.min(1, (time - scene.userData.dealerRecoveryStart) / 1.5);
+
+        // Reduce wobble as recovery progresses
+        dealerTargetY = wobble * (1 - recoveryProgress);
+    } else if (animState.dealerDropping) {
+        // Reset recovery timer when dropping
+        scene.userData.dealerRecoveryStart = null;
+    } else {
+        // Clear recovery state when fully recovered
+        scene.userData.dealerRecoveryStart = null;
+    }
+
+    // Smoother lerp for dealer position - slower during recovery
+    const dealerLerpSpeed = animState.dealerRecovering ? 0.08 : 0.25;
+    dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * dealerLerpSpeed;
 
     const headGroup = dealerGroup.getObjectByName("HEAD");
     if (headGroup) {
@@ -588,6 +635,40 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             items.itemInverter.scale.setScalar(1);
             items.itemAdrenaline.visible = false;
             items.itemAdrenaline.scale.setScalar(1);
+            // Turn off item light by default
+            if (items.itemLight) items.itemLight.intensity = 0;
+        };
+
+        // ITEM LIGHT HELPER - Illuminate visible items
+        const updateItemLight = () => {
+            if (!items.itemLight) return;
+
+            // Check which item is currently visible and position light there
+            const visibleItems = [
+                items.itemBeer,
+                items.itemCigs,
+                items.itemSaw,
+                items.itemCuffs,
+                items.itemGlass,
+                items.itemPhone,
+                items.itemInverter,
+                items.itemAdrenaline
+            ].filter(item => item.visible);
+
+            if (visibleItems.length > 0) {
+                const activeItem = visibleItems[0];
+                // Position light slightly above and in front of the item
+                items.itemLight.position.copy(activeItem.position);
+                items.itemLight.position.y += 2;
+                items.itemLight.position.z += 3; // Slightly toward camera
+
+                // Stronger light for dealer items (far from camera)
+                const isDealerItem = activeItem.position.z < -8;
+                items.itemLight.intensity = isDealerItem ? 25 : 15;
+                items.itemLight.distance = isDealerItem ? 30 : 20;
+            } else {
+                items.itemLight.intensity = 0;
+            }
         };
 
         // Initialize user data and SYNC with current state to prevent ghost triggers
@@ -633,21 +714,22 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemGlass.position.y -= 0.15;
                 }
             } else {
-                // DEALER uses glass - with rise/look/drop phases
-                items.itemGlass.scale.setScalar(1.6);
+                // DEALER uses glass - Position at dealer's location (far from camera)
+                items.itemGlass.scale.setScalar(2.0); // reduced from 2.5
                 if (glassTime < 0.4) {
-                    // Rise
+                    // Rise at dealer position
                     const p = glassTime / 0.4;
-                    items.itemGlass.position.set(0, 1 + p * 1.5, -4);
+                    items.itemGlass.position.set(0, 3 + p * 2, -8); // Near dealer at z=-12
                     items.itemGlass.rotation.set(-0.2, 0, 0);
                 } else if (glassTime < 1.5) {
                     // Looking through glass
-                    items.itemGlass.position.set(0, 2.5 + Math.sin(glassTime * 3) * 0.1, -4);
+                    items.itemGlass.position.set(0, 5 + Math.sin(glassTime * 3) * 0.1, -8);
                     items.itemGlass.rotation.set(-0.3, Math.sin(glassTime * 2) * 0.1, 0);
                 } else {
                     // Drop
                     const p = (glassTime - 1.5) / 0.3;
-                    items.itemGlass.position.y = 2.5 - p * 3;
+                    items.itemGlass.position.y = 5 - p * 4;
+                    items.itemGlass.position.z = -8; // Ensure drop stays at z=-8
                     if (glassTime > 1.7) items.itemGlass.visible = false;
                 }
             }
@@ -693,21 +775,23 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     camera.rotation.x *= 0.85;
                 }
             } else {
-                // DEALER drinking beer - tilt AWAY from camera (toward dealer)
+                // DEALER drinking beer - Position at dealer's location (far from camera)
+                items.itemBeer.scale.setScalar(2.0); // reduced from 2.5
                 if (drinkTime < 0.5) {
-                    // Beer rises
+                    // Beer rises at dealer position
                     const p = drinkTime / 0.5;
-                    items.itemBeer.position.set(0, 1 + p * 2, -4);
+                    items.itemBeer.position.set(0.5, 3 + p * 2, -8); // Near dealer at z=-12
                     items.itemBeer.rotation.set(-0.3, 0, 0); // Tilt toward dealer
                 } else if (drinkTime < 2.5) {
                     // Drinking motion - tilt away from camera (negative X)
                     const tiltP = Math.min(1, (drinkTime - 0.5) / 0.5);
-                    items.itemBeer.position.set(0, 3 + Math.sin(drinkTime) * 0.2, -4);
+                    items.itemBeer.position.set(0.5, 5 + Math.sin(drinkTime) * 0.2, -8);
                     items.itemBeer.rotation.set(-0.3 - tiltP * 1.2, 0, 0); // Negative = away from camera
                 } else {
                     // Drop - fall down
                     const p = (drinkTime - 2.5) / 1.0;
-                    items.itemBeer.position.y = 3 - p * 4;
+                    items.itemBeer.position.y = 5 - p * 4;
+                    items.itemBeer.position.z = -8;
                     items.itemBeer.rotation.z += 0.15;
                     if (drinkTime > 3.2) items.itemBeer.visible = false;
                 }
@@ -781,16 +865,16 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemCigs.rotation.z -= 0.3;
                 }
             } else {
-                // DEALER SMOKING - visible near center of table
-                items.itemCigs.scale.setScalar(1.8); // Match player size
+                // DEALER SMOKING - Position at dealer's location (far from camera)
+                items.itemCigs.scale.setScalar(2.0); // reduced from 2.5
                 if (healTime < 0.5) {
-                    // Rise up
+                    // Rise up at dealer position
                     const p = healTime / 0.5;
-                    items.itemCigs.position.set(0.3, 1 + p * 1.5, -4);
+                    items.itemCigs.position.set(0.3, 3 + p * 2, -8); // Near dealer at z=-12
                     items.itemCigs.rotation.set(0, 0.2, 0.3);
                 } else if (healTime < 3.0) {
-                    // Smoking - visible in center with glow
-                    items.itemCigs.position.set(0.3, 2.5 + Math.sin(healTime * 2) * 0.1, -4);
+                    // Smoking - visible at dealer with glow
+                    items.itemCigs.position.set(0.3, 5 + Math.sin(healTime * 2) * 0.1, -8);
                     items.itemCigs.rotation.set(0, 0.2, 0.3);
 
                     const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
@@ -818,7 +902,8 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                 } else {
                     // Drop - cigarette falls
                     const p = (healTime - 3.0) / 1.0;
-                    items.itemCigs.position.y = 2.5 - p * 3;
+                    items.itemCigs.position.y = 5 - p * 4;
+                    items.itemCigs.position.z = -8;
                     items.itemCigs.rotation.z += 0.1;
                     if (healTime > 3.5) {
                         items.itemCigs.visible = false;
@@ -946,18 +1031,19 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemPhone.rotation.x += 0.05;
                 }
             } else {
-                // DEALER using phone - with proper drop animation
+                // DEALER using phone - Position at dealer's actual location (z=-14)
+                items.itemPhone.scale.setScalar(2.5); // reduced from 3.5
                 if (phoneTime < 0.5) {
-                    // Phone rises
+                    // Phone rises at dealer position
                     const p = phoneTime / 0.5;
-                    items.itemPhone.position.set(0, 1 + p * 2, -4);
-                    items.itemPhone.rotation.set(0.5, Math.PI, 0);
+                    items.itemPhone.position.set(0, 4 + p * 2, -14); // At dealer z=-14
+                    items.itemPhone.rotation.set(0.5, 0, 0); // Face camera
                 } else if (phoneTime < 2.5) {
-                    // Looking at phone
+                    // Looking at phone - screen facing camera
                     const floatY = Math.sin(phoneTime * 2) * 0.1;
-                    items.itemPhone.position.set(0, 3 + floatY, -4);
-                    items.itemPhone.rotation.set(0.8, Math.PI, 0.1);
-                    items.itemPhone.scale.setScalar(2.0);
+                    items.itemPhone.position.set(0, 6 + floatY, -8);
+                    // Rotate Y=0 to face camera. X=0.4 tilts it up slightly.
+                    items.itemPhone.rotation.set(0.4, 0, 0);
                     if (screen) {
                         const mat = screen.material as THREE.MeshBasicMaterial;
                         const glowPhase = (phoneTime - 0.5) / 2.0;
@@ -968,7 +1054,8 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                 } else {
                     // Drop - phone falls down
                     const p = (phoneTime - 2.5) / 1.0;
-                    items.itemPhone.position.y = 3 - p * 4;
+                    items.itemPhone.position.y = 6 - p * 5;
+                    items.itemPhone.position.z = -8;
                     items.itemPhone.rotation.z += 0.1;
                     if (phoneTime > 3.2) items.itemPhone.visible = false;
                 }
@@ -1013,17 +1100,17 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemInverter.rotation.y += 0.2 * (1 - p);
                 }
             } else {
-                // DEALER using inverter - with proper phases
-                items.itemInverter.scale.setScalar(2.0);
+                // DEALER using inverter - Position at dealer's location (far from camera)
+                items.itemInverter.scale.setScalar(2.0); // reduced from 2.5
                 if (invTime < 0.5) {
-                    // Rise with spin
+                    // Rise with spin at dealer position
                     const p = invTime / 0.5;
-                    items.itemInverter.position.set(0, 1 + p * 3, -8);
+                    items.itemInverter.position.set(0, 3 + p * 3, -8); // Near dealer at z=-12
                     items.itemInverter.rotation.y = invTime * 8;
                 } else if (invTime < 1.8) {
                     // Spinning in air with energy
                     const spinSpeed = 0.4;
-                    items.itemInverter.position.set(0, 4 + Math.sin(invTime * 8) * 0.2, -8);
+                    items.itemInverter.position.set(0, 6 + Math.sin(invTime * 8) * 0.2, -8);
                     items.itemInverter.rotation.y += spinSpeed;
                     if (invTime > 0.8 && invTime < 1.5) {
                         scene.userData.cameraShake = 0.15;
@@ -1031,7 +1118,8 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                 } else {
                     // Drop
                     const p = (invTime - 1.8) / 0.7;
-                    items.itemInverter.position.y = 4 - p * 5;
+                    items.itemInverter.position.y = 6 - p * 6;
+                    items.itemInverter.position.z = -8;
                     items.itemInverter.rotation.y += 0.1 * (1 - p);
                     if (invTime > 2.3) items.itemInverter.visible = false;
                 }
@@ -1075,22 +1163,23 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemAdrenaline.rotation.z = Math.PI / 2 + p * 0.5;
                 }
             } else {
-                // DEALER injection - with proper phases
-                items.itemAdrenaline.scale.setScalar(2.0);
+                // DEALER injection - Position at dealer's location (far from camera)
+                items.itemAdrenaline.scale.setScalar(2.0); // reduced from 2.5
                 if (adrTime < 0.5) {
-                    // Rise
+                    // Rise at dealer position
                     const p = adrTime / 0.5;
-                    items.itemAdrenaline.position.set(0.5, 1 + p * 3, -9);
+                    items.itemAdrenaline.position.set(0.5, 3 + p * 3, -8); // Near dealer at z=-12
                     items.itemAdrenaline.rotation.set(0.3, 0, 0.3);
                 } else if (adrTime < 1.5) {
                     // Injection motion
-                    items.itemAdrenaline.position.set(0.5, 4 + Math.sin(adrTime * 3) * 0.1, -9);
+                    items.itemAdrenaline.position.set(0.5, 6 + Math.sin(adrTime * 3) * 0.1, -8);
                     items.itemAdrenaline.rotation.z = Math.PI / 2;
                     if (adrTime > 0.8) scene.userData.cameraShake = 0.12;
                 } else {
                     // Drop
                     const p = (adrTime - 1.5) / 1.0;
-                    items.itemAdrenaline.position.y = 4 - p * 5;
+                    items.itemAdrenaline.position.y = 6 - p * 6;
+                    items.itemAdrenaline.position.z = -8;
                     items.itemAdrenaline.rotation.z = Math.PI / 2 + p * 0.3;
                     if (adrTime > 2.2) items.itemAdrenaline.visible = false;
                 }
@@ -1127,7 +1216,8 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             items.itemSaw.visible = false;
         }
 
-
+        // UPDATE ITEM LIGHT - Position and intensity based on visible items
+        updateItemLight();
 
     }
 }

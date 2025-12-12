@@ -7,6 +7,7 @@ import { Inventory } from './ui/Inventory';
 import { Controls } from './ui/Controls';
 import { BootScreen } from './ui/BootScreen';
 import { IntroScreen } from './ui/IntroScreen';
+import ShellBackground from './ui/ShellBackground';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { LootOverlay } from './ui/LootOverlay';
 import { LogsDisplay } from './ui/LogsDisplay';
@@ -32,6 +33,7 @@ interface GameUIProps {
     cameraView: CameraView;
     aimTarget?: AimTarget; // Added for controls logic
     isProcessing: boolean;
+    isRecovering?: boolean; // Added for blocking gun pickup during recovery
     settings: GameSettings;
     onStartGame: (name: string) => void;
     onStartMultiplayer: () => void;
@@ -103,7 +105,8 @@ export const GameUI: React.FC<GameUIProps> = ({
     mpMyPlayerId,
     onMpShoot,
     onStealItem,
-    onBootComplete
+    onBootComplete,
+    isRecovering = false
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
     const [chatMsg, setChatMsg] = useState('');
@@ -170,6 +173,11 @@ export const GameUI: React.FC<GameUIProps> = ({
 
     return (
         <>
+            {/* Falling Shells Background - Persistent across Boot and Intro */}
+            {(gameState.phase === 'BOOT' || gameState.phase === 'INTRO') && (
+                <ShellBackground />
+            )}
+
             {gameState.phase === 'BOOT' && <BootScreen onContinue={onBootComplete} />}
 
             {/* FX Layers */}
@@ -316,6 +324,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <Controls
                                 isGunHeld={isGunHeld}
                                 isProcessing={isProcessing}
+                                isRecovering={isRecovering}
                                 onPickupGun={onPickupGun}
                                 onFireShot={onFireShot}
                                 onHoverTarget={onHoverTarget}

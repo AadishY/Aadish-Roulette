@@ -137,7 +137,12 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const itemInverter = createInverter(); itemInverter.visible = false; scene.add(itemInverter);
             const itemAdrenaline = createAdrenaline(); itemAdrenaline.visible = false; scene.add(itemAdrenaline);
 
-            const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline };
+            // Item illumination light - follows active items to make them visible
+            const itemLight = new THREE.PointLight(0xffffee, 0, 25); // Warm white, starts off
+            itemLight.position.set(0, 5, -12); // Default at dealer position
+            scene.add(itemLight);
+
+            const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemLight };
 
             // === MULTIPLAYER AVATAR LOGIC ===
             let dealerGroup = new THREE.Group();

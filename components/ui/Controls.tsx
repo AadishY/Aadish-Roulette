@@ -7,6 +7,7 @@ import { GameStateData } from '../../hooks/useSocket';
 interface ControlsProps {
     isGunHeld: boolean;
     isProcessing: boolean;
+    isRecovering?: boolean; // Whether player/dealer is knocked and recovering
     onPickupGun: () => void;
     onFireShot: (target: TurnOwner, targetId?: string) => void;
     onHoverTarget: (target: AimTarget) => void;
@@ -20,6 +21,7 @@ interface ControlsProps {
 const ControlsComponent: React.FC<ControlsProps> = ({
     isGunHeld,
     isProcessing,
+    isRecovering = false,
     onPickupGun,
     onFireShot,
     onHoverTarget,
@@ -58,14 +60,23 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                 {!isGunHeld && (
                     <button
                         onClick={() => {
-                            audioManager.playSound('click');
-                            onPickupGun();
+                            if (!isRecovering) {
+                                audioManager.playSound('click');
+                                onPickupGun();
+                            }
                         }}
-                        disabled={isProcessing}
-                        className="bg-black/90 border border-stone-500 px-4 py-3 md:px-8 md:py-5 text-stone-200 font-black text-xs md:text-xl hover:bg-stone-800 hover:text-white hover:border-white transition-all active:scale-95 shadow-lg tracking-wider flex items-center gap-2 animate-pulse disabled:opacity-50"
+                        disabled={isProcessing || isRecovering}
+                        className={`bg-black/90 border px-4 py-3 md:px-8 md:py-5 font-black text-xs md:text-xl transition-all active:scale-95 shadow-lg tracking-wider flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isRecovering
+                                ? 'border-red-800 text-red-500 disabled:animate-none'
+                                : 'border-stone-500 text-stone-200 hover:bg-stone-800 hover:text-white hover:border-white animate-pulse'
+                            }`}
                     >
                         <Hand size={16} className="md:w-6 md:h-6" />
-                        <span className="hidden md:inline">GRAB </span>SHOTGUN
+                        {isRecovering ? (
+                            <><span className="hidden md:inline">WAIT </span>RECOVERING...</>
+                        ) : (
+                            <><span className="hidden md:inline">GRAB </span>SHOTGUN</>
+                        )}
                     </button>
                 )}
 

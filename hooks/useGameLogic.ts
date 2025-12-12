@@ -58,7 +58,9 @@ export const useGameLogic = () => {
     isLiveShot: false,
     dealerHit: false,
     dealerDropping: false,
-    playerHit: false
+    playerHit: false,
+    playerRecovering: false,
+    dealerRecovering: false
   });
 
   // Load name on mount
@@ -142,7 +144,8 @@ export const useGameLogic = () => {
     setKnownShell(null);
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
-      isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false, dealerHit: false, dealerDropping: false, playerHit: false
+      isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
+      dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -217,12 +220,13 @@ export const useGameLogic = () => {
     }
 
     // Generate items based on round count
+    // Rounds 1-3: 2 items, Rounds 4-9: 3 items, Rounds 10+: 4 items
     const roundNum = forceClear ? 1 : gameState.roundCount + 1;
 
     let amount = 2; // Default start with 2 items
-    if (roundNum === 1) amount = 2;
-    else if (roundNum === 2) amount = 3;
-    else amount = 4;
+    if (roundNum >= 10) amount = 4;
+    else if (roundNum >= 4) amount = 3;
+    else amount = 2;
 
 
     const generateLoot = () => {
@@ -264,6 +268,12 @@ export const useGameLogic = () => {
 
   const pickupGun = () => {
     if (isProcessing) return;
+    // PREVENT GUN PICKUP WHILE ANYONE IS KNOCKED DOWN OR RECOVERING
+    if (animState.playerHit || animState.playerRecovering ||
+      animState.dealerDropping || animState.dealerRecovering) {
+      addLog('WAIT FOR RECOVERY...', 'info');
+      return;
+    }
     setCameraView('GUN');
   };
 
@@ -309,14 +319,19 @@ export const useGameLogic = () => {
     }
 
     if (isLive && target === 'PLAYER') {
-      // INSTANT HIT
-      setAnim(prev => ({ ...prev, playerHit: true }));
+      // INSTANT HIT - Player knocked down
+      setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: true }));
       setOverlayColor('red'); // Instant Red Screen
       setShowBlood(true);
+      // Player hit lasts 2.5s, then recovery animation begins
       setTimeout(() => {
         setAnim(prev => ({ ...prev, playerHit: false }));
         setShowBlood(false);
         setOverlayColor('none');
+        // Recovery animation continues for another 2s
+        setTimeout(() => {
+          setAnim(prev => ({ ...prev, playerRecovering: false }));
+        }, 2000);
       }, 2500);
     }
 
@@ -363,12 +378,15 @@ export const useGameLogic = () => {
         const newHp = Math.max(0, dealer.hp - damage);
         setDealer(p => ({ ...p, hp: newHp }));
         setOverlayColor('green');
+        // Mark dealer as recovering during stand-up animation
+        setAnim(prev => ({ ...prev, dealerRecovering: true }));
 
         await wait(2000);
 
         if (newHp > 0) {
           setAnim(prev => ({ ...prev, dealerDropping: false }));
-          await wait(1000);
+          await wait(1500); // Longer recovery time for dealer stand-up
+          setAnim(prev => ({ ...prev, dealerRecovering: false }));
         }
         setOverlayColor('none');
       }

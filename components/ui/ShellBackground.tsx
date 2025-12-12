@@ -131,7 +131,8 @@ const ShellBackground: React.FC = () => {
                 xPos = (Math.random() - 0.5) * 16; // -8 to 8
             }
             shell.position.x = xPos;
-            shell.position.y = 10 + Math.random() * 15;
+            // Spread across full height initially so appearing looks natural
+            shell.position.y = (Math.random() * 40) - 15; // -15 to 25
             shell.position.z = (Math.random() - 0.5) * 8;
 
             // Random initial rotation
