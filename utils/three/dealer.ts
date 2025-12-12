@@ -63,122 +63,104 @@ export const createDealerModel = (scene: THREE.Scene) => {
     skull.castShadow = true;
     headGroup.add(skull);
 
-    // === BIG BLACK EYES - Smooth Oval / Hand-drawn style ===
+    // === BIG BLACK EYES - Smaller, beady ===
     const createOvalEye = (rx: number, ry: number) => {
         const shape = new THREE.Shape();
-        // Ellipse centered at 0,0
         shape.ellipse(0, 0, rx, ry, 0, Math.PI * 2, false, 0);
         return new THREE.ShapeGeometry(shape);
     };
 
-    const lEye = new THREE.Mesh(createOvalEye(0.85, 1.0), voidMat);
-    lEye.position.set(-0.9, 0.5, 2.25); // Moved slightly forward to avoid z-fighting on surface
-    lEye.rotation.z = 0.1; // Simple tilt
-    lEye.rotation.y = -0.15; // wrap around face slightly
+    const lEye = new THREE.Mesh(createOvalEye(0.55, 0.7), voidMat); // Much smaller
+    lEye.position.set(-0.95, 0.5, 2.3); // Push forward slightly
+    lEye.rotation.z = 0.15;
+    lEye.rotation.y = -0.2;
     headGroup.add(lEye);
 
-    const rEye = new THREE.Mesh(createOvalEye(0.85, 1.0), voidMat);
-    rEye.position.set(0.9, 0.5, 2.25);
-    rEye.rotation.z = -0.1;
-    rEye.rotation.y = 0.15;
+    const rEye = new THREE.Mesh(createOvalEye(0.55, 0.7), voidMat);
+    rEye.position.set(0.95, 0.5, 2.3);
+    rEye.rotation.z = -0.15;
+    rEye.rotation.y = 0.2;
     headGroup.add(rEye);
 
-    // Red glowing pupils
+    // Red glowing pupils - SLIT SHAPE
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const pupilGeo = new THREE.CapsuleGeometry(0.1, 0.35, 4, 8);
 
-    const lPupil = new THREE.Mesh(
-        new THREE.SphereGeometry(0.18, 16, 16),
-        pupilMat
-    );
-    lPupil.position.set(-0.9, 0.5, 2.35); // pushed out
+    const lPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    lPupil.position.set(-0.95, 0.5, 2.38); // Out more
+    lPupil.rotation.z = 0.1;
     lPupil.name = 'LEFT_PUPIL';
     headGroup.add(lPupil);
 
-    const rPupil = new THREE.Mesh(
-        new THREE.SphereGeometry(0.18, 16, 16),
-        pupilMat
-    );
-    rPupil.position.set(0.9, 0.5, 2.35);
+    const rPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    rPupil.position.set(0.95, 0.5, 2.38);
+    rPupil.rotation.z = -0.1;
     rPupil.name = 'RIGHT_PUPIL';
     headGroup.add(rPupil);
 
     // Pupil glow
     const glowMat = new THREE.MeshBasicMaterial({
-        color: 0xff2200,
+        color: 0xff0000,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.6
     });
 
-    const lGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.3, 16, 16),
-        glowMat
-    );
-    lGlow.position.set(-0.9, 0.5, 2.3);
+    const lGlow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), glowMat); // Smaller glow
+    lGlow.position.set(-0.95, 0.5, 2.35);
     headGroup.add(lGlow);
 
-    const rGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.3, 16, 16),
-        glowMat
-    );
-    rGlow.position.set(0.9, 0.5, 2.3);
+    const rGlow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), glowMat);
+    rGlow.position.set(0.95, 0.5, 2.35);
     headGroup.add(rGlow);
 
     // === MOUTH - Wide grin ===
-    const mouthGeo = new THREE.TorusGeometry(1.3, 0.4, 16, 32, Math.PI);
+    const mouthGeo = new THREE.TorusGeometry(1.4, 0.5, 16, 40, Math.PI);
     const mouthVoid = new THREE.Mesh(mouthGeo, voidMat);
     mouthVoid.rotation.z = Math.PI;
-    mouthVoid.position.set(0, -0.65, 1.8);
-    mouthVoid.scale.set(1.0, 0.55, 0.6);
+    mouthVoid.position.set(0, -0.6, 1.8);
+    mouthVoid.scale.set(1.1, 0.6, 0.6);
     headGroup.add(mouthVoid);
 
     // === PROPER TEETH PLACEMENT ===
-    // Moved slightly forward (2.1) to ensure visibility against the black void
-    // Added more teeth for a fuller, grinnier look
+    // Spaced out for jagged look
 
-    // Upper teeth
+    // Upper teeth - Spaced by ~0.15, thinner (0.04 radius = 0.08 width)
     const upperTeeth = [
-        { x: -1.0, h: 0.55 }, { x: -0.9, h: 0.45 },
-        { x: -0.8, h: 0.65 }, { x: -0.7, h: 0.5 },
-        { x: -0.6, h: 0.55 }, { x: -0.5, h: 0.4 },
-        { x: -0.4, h: 0.60 }, { x: -0.3, h: 0.45 },
-        { x: -0.2, h: 0.5 }, { x: -0.1, h: 0.4 },
-        { x: 0, h: 0.6 },
-        { x: 0.1, h: 0.4 }, { x: 0.2, h: 0.5 },
-        { x: 0.3, h: 0.45 }, { x: 0.4, h: 0.60 },
-        { x: 0.5, h: 0.4 }, { x: 0.6, h: 0.55 },
-        { x: 0.7, h: 0.5 }, { x: 0.8, h: 0.65 },
-        { x: 0.9, h: 0.45 }, { x: 1.0, h: 0.55 },
+        { x: -0.9, h: 0.55 }, { x: -0.75, h: 0.65 },
+        { x: -0.6, h: 0.45 }, { x: -0.45, h: 0.60 },
+        { x: -0.3, h: 0.40 }, { x: -0.15, h: 0.55 },
+        { x: 0, h: 0.65 },
+        { x: 0.15, h: 0.50 }, { x: 0.3, h: 0.60 },
+        { x: 0.45, h: 0.45 }, { x: 0.6, h: 0.55 },
+        { x: 0.75, h: 0.65 }, { x: 0.9, h: 0.50 },
     ];
 
     for (const t of upperTeeth) {
-        const geo = new THREE.ConeGeometry(0.06, t.h, 4);
+        const geo = new THREE.ConeGeometry(0.04, t.h, 4); // Thinner for gaps
         const mesh = new THREE.Mesh(geo, teethMat);
-        mesh.position.set(t.x, -0.45, 2.15); // Moved to 2.15
-        mesh.rotation.x = Math.PI - 0.15;
-        mesh.rotation.z = (Math.random() - 0.5) * 0.4;
+        mesh.position.set(t.x, -0.45, 2.15);
+        mesh.rotation.x = Math.PI - 0.1;
+        mesh.rotation.z = (Math.random() - 0.5) * 0.2;
         headGroup.add(mesh);
     }
 
-    // Lower teeth
+    // Lower teeth - Clearly visible, pointing up
     const lowerTeeth = [
-        { x: -0.95, h: 0.5 }, { x: -0.85, h: 0.4 },
-        { x: -0.75, h: 0.6 }, { x: -0.65, h: 0.45 },
-        { x: -0.55, h: 0.5 }, { x: -0.45, h: 0.35 },
-        { x: -0.35, h: 0.55 }, { x: -0.25, h: 0.4 },
-        { x: -0.15, h: 0.45 }, { x: -0.05, h: 0.35 },
-        { x: 0.05, h: 0.45 }, { x: 0.15, h: 0.45 },
-        { x: 0.25, h: 0.4 }, { x: 0.35, h: 0.55 },
-        { x: 0.45, h: 0.35 }, { x: 0.55, h: 0.5 },
-        { x: 0.65, h: 0.45 }, { x: 0.75, h: 0.6 },
-        { x: 0.85, h: 0.4 }, { x: 0.95, h: 0.5 },
+        { x: -0.85, h: 0.50 }, { x: -0.7, h: 0.40 },
+        { x: -0.55, h: 0.55 }, { x: -0.4, h: 0.45 },
+        { x: -0.25, h: 0.50 }, { x: -0.1, h: 0.35 },
+        { x: 0.05, h: 0.55 }, { x: 0.2, h: 0.40 },
+        { x: 0.35, h: 0.50 }, { x: 0.5, h: 0.45 },
+        { x: 0.65, h: 0.55 }, { x: 0.8, h: 0.45 },
     ];
 
     for (const t of lowerTeeth) {
-        const geo = new THREE.ConeGeometry(0.05, t.h, 4);
+        const geo = new THREE.ConeGeometry(0.035, t.h, 4);
         const mesh = new THREE.Mesh(geo, teethMat);
-        mesh.position.set(t.x, -0.85, 2.1); // Moved to 2.1
-        mesh.rotation.x = 0.15;
-        mesh.rotation.z = (Math.random() - 0.5) * 0.3;
+        // Raised Y slightly to ensure they poke out of the "gum" line
+        mesh.position.set(t.x, -0.8, 2.1);
+        mesh.rotation.x = 0.2; // Angle back slightly
+        mesh.rotation.z = (Math.random() - 0.5) * 0.2;
         headGroup.add(mesh);
     }
 
@@ -218,9 +200,10 @@ export const createDealerModel = (scene: THREE.Scene) => {
     dealerGroup.add(rShoulder);
 
     // Arm Helpers
-    // Lowered Elbows and Hands as requested
-    // Previous: Elbow Y=0.5, Hand Y=-0.2
-    // New: Elbow Y=0.0, Hand Y=-0.4 (Table at -0.75, gives 0.35 clearance to center, ~0.1 clearance to bottom)
+    // Lowered Elbows and Hands to rest ON the table
+    // Table surface is at -0.75 (y=-1, height=0.5). Top is technically -0.75.
+    // Hand height is 0.5 (Box Y after rotation). To sit on table:
+    // Center Y = -0.75 + 0.25 = -0.5.
 
     const createLimb = (start: THREE.Vector3, end: THREE.Vector3, thickness: number) => {
         const len = start.distanceTo(end);
@@ -233,8 +216,8 @@ export const createDealerModel = (scene: THREE.Scene) => {
         return mesh;
     };
 
-    const HAND_Y = -0.4;
-    const ELBOW_Y = 0.0;
+    const HAND_Y = -0.68; // Sunk into table
+    const ELBOW_Y = -0.3; // Low elbows
     const ELBOW_Z = Z_POS + 3; // Mid-way forward
 
     // LEFT ARM
