@@ -548,6 +548,27 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
     const isPlayerTurn = props.turnOwner === 'PLAYER';
 
     if (items) {
+        // IMPORTANT: Reset all items to hidden state FIRST, then show only if animation is active
+        // This prevents items from getting stuck visible
+        const resetItemDefaults = () => {
+            items.itemGlass.visible = false;
+            items.itemGlass.scale.setScalar(1);
+            items.itemBeer.visible = false;
+            items.itemBeer.scale.setScalar(1);
+            items.itemCigs.visible = false;
+            items.itemCigs.scale.setScalar(1);
+            items.itemSaw.visible = false;
+            items.itemSaw.scale.setScalar(1);
+            items.itemCuffs.visible = false;
+            items.itemCuffs.scale.setScalar(1);
+            items.itemPhone.visible = false;
+            items.itemPhone.scale.setScalar(1);
+            items.itemInverter.visible = false;
+            items.itemInverter.scale.setScalar(1);
+            items.itemAdrenaline.visible = false;
+            items.itemAdrenaline.scale.setScalar(1);
+        };
+
         // Initialize user data and SYNC with current state to prevent ghost triggers
         // IMPORTANT: All values must sync to current animState to prevent spurious animations
         if (scene.userData.lastDrink === undefined) scene.userData.lastDrink = animState.triggerDrink;
@@ -570,19 +591,20 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
 
         const glassTime = time - (scene.userData.glassStart || -999);
         const glassDuration = isPlayerTurn ? 2.5 : 1.8; // Shorter for dealer
-        if (glassTime < glassDuration) {
+        if (glassTime >= 0 && glassTime < glassDuration) {
             items.itemGlass.visible = true;
 
             if (isPlayerTurn) {
                 if (glassTime < 0.5) {
                     const p = glassTime / 0.5;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemGlass.position.set(0.5 - ease * 0.3, -3 + ease * 4.5, 10.5);
+                    // FIXED: Moved closer to camera (z=6 instead of 10.5)
+                    items.itemGlass.position.set(0.5 - ease * 0.3, -3 + ease * 4.5, 6);
                     items.itemGlass.rotation.set(0, 0, 0);
                 } else if (glassTime < 2.0) {
                     // Hover & Search with wobble
                     const hover = Math.sin((glassTime - 0.5) * 3);
-                    items.itemGlass.position.set(Math.sin(time) * 0.3, 1.5 + Math.cos(time * 2) * 0.1, 10.5);
+                    items.itemGlass.position.set(Math.sin(time) * 0.3, 1.5 + Math.cos(time * 2) * 0.1, 6);
                     items.itemGlass.rotation.z = hover * 0.1;
                     items.itemGlass.rotation.x = -0.2;
                 } else {
@@ -594,9 +616,6 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                 items.itemGlass.rotation.set(-0.3, Math.sin(glassTime * 2) * 0.1, 0);
                 items.itemGlass.scale.setScalar(1.6);
             }
-        } else {
-            items.itemGlass.visible = false;
-            items.itemGlass.scale.setScalar(1);
         }
 
         // BEER ANIMATION - Smoother
@@ -606,18 +625,18 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             scene.userData.drinkStart = time;
         }
         const drinkTime = time - (scene.userData.drinkStart || -999);
-        if (drinkTime < 3.0) {
+        if (drinkTime >= 0 && drinkTime < 3.0) {
             items.itemBeer.visible = true;
             if (isPlayerTurn) {
                 if (drinkTime < 0.6) { // Lift
                     const p = drinkTime / 0.6;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    // Higher Y=1.5
-                    items.itemBeer.position.set(0.6 - ease * 0.1, -4 + ease * 5.5, 11.5);
+                    // FIXED: Moved closer to camera (z=7 instead of 11.5)
+                    items.itemBeer.position.set(0.6 - ease * 0.1, -4 + ease * 5.5, 7);
                     items.itemBeer.rotation.set(-ease * 0.2, -0.2, ease * 0.1);
                 } else if (drinkTime < 2.0) { // Drink
                     const sipP = Math.min(1, (drinkTime - 0.6) / 0.4);
-                    items.itemBeer.position.set(0.5, 1.5, 11.5);
+                    items.itemBeer.position.set(0.5, 1.5, 7);
                     // Deep tilt
                     items.itemBeer.rotation.set(-0.2 - sipP * 1.2, -0.2, 0.1);
                     // Head tilt
@@ -650,9 +669,6 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     if (drinkTime > 2.5) items.itemBeer.visible = false;
                 }
             }
-        } else {
-            items.itemBeer.visible = false;
-            items.itemBeer.scale.setScalar(1);
         }
 
         // RACK ANIMATION (Shell ejection handled in ThreeScene.tsx)
@@ -676,19 +692,19 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
             scene.userData.healStart = time;
         }
         const healTime = time - (scene.userData.healStart || -999);
-        if (healTime < 4.0) {
+        if (healTime >= 0 && healTime < 4.0) {
             items.itemCigs.visible = true;
             if (isPlayerTurn) {
                 // Make cigarette larger and closer to face
                 items.itemCigs.scale.setScalar(2.0);
                 if (healTime < 1.0) {
                     const p = healTime;
-                    // Much closer to camera - near player's face
-                    items.itemCigs.position.set(0.8 - p * 0.3, -1 + p * 2.5, 5);
+                    // FIXED: Moved closer to camera (z=4 instead of 5)
+                    items.itemCigs.position.set(0.8 - p * 0.3, -1 + p * 2.5, 4);
                     items.itemCigs.rotation.set(0.2, -0.3, 0);
                 } else if (healTime < 3.0) {
                     // Smoking phase - near mouth level, close to camera
-                    items.itemCigs.position.set(0.5, 1.5 + Math.sin(time) * 0.05, 5);
+                    items.itemCigs.position.set(0.5, 1.5 + Math.sin(time) * 0.05, 4);
                     items.itemCigs.rotation.set(0.3, -0.2, 0.1);
 
                     // Glow
@@ -760,9 +776,6 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemCigs.scale.setScalar(1);
                 }
             }
-        } else {
-            items.itemCigs.visible = false;
-            items.itemCigs.scale.setScalar(1);
         }
 
         // SAW ANIMATION (Restored)
@@ -828,9 +841,6 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                 items.itemCuffs.visible = false;
                 items.itemCuffs.scale.setScalar(1);
             }
-        } else {
-            items.itemCuffs.visible = false;
-            items.itemCuffs.scale.setScalar(1);
         }
 
         // PHONE ANIMATION - Enhanced with screen glow
@@ -851,11 +861,12 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     // Lift up - closer to camera
                     const p = phoneTime / 0.5;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemPhone.position.set(0.4, -2 + ease * 3.5, 5);
+                    // FIXED: Moved closer to camera (z=4 instead of 5)
+                    items.itemPhone.position.set(0.4, -2 + ease * 3.5, 4);
                     items.itemPhone.rotation.set(-0.3 + ease * 0.2, -0.15, -0.15); // Added Z tilt
                 } else if (phoneTime < 3.0) {
                     // Hold and look - close to face, slightly tilted
-                    items.itemPhone.position.set(0.4, 1.5 + Math.sin(time * 2) * 0.03, 5);
+                    items.itemPhone.position.set(0.4, 1.5 + Math.sin(time * 2) * 0.03, 4);
                     items.itemPhone.rotation.set(-0.1, -0.1, -0.2); // Tilted like holding phone
 
                     // Screen glow animation
@@ -891,9 +902,6 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     else mat.color.setHex(0x00aa00);
                 }
             }
-        } else {
-            items.itemPhone.visible = false;
-            items.itemPhone.scale.setScalar(1);
         }
 
         // INVERTER ANIMATION - Enhanced with spin and energy effect
@@ -912,12 +920,13 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     // Lift up with spin
                     const p = invTime / 0.5;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemInverter.position.set(0, -2 + ease * 3.5, 10);
+                    // FIXED: Moved closer to camera (z=6 instead of 10)
+                    items.itemInverter.position.set(0, -2 + ease * 3.5, 6);
                     items.itemInverter.rotation.y = invTime * 10;
                 } else if (invTime < 2.0) {
                     // Hold in air, spinning rapidly with glow pulse
                     const pulseY = 1.5 + Math.sin(invTime * 10) * 0.2;
-                    items.itemInverter.position.set(0, pulseY, 10);
+                    items.itemInverter.position.set(0, pulseY, 6);
                     items.itemInverter.rotation.y += 0.3;
 
                     // Intense shake during polarity switch
@@ -941,9 +950,6 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     scene.userData.cameraShake = 0.15;
                 }
             }
-        } else {
-            items.itemInverter.visible = false;
-            items.itemInverter.scale.setScalar(1);
         }
 
         // ADRENALINE ANIMATION - Enhanced with injection effect
@@ -961,17 +967,18 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     // Pick up
                     const p = adrTime / 0.4;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemAdrenaline.position.set(2.0 - ease * 1.5, -2 + ease * 3.5, 11);
+                    // FIXED: Moved closer to camera (z=7 instead of 11)
+                    items.itemAdrenaline.position.set(2.0 - ease * 1.5, -2 + ease * 3.5, 7);
                     items.itemAdrenaline.rotation.set(-0.5 + ease * 0.3, 0, -0.5 + ease * 0.3);
                 } else if (adrTime < 1.0) {
                     // Move to arm position
                     const p = (adrTime - 0.4) / 0.6;
-                    items.itemAdrenaline.position.set(0.5, 1.5, 11);
+                    items.itemAdrenaline.position.set(0.5, 1.5, 7);
                     items.itemAdrenaline.rotation.set(-0.2, 0, -0.2);
                     items.itemAdrenaline.rotation.z = Math.PI / 2 * p;
                 } else if (adrTime < 1.8) {
                     // Injection with shake
-                    items.itemAdrenaline.position.set(0.5, 1.2, 11);
+                    items.itemAdrenaline.position.set(0.5, 1.2, 7);
                     camera.position.x += (Math.random() - 0.5) * 0.15;
                     camera.position.y += (Math.random() - 0.5) * 0.1;
                 } else {
@@ -998,9 +1005,36 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     items.itemAdrenaline.rotation.z = Math.PI / 2 + p * 0.3;
                 }
             }
-        } else {
+        }
+
+        // SAFETY: Final cleanup - hide any items that shouldn't be visible
+        // This runs AFTER all animation checks to ensure nothing stays stuck
+        const now = time;
+        const cleanupThreshold = 5.0; // If animation started more than 5 seconds ago, force hide
+
+        if (scene.userData.glassStart && (now - scene.userData.glassStart) > cleanupThreshold) {
+            items.itemGlass.visible = false;
+        }
+        if (scene.userData.drinkStart && (now - scene.userData.drinkStart) > cleanupThreshold) {
+            items.itemBeer.visible = false;
+        }
+        if (scene.userData.healStart && (now - scene.userData.healStart) > cleanupThreshold) {
+            items.itemCigs.visible = false;
+        }
+        if (scene.userData.cuffStart && (now - scene.userData.cuffStart) > cleanupThreshold) {
+            items.itemCuffs.visible = false;
+        }
+        if (scene.userData.phoneStart && (now - scene.userData.phoneStart) > cleanupThreshold) {
+            items.itemPhone.visible = false;
+        }
+        if (scene.userData.inverterStart && (now - scene.userData.inverterStart) > cleanupThreshold) {
+            items.itemInverter.visible = false;
+        }
+        if (scene.userData.adrStart && (now - scene.userData.adrStart) > cleanupThreshold) {
             items.itemAdrenaline.visible = false;
-            items.itemAdrenaline.scale.setScalar(1);
+        }
+        if (!animState.isSawing && scene.userData.lastSaw === animState.triggerSparks) {
+            items.itemSaw.visible = false;
         }
 
 
