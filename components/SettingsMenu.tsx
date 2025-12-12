@@ -20,7 +20,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
         // pointer-events-none on wrapper to let clicks pass through edges if needed, though usually modal blocks.
         // pointer-events-auto on the modal itself.
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md bg-stone-900 border-2 border-stone-600 shadow-[0_0_50px_rgba(0,0,0,1)] p-8 pl-12 relative clip-path-slant flex flex-col max-h-[90vh] overflow-y-auto">
+            <div className="w-full max-w-md bg-stone-900 border-2 border-stone-600 shadow-[0_0_50px_rgba(0,0,0,1)] p-6 md:p-8 relative flex flex-col max-h-[85vh] overflow-hidden rounded-sm">
                 <div className="flex justify-between items-center mb-6 border-b border-stone-700 pb-4 sticky top-0 bg-stone-900 z-10">
                     <h2 className="text-2xl md:text-3xl font-black text-stone-200 tracking-widest">
                         CONFIG
@@ -30,7 +30,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </button>
                 </div>
 
-                <div className="space-y-6 flex-1">
+                <div className="space-y-6 flex-1 overflow-y-auto pr-2">
                     {/* Pixelation */}
                     <div className="space-y-2">
                         <div className="flex justify-between text-stone-400 font-bold tracking-wider text-xs md:text-sm">
@@ -107,7 +107,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </div>
                 </div>
 
-                <div className="mt-8 pt-4 border-t border-stone-800 flex flex-col gap-3">
+                <div className="mt-6 pt-4 border-t border-stone-800 flex flex-col gap-3 flex-shrink-0">
                     <button onClick={onClose} className="w-full bg-stone-200 text-black font-black px-8 py-3 hover:bg-red-600 hover:text-white transition-colors tracking-widest text-sm">
                         CLOSE
                     </button>
