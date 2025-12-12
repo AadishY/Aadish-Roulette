@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { SceneContext, SceneProps } from '../../types';
 import { audioManager } from '../audioManager';
 
+const _v1 = new THREE.Vector3();
+const _v2 = new THREE.Vector3();
+const _vBullet = new THREE.Vector3();
+
 export function updateParticles(p: THREE.Points, limit: number) {
     const pos = p.geometry.attributes.position.array as Float32Array;
     const vel = p.geometry.attributes.velocity.array as Float32Array;
@@ -58,9 +62,11 @@ export function updateShell(shell: THREE.Mesh, vel: THREE.Vector3, time: number,
             shell.userData.landedAt = null;
         }
 
-        // Keep shell on table - clamp position instead of letting it fall
-        shell.position.x = Math.max(-10, Math.min(10, shell.position.x));
-        shell.position.z = Math.max(-8, Math.min(8, shell.position.z));
+        // Keep shell on table - clamp position instead of letting it fall (GC Optimization)
+        if (shell.position.y < -0.5) {
+            shell.position.x = Math.max(-10, Math.min(10, shell.position.x));
+            shell.position.z = Math.max(-8, Math.min(8, shell.position.z));
+        }
 
         // Despawn only if fallen through floor somehow
         if (shell.position.y < -5) {
@@ -74,9 +80,13 @@ export function updateBullet(bullet: THREE.Mesh, dt: number) {
     if (bullet.visible) {
         const speed = 5.0;
         const moveDist = speed * (dt / 0.0166);
-        const dir = bullet.userData.velocity;
-        if (dir) bullet.position.add(dir.clone().multiplyScalar(moveDist));
-        if (bullet.position.distanceTo(new THREE.Vector3(0, 0, 0)) > 60) bullet.visible = false;
+        const dir = bullet.userData.velocity as THREE.Vector3;
+        if (dir) {
+            // Optimization: avoid clone()
+            _vBullet.copy(dir).multiplyScalar(moveDist);
+            bullet.position.add(_vBullet);
+        }
+        if (bullet.position.distanceTo(_v1.set(0, 0, 0)) > 60) bullet.visible = false;
     }
 }
 
@@ -87,9 +97,6 @@ export function updateBlood(p: THREE.Points, dt: number) {
     let activeBlood = false;
     for (let i = 0; i < bPos.length / 3; i++) {
         const idx = i * 3;
-        // Our active check is y < 100 for update, but logic elsewhere spawns at y=5 +- offset
-        // Wait, previously update logic checked bPos[idx] < 100 which is X position. That is risky. 
-        // Let's use Y position check. Spawner sets Y approx 5. Dead sets Y = 9999.
         if (bPos[idx + 1] < 100) {
             activeBlood = true;
             bPos[idx] += bVel[idx] * timeScale;
@@ -109,7 +116,6 @@ export function updateSparks(p: THREE.Points, dt: number) {
     let activeSparks = false;
     for (let i = 0; i < sPosArr.length / 3; i++) {
         const idx = i * 3;
-        // Same fix for X check -> Y check
         if (sPosArr[idx + 1] < 100) {
             activeSparks = true;
             sPosArr[idx] += sVelArr[idx] * timeScale;
@@ -148,13 +154,11 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
 
             if (visibleItems.length > 0) {
                 const activeItem = visibleItems[0];
-                // Position light slightly above and in front of the item
                 items.itemLight.position.copy(activeItem.position);
                 items.itemLight.position.y += 2;
-                items.itemLight.position.z += 3; // Slightly toward camera
+                items.itemLight.position.z += 3;
 
-                // Stronger light for dealer items (far from camera)
-                const isDealerItem = activeItem.position.z < -8;
+                const isDealerItem = activeItem.position.z < -2; // Adjusted check for new positions
                 items.itemLight.intensity = isDealerItem ? 25 : 15;
                 items.itemLight.distance = isDealerItem ? 30 : 20;
             } else {
@@ -162,7 +166,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             }
         };
 
-        // Initialize user data and SYNC with current state to prevent ghost triggers
+        // Initialize user data
         if (scene.userData.lastDrink === undefined) scene.userData.lastDrink = animState.triggerDrink;
         if (scene.userData.lastHeal === undefined) scene.userData.lastHeal = animState.triggerHeal;
         if (scene.userData.lastSaw === undefined) scene.userData.lastSaw = animState.triggerSparks;
@@ -173,7 +177,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         if (scene.userData.lastInverter === undefined) scene.userData.lastInverter = animState.triggerInverter;
         if (scene.userData.lastAdrenaline === undefined) scene.userData.lastAdrenaline = animState.triggerAdrenaline;
 
-        // GLASS ANIMATION - Shortened for dealer
+        // GLASS ANIMATION
         if (animState.triggerGlass < scene.userData.lastGlass) scene.userData.lastGlass = animState.triggerGlass;
         if (animState.triggerGlass > scene.userData.lastGlass) {
             scene.userData.lastGlass = animState.triggerGlass;
@@ -183,7 +187,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         const glassTime = time - (scene.userData.glassStart || -999);
-        const glassDuration = isPlayerTurn ? 2.5 : 1.8; // Shorter for dealer
+        const glassDuration = isPlayerTurn ? 2.5 : 1.8;
         if (glassTime >= 0 && glassTime < glassDuration) {
             items.itemGlass.visible = true;
 
@@ -191,11 +195,9 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 if (glassTime < 0.5) {
                     const p = glassTime / 0.5;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    // FIXED: Moved closer to camera (z=6 instead of 10.5)
                     items.itemGlass.position.set(0.5 - ease * 0.3, -3 + ease * 4.5, 6);
                     items.itemGlass.rotation.set(0, 0, 0);
                 } else if (glassTime < 2.0) {
-                    // Hover & Search with wobble
                     const hover = Math.sin((glassTime - 0.5) * 3);
                     items.itemGlass.position.set(Math.sin(time) * 0.3, 1.5 + Math.cos(time * 2) * 0.1, 6);
                     items.itemGlass.rotation.z = hover * 0.1;
@@ -204,29 +206,26 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     items.itemGlass.position.y -= 0.15;
                 }
             } else {
-                // DEALER uses glass - Position at dealer's location (far from camera)
-                items.itemGlass.scale.setScalar(2.0); // reduced from 2.5
+                // DEALER uses glass - SMALLER Scale
+                items.itemGlass.scale.setScalar(1.3);
                 if (glassTime < 0.4) {
-                    // Rise at dealer position
                     const p = glassTime / 0.4;
-                    items.itemGlass.position.set(0, -1 + p * 6, -8); // From table Y=-1 to Y=5
+                    items.itemGlass.position.set(0, -1 + p * 6, -4.0);
                     items.itemGlass.rotation.set(-0.2, 0, 0);
                 } else if (glassTime < 1.5) {
-                    // Looking through glass
-                    items.itemGlass.position.set(0, 5 + Math.sin(glassTime * 3) * 0.1, -8);
+                    items.itemGlass.position.set(0, 5 + Math.sin(glassTime * 3) * 0.1, -4.0);
                     items.itemGlass.rotation.set(-0.3, Math.sin(glassTime * 2) * 0.1, 0);
                 } else {
-                    // Drop
                     const p = (glassTime - 1.5) / 0.3;
                     items.itemGlass.position.y = 5 - p * 4;
-                    items.itemGlass.position.z = -8; // Ensure drop stays at z=-8
+                    items.itemGlass.position.z = -4.0;
                     if (glassTime > 1.7) items.itemGlass.visible = false;
                 }
             }
         }
 
-        // BEER ANIMATION - Enhanced visibility and motion
-        if (animState.triggerDrink < scene.userData.lastDrink) scene.userData.lastDrink = animState.triggerDrink; // Reset check
+        // BEER ANIMATION
+        if (animState.triggerDrink < scene.userData.lastDrink) scene.userData.lastDrink = animState.triggerDrink;
         if (animState.triggerDrink > scene.userData.lastDrink) {
             scene.userData.lastDrink = animState.triggerDrink;
             scene.userData.drinkStart = time;
@@ -235,28 +234,23 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         const drinkTime = time - (scene.userData.drinkStart || -999);
         if (drinkTime >= 0 && drinkTime < 3.5) {
             items.itemBeer.visible = true;
-            // Make beer larger for better visibility
+            // Larger for player
             items.itemBeer.scale.setScalar(2.2);
 
             if (isPlayerTurn) {
-                if (drinkTime < 0.8) { // Lift - slower, more visible
+                if (drinkTime < 0.8) {
                     const p = drinkTime / 0.8;
                     const ease = 1 - Math.pow(1 - p, 3);
-                    // Closer to camera, more centered
                     items.itemBeer.position.set(0.3, -3 + ease * 4.5, 5);
-                    // Tilt toward camera (positive X rotation)
                     items.itemBeer.rotation.set(ease * 0.4, 0, ease * 0.1);
-                } else if (drinkTime < 2.5) { // Drink - longer duration
+                } else if (drinkTime < 2.5) {
                     const sipPhase = (drinkTime - 0.8) / 1.7;
                     const sipP = Math.min(1, sipPhase);
-                    // Keep can near face, visible position
                     items.itemBeer.position.set(0.3, 1.5 + Math.sin(drinkTime * 3) * 0.05, 5);
-                    // TILT TOWARD CAMERA - positive X rotation tips top toward camera
                     const tiltAmount = 0.4 + Math.sin(sipPhase * Math.PI) * 1.0;
                     items.itemBeer.rotation.set(tiltAmount, 0, 0.1);
-                    // Subtle head tilt follows drink
                     camera.rotation.x = -0.15 * sipP;
-                } else { // Drop - faster exit
+                } else {
                     const p = (drinkTime - 2.5) / 1.0;
                     const timeScale = dt / 0.0166;
                     items.itemBeer.position.y -= p * 0.8 * timeScale;
@@ -266,30 +260,27 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     camera.rotation.x *= Math.pow(0.85, timeScale);
                 }
             } else {
-                // DEALER drinking beer - Position at dealer's location (far from camera)
-                items.itemBeer.scale.setScalar(2.0); // reduced from 2.5
+                // DEALER drinking beer - SMALLER Scale
+                items.itemBeer.scale.setScalar(1.3);
                 if (drinkTime < 0.5) {
-                    // Beer rises at dealer position
                     const p = drinkTime / 0.5;
-                    items.itemBeer.position.set(0.5, -1 + p * 6, -8);
-                    items.itemBeer.rotation.set(-0.3, 0, 0); // Tilt toward dealer
+                    items.itemBeer.position.set(0.5, -1 + p * 6, -4.0);
+                    items.itemBeer.rotation.set(-0.3, 0, 0);
                 } else if (drinkTime < 2.5) {
-                    // Drinking motion - tilt away from camera (negative X)
                     const tiltP = Math.min(1, (drinkTime - 0.5) / 0.5);
-                    items.itemBeer.position.set(0.5, 5 + Math.sin(drinkTime) * 0.2, -8);
-                    items.itemBeer.rotation.set(-0.3 - tiltP * 1.2, 0, 0); // Negative = away from camera
+                    items.itemBeer.position.set(0.5, 5 + Math.sin(drinkTime) * 0.2, -4.0);
+                    items.itemBeer.rotation.set(-0.3 - tiltP * 1.2, 0, 0);
                 } else {
-                    // Drop - fall down
                     const p = (drinkTime - 2.5) / 1.0;
                     items.itemBeer.position.y = 5 - p * 4;
-                    items.itemBeer.position.z = -8;
+                    items.itemBeer.position.z = -4.0;
                     items.itemBeer.rotation.z += 0.15;
                     if (drinkTime > 3.2) items.itemBeer.visible = false;
                 }
             }
         }
 
-        // RACK ANIMATION (Shell ejection handled in ThreeScene.tsx)
+        // RACK ANIMATION
         if (animState.triggerRack < scene.userData.lastRack) scene.userData.lastRack = animState.triggerRack;
         if (animState.triggerRack > scene.userData.lastRack) {
             scene.userData.lastRack = animState.triggerRack;
@@ -301,7 +292,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             context.gunGroup.rotation.z += (rackTime < 0.1) ? 0.1 : -0.05;
         }
 
-        // CIGARETTE - SMOKE & GLOW
+        // CIGARETTE
         if (animState.triggerHeal < scene.userData.lastHeal) scene.userData.lastHeal = animState.triggerHeal;
         if (animState.triggerHeal > scene.userData.lastHeal) {
             scene.userData.lastHeal = animState.triggerHeal;
@@ -312,24 +303,20 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         if (healTime >= 0 && healTime < 4.0) {
             items.itemCigs.visible = true;
             if (isPlayerTurn) {
-                // Make cigarette larger and closer to face
                 items.itemCigs.scale.setScalar(2.0);
                 if (healTime < 1.0) {
                     const p = healTime;
                     items.itemCigs.position.set(0.8 - p * 0.3, -1 + p * 2.5, 4);
                     items.itemCigs.rotation.set(0.2, -0.3, 0);
                 } else if (healTime < 3.0) {
-                    // Smoking phase - near mouth level, close to camera
                     items.itemCigs.position.set(0.5, 1.5 + Math.sin(time) * 0.05, 4);
                     items.itemCigs.rotation.set(0.3, -0.2, 0.1);
 
-                    // Glow
                     const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
                     if (tip) {
                         const intensity = (Math.sin(time * 20) + 1) * 0.5;
                         (tip.material as THREE.MeshBasicMaterial).color.setHSL(0.04, 1.0, 0.3 + intensity * 0.7);
                     }
-                    // Smoke
                     const smokePool = items.itemCigs.getObjectByName("SMOKE_POOL");
                     if (smokePool) {
                         smokePool.children.forEach((p, i) => {
@@ -347,21 +334,19 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     }
                     camera.rotation.z = Math.sin(time) * 0.005;
                 } else {
-                    // Flick away
                     const timeScale = dt / 0.0166;
                     items.itemCigs.position.x += 0.15 * timeScale;
                     items.itemCigs.position.y -= 0.15 * timeScale;
                     items.itemCigs.rotation.z -= 0.3 * timeScale;
                 }
             } else {
-                // DEALER SMOKING
                 items.itemCigs.scale.setScalar(2.0);
                 if (healTime < 0.5) {
                     const p = healTime / 0.5;
-                    items.itemCigs.position.set(0.3, -1 + p * 6, -8); // Rise from table
+                    items.itemCigs.position.set(0.3, -1 + p * 6, -4.0);
                     items.itemCigs.rotation.set(0, 0.2, 0.3);
                 } else if (healTime < 3.0) {
-                    items.itemCigs.position.set(0.3, 5 + Math.sin(healTime * 2) * 0.1, -8);
+                    items.itemCigs.position.set(0.3, 5 + Math.sin(healTime * 2) * 0.1, -4.0);
                     items.itemCigs.rotation.set(0, 0.2, 0.3);
 
                     const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
@@ -388,7 +373,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 } else {
                     const p = (healTime - 3.0) / 1.0;
                     items.itemCigs.position.y = 5 - p * 4;
-                    items.itemCigs.position.z = -8;
+                    items.itemCigs.position.z = -4.0;
                     items.itemCigs.rotation.z += 0.1;
                     if (healTime > 3.5) {
                         items.itemCigs.visible = false;
@@ -410,12 +395,13 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             const sawCycle = Math.sin(time * 30);
 
             if (isPlayerTurn) {
-                items.itemSaw.position.add(new THREE.Vector3(0.5, 0.5, 2.0));
-                items.itemSaw.position.x += sawCycle * 0.2;
+                // Optimization: reused vector
+                _v1.set(0.5 + sawCycle * 0.2, 0.5, 2.0);
+                items.itemSaw.position.add(_v1);
                 items.itemSaw.rotation.set(Math.PI / 2, 0, Math.PI / 2);
             } else {
-                items.itemSaw.position.add(new THREE.Vector3(-0.5, 0.5, -2.0));
-                items.itemSaw.position.x += sawCycle * 0.2;
+                _v1.set(-0.5 + sawCycle * 0.2, 0.5, -2.0);
+                items.itemSaw.position.add(_v1);
                 items.itemSaw.rotation.set(Math.PI / 2, 0, -Math.PI / 2);
             }
         } else {
@@ -433,19 +419,18 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
 
         if (cuffTime < 1.8) {
             items.itemCuffs.visible = true;
-            let start, end;
             if (isPlayerTurn) {
-                start = new THREE.Vector3(2, -2, 10);
-                end = new THREE.Vector3(0, 2, -8);
+                _v1.set(2, -2, 10); // Start
+                _v2.set(0, 2, -8);  // End
             } else {
-                start = new THREE.Vector3(0, -1, -8); // From dealer table
-                end = new THREE.Vector3(0, 0, 8);
+                _v1.set(0, -1, -4.0); // Start
+                _v2.set(0, 0, 8); // End
             }
 
             if (cuffTime < 1.2) {
                 const p = cuffTime / 1.2;
                 const ease = 1 - Math.pow(1 - p, 2);
-                items.itemCuffs.position.lerpVectors(start, end, ease);
+                items.itemCuffs.position.lerpVectors(_v1, _v2, ease);
                 items.itemCuffs.position.y += Math.sin(ease * Math.PI) * 3.0;
                 const scalePulse = 1.0 + Math.sin(ease * Math.PI) * 0.5;
                 items.itemCuffs.scale.setScalar(isPlayerTurn ? 1.0 : scalePulse * 1.3);
@@ -500,11 +485,11 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemPhone.scale.setScalar(2.5);
                 if (phoneTime < 0.5) {
                     const p = phoneTime / 0.5;
-                    items.itemPhone.position.set(0, -1 + p * 7, -14); // Rise from table
+                    items.itemPhone.position.set(0, -1 + p * 7, -4.0); // Z = -4
                     items.itemPhone.rotation.set(0.5, 0, 0);
                 } else if (phoneTime < 2.5) {
                     const floatY = Math.sin(phoneTime * 2) * 0.1;
-                    items.itemPhone.position.set(0, 6 + floatY, -8);
+                    items.itemPhone.position.set(0, 6 + floatY, -4.0);
                     items.itemPhone.rotation.set(0.4, 0, 0);
                     if (screen) {
                         const mat = screen.material as THREE.MeshBasicMaterial;
@@ -516,7 +501,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 } else {
                     const p = (phoneTime - 2.5) / 1.0;
                     items.itemPhone.position.y = 6 - p * 5;
-                    items.itemPhone.position.z = -8;
+                    items.itemPhone.position.z = -4.0;
                     items.itemPhone.rotation.z += 0.1;
                     if (phoneTime > 3.2) items.itemPhone.visible = false;
                 }
@@ -559,11 +544,11 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemInverter.scale.setScalar(2.0);
                 if (invTime < 0.5) {
                     const p = invTime / 0.5;
-                    items.itemInverter.position.set(0, -1 + p * 7, -8); // Rise from table
+                    items.itemInverter.position.set(0, -1 + p * 7, -4.0); // Z = -4
                     items.itemInverter.rotation.y = invTime * 8;
                 } else if (invTime < 1.8) {
                     const spinSpeed = 0.4;
-                    items.itemInverter.position.set(0, 6 + Math.sin(invTime * 8) * 0.2, -8);
+                    items.itemInverter.position.set(0, 6 + Math.sin(invTime * 8) * 0.2, -4.0);
                     items.itemInverter.rotation.y += spinSpeed;
                     if (invTime > 0.8 && invTime < 1.5) {
                         scene.userData.cameraShake = 0.15;
@@ -571,7 +556,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 } else {
                     const p = (invTime - 1.8) / 0.7;
                     items.itemInverter.position.y = 6 - p * 6;
-                    items.itemInverter.position.z = -8;
+                    items.itemInverter.position.z = -4.0;
                     items.itemInverter.rotation.y += 0.1 * (1 - p);
                     if (invTime > 2.3) items.itemInverter.visible = false;
                 }
@@ -613,16 +598,16 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemAdrenaline.scale.setScalar(2.0);
                 if (adrTime < 0.5) {
                     const p = adrTime / 0.5;
-                    items.itemAdrenaline.position.set(0.5, -1 + p * 7, -8); // Rise from table
+                    items.itemAdrenaline.position.set(0.5, -1 + p * 7, -4.0); // Z = -4
                     items.itemAdrenaline.rotation.set(0.3, 0, 0.3);
                 } else if (adrTime < 1.5) {
-                    items.itemAdrenaline.position.set(0.5, 6 + Math.sin(adrTime * 3) * 0.1, -8);
+                    items.itemAdrenaline.position.set(0.5, 6 + Math.sin(adrTime * 3) * 0.1, -4.0);
                     items.itemAdrenaline.rotation.z = Math.PI / 2;
                     if (adrTime > 0.8) scene.userData.cameraShake = 0.12;
                 } else {
                     const p = (adrTime - 1.5) / 1.0;
                     items.itemAdrenaline.position.y = 6 - p * 6;
-                    items.itemAdrenaline.position.z = -8;
+                    items.itemAdrenaline.position.z = -4.0;
                     items.itemAdrenaline.rotation.z = Math.PI / 2 + p * 0.3;
                     if (adrTime > 2.2) items.itemAdrenaline.visible = false;
                 }

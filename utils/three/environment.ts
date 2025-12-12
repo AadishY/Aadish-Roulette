@@ -673,9 +673,9 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     const createFogSprite = () => {
         const spriteMat = new THREE.SpriteMaterial({
             map: createDirtySkinTexture(), // Recycling texture for noise
-            color: 0x1a1a1a, // Dark Grey
+            color: 0x121212, // Lighter Dark Grey
             transparent: true,
-            opacity: 0.3,
+            opacity: 0.25,
             blending: THREE.NormalBlending
         });
         const sprite = new THREE.Sprite(spriteMat);

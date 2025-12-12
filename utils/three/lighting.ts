@@ -5,8 +5,8 @@ export const setupLighting = (scene: THREE.Scene) => {
     // BUCKSHOT ROULETTE STYLE LIGHTING - Dark Industrial Bunker
     // ═══════════════════════════════════════════════════════════════
 
-    // Slight fog for depth, denser with slightly darker color
-    scene.fog = new THREE.FogExp2(0x080606, 0.025); // Denser fog
+    // Slight fog for depth, lighter density as requested
+    scene.fog = new THREE.FogExp2(0x121212, 0.015); // Reduced density
 
     // Strong ambient but slightly reduced for contrast
     const ambient = new THREE.AmbientLight(0x444040, 0.3); // Darker ambient

@@ -255,38 +255,43 @@ export const createDealerModel = (scene: THREE.Scene) => {
     dealerGroup.add(rUpperArm);
 
     // Forearms - Reaching forward onto the table
+    // Forearms - Reaching forward onto the table
     const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.5);
 
     const lForearm = new THREE.Mesh(forearmGeo, suitMat);
-    // Adjust to reach from shoulder to table
-    lForearm.position.set(-2.8, -4.0, 2.5);
+    // Adjusted to reach from shoulder to table (WIDER STANCE)
+    lForearm.position.set(-3.8, -4.0, 2.5);
     lForearm.rotation.x = -Math.PI / 2 + 0.4; // Tilted down towards table
-    lForearm.rotation.z = 0.4; // Angled inward
+    lForearm.rotation.z = -0.2; // Angled outward
     lForearm.castShadow = true;
+    lForearm.name = 'LEFT_FOREARM';
     dealerGroup.add(lForearm);
 
     const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(2.8, -4.0, 2.5);
+    rForearm.position.set(3.8, -4.0, 2.5);
     rForearm.rotation.x = -Math.PI / 2 + 0.4;
-    rForearm.rotation.z = -0.4; // Angled inward
+    rForearm.rotation.z = 0.2; // Angled outward
     rForearm.castShadow = true;
+    rForearm.name = 'RIGHT_FOREARM';
     dealerGroup.add(rForearm);
 
     // Hands - Resting on table in front of dealer
     const handGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
 
     const lHand = new THREE.Mesh(handGeo, skullMat);
-    lHand.position.set(-1.8, -4.8, 4.2); // Near center table edge
+    lHand.position.set(-3.5, -4.8, 4.2); // Wider
     lHand.rotation.x = 0.1;
     lHand.rotation.z = 0.2;
     lHand.castShadow = true;
+    lHand.name = 'LEFT_HAND';
     dealerGroup.add(lHand);
 
     const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(1.8, -4.8, 4.2);
+    rHand.position.set(3.5, -4.8, 4.2); // Wider
     rHand.rotation.x = 0.1;
     rHand.rotation.z = -0.2;
     rHand.castShadow = true;
+    rHand.name = 'RIGHT_HAND';
     dealerGroup.add(rHand);
 
     // Fingers - Sprawled on table
