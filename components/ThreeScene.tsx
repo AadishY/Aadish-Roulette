@@ -522,7 +522,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                     if (mesh.material) (mesh.material as THREE.Material).opacity = 0;
                 });
                 muzzleFlash.visible = false;
-                muzzleLight.intensity = 0; roomRedLight.intensity = 0;
+                muzzleLight.intensity = 0;
+                // Maintain ambient red glow
+                roomRedLight.intensity = 3.0 * (propsRef.current.settings.brightness || 1.0);
             }
         } else {
             let isVis = false;
@@ -542,7 +544,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 muzzleFlash.visible = isVis;
             }
 
-            roomRedLight.intensity = THREE.MathUtils.lerp(roomRedLight.intensity, 0, 0.2);
+            // Return to ambient red glow
+            const targetRed = 3.0 * (propsRef.current.settings.brightness || 1.0);
+            roomRedLight.intensity = THREE.MathUtils.lerp(roomRedLight.intensity, targetRed, 0.2);
             if (!isVis && muzzleFlash.visible) muzzleFlash.visible = false;
         }
     }, [animState.muzzleFlashIntensity, animState.isLiveShot]);

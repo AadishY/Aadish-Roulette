@@ -5,33 +5,33 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.fog = new THREE.FogExp2(0x05070a, 0.035);
 
     // Ultra-low ambient to force reliance on practical lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.15);
+    const ambient = new THREE.AmbientLight(0x442222, 0.2); // Reddish ambient
     scene.add(ambient);
 
     // Main Hanging Bulb - Warm Tungsten, flickering intensity managed in sceneLogic
-    const bulbLight = new THREE.PointLight(0xffaa55, 45.0, 60);
-    bulbLight.position.set(0, 9, 0);
+    const bulbLight = new THREE.PointLight(0xffaa55, 35.0, 50);
+    bulbLight.position.set(0, 8, 0); // Slightly lower
     bulbLight.castShadow = true;
-    bulbLight.shadow.bias = -0.00005;
-    bulbLight.shadow.mapSize.width = 2048; // Sharper shadows
-    bulbLight.shadow.mapSize.height = 2048;
-    bulbLight.shadow.radius = 2; // Soft edges
+    bulbLight.shadow.bias = -0.0001;
+    bulbLight.shadow.mapSize.width = 1024;
+    bulbLight.shadow.mapSize.height = 1024;
+    bulbLight.shadow.radius = 4; // Softer shadows
     scene.add(bulbLight);
 
     // Cool Blue Fill - Simulates ambient moon/city light from vents
-    const playerFill = new THREE.DirectionalLight(0x445577, 0.5);
+    const playerFill = new THREE.DirectionalLight(0x223344, 0.3);
     playerFill.position.set(-5, 2, 10);
     scene.add(playerFill);
 
     // Cinematic Rim Light (Warm) - Highlights player/dealer edges
-    const bgRim = new THREE.DirectionalLight(0xff9966, 2.5);
+    const bgRim = new THREE.DirectionalLight(0xff5533, 2.0); // Redder
     bgRim.position.set(15, 5, -20);
     bgRim.target.position.set(0, 4, 0);
     scene.add(bgRim);
     scene.add(bgRim.target);
 
     // Cold Rim Light (Opposite side)
-    const coldRim = new THREE.SpotLight(0x4488ff, 8);
+    const coldRim = new THREE.SpotLight(0x334466, 5);
     coldRim.position.set(-15, 8, -20);
     coldRim.target.position.set(0, 4, 0);
     coldRim.angle = 0.6;
@@ -40,33 +40,33 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(coldRim.target);
 
     // Dealer Rim Light - Strong Silhouette
-    const dealerRim = new THREE.SpotLight(0xaaccff, 15);
-    dealerRim.position.set(0, 10, -25);
+    const dealerRim = new THREE.SpotLight(0xffaa88, 10);
+    dealerRim.position.set(0, 10, -28);
     dealerRim.target.position.set(0, 5, -14);
-    dealerRim.angle = 0.5;
-    dealerRim.penumbra = 1;
+    dealerRim.angle = 0.6;
+    dealerRim.penumbra = 0.8;
     scene.add(dealerRim);
     scene.add(dealerRim.target);
 
     // Table Spotlight - Focused and bright
-    const gunSpot = new THREE.SpotLight(0xffddaa, 1200);
-    gunSpot.position.set(0, 14, 2);
-    gunSpot.target.position.set(0, 0, 4);
-    gunSpot.angle = 0.45;
-    gunSpot.penumbra = 0.3;
+    const gunSpot = new THREE.SpotLight(0xffddaa, 800);
+    gunSpot.position.set(0, 12, 1);
+    gunSpot.target.position.set(0, 0, 3);
+    gunSpot.angle = 0.6;
+    gunSpot.penumbra = 0.5;
     gunSpot.castShadow = true;
     scene.add(gunSpot);
     scene.add(gunSpot.target);
 
     // General Rim
-    const rimLight = new THREE.SpotLight(0x334455, 4);
+    const rimLight = new THREE.SpotLight(0x442222, 5);
     rimLight.position.set(0, 10, -25);
     rimLight.lookAt(0, 5, -14);
     scene.add(rimLight);
 
     // Bounce Light from Table Surface (Fake GI)
-    const tableGlow = new THREE.PointLight(0x996633, 1.0, 10);
-    tableGlow.position.set(0, 0.5, 0);
+    const tableGlow = new THREE.PointLight(0x557755, 0.5, 8); // Greenish bounce
+    tableGlow.position.set(0, 2, 0);
     scene.add(tableGlow);
 
     // Dynamic Lights (Muzzle & Room Red) - Initialized to 0
@@ -78,7 +78,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(roomRedLight);
 
     // Spooky Under-lighting for Dealer face
-    const underLight = new THREE.PointLight(0x22ffaa, 1.0, 8);
+    const underLight = new THREE.PointLight(0xff3333, 0.8, 6);
     underLight.position.set(0, -3, -11);
     scene.add(underLight);
 
@@ -139,8 +139,31 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     bulbGroup.name = "BULB_GROUP";
     scene.add(bulbGroup);
 
-    // Wire Geometry
-    const wireGeo = new THREE.CylinderGeometry(0.02, 0.02, 6);
+    // === HANGING WIRES (Procedural) ===
+    const createWire = (start: THREE.Vector3, end: THREE.Vector3, slack: number, segments: number) => {
+        const points = [];
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const x = THREE.MathUtils.lerp(start.x, end.x, t);
+            const z = THREE.MathUtils.lerp(start.z, end.z, t);
+            // Parabola for slack
+            const y = THREE.MathUtils.lerp(start.y, end.y, t) - (Math.sin(t * Math.PI) * slack);
+            points.push(new THREE.Vector3(x, y, z));
+        }
+        const curve = new THREE.CatmullRomCurve3(points);
+        const geo = new THREE.TubeGeometry(curve, segments, 0.05, 6, false);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+        return new THREE.Mesh(geo, mat);
+    };
+
+    // Add multiple wires hanging from ceiling
+    scene.add(createWire(new THREE.Vector3(-10, 12, -5), new THREE.Vector3(10, 12, -5), 2.5, 10));
+    scene.add(createWire(new THREE.Vector3(-15, 12, -10), new THREE.Vector3(5, 14, -15), 3.0, 10));
+    scene.add(createWire(new THREE.Vector3(-5, 14, -20), new THREE.Vector3(15, 12, -18), 2.0, 10));
+    scene.add(createWire(new THREE.Vector3(0, 14, 5), new THREE.Vector3(0, 10, 0), 1.0, 8)); // Near bulb
+
+    // Wire Geometry (Simple straight one for bulb group)
+    const wireGeo = new THREE.CylinderGeometry(0.03, 0.03, 6);
     const wire = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
     wire.position.set(0, -3, 0);
 
@@ -263,6 +286,36 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     screen.position.set(-10, -5, -20.9); screen.rotation.y = 0.4;
     scene.add(screen);
 
+    // === BACK WALL SPEAKERS/TECH (From Reference) ===
+    const createSpeaker = (x: number, y: number, z: number, ry: number) => {
+        const group = new THREE.Group();
+        group.position.set(x, y, z);
+        group.rotation.y = ry;
+
+        // Cabinet
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 3), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+        group.add(cab);
+
+        // Speaker Cone
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(1.5, 0.5, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+        cone.rotation.x = -Math.PI / 2;
+        cone.position.z = 1.5;
+        cone.position.y = -1;
+        group.add(cone);
+
+        // Tweeter
+        const tweet = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.2), new THREE.MeshStandardMaterial({ color: 0x050505 }));
+        tweet.rotation.x = Math.PI / 2;
+        tweet.position.set(0, 1.5, 1.5);
+        group.add(tweet);
+
+        scene.add(group);
+    };
+
+    createSpeaker(-12, 1, -26, 0.4);
+    createSpeaker(12, 1, -26, -0.4);
+
+
     // --- CAGE / FENCE BACKGROUND ---
     const fenceGroup = new THREE.Group();
     const wireMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7, metalness: 0.5 });
@@ -299,6 +352,56 @@ function generateGlowTexture() {
     return texture;
 }
 
+function createTableTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024; canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return new THREE.CanvasTexture(canvas);
+
+    // Background - Dirty Green
+    ctx.fillStyle = '#2b422a';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Noise/Grunge
+    for (let i = 0; i < 20000; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#203020' : '#355030';
+        ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
+    }
+
+    // Grid Lines
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.4)';
+    ctx.lineWidth = 4;
+
+    // Center Line
+    ctx.beginPath();
+    ctx.moveTo(512, 0); ctx.lineTo(512, 1024);
+    ctx.stroke();
+
+    // Center Circle
+    ctx.beginPath();
+    ctx.arc(512, 512, 100, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Grid Boxes (roughly matching the UI slots)
+    // Left Side (Player Items?)
+    ctx.strokeRect(100, 600, 300, 300);
+    ctx.strokeRect(100, 100, 300, 300);
+
+    // Right Side
+    ctx.strokeRect(624, 600, 300, 300);
+    ctx.strokeRect(624, 100, 300, 300);
+
+    // Item Slots (Small boxes)
+    for (let i = 0; i < 4; i++) {
+        ctx.strokeRect(40 + i * 80, 900, 60, 60); // Player inventory hint?
+        ctx.strokeRect(664 + i * 80, 900, 60, 60);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    return tex;
+}
+
 export const createDust = (scene: THREE.Scene, isMobile: boolean = false) => {
     const particleCount = isMobile ? 5 : 20;
     const geometry = new THREE.BufferGeometry();
@@ -333,8 +436,16 @@ export const createDust = (scene: THREE.Scene, isMobile: boolean = false) => {
 export const createTable = (scene: THREE.Scene) => {
     const tableGroup = new THREE.Group();
 
-    // Table Top - Grungy, Industrial
-    const tableMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.9, metalness: 0.3 });
+    // Generate Procedural Table Texture (Buckshot Roulette Style)
+    const tableTex = createTableTexture();
+
+    // Table Top - Grungy Green Felt
+    const tableMat = new THREE.MeshStandardMaterial({
+        map: tableTex,
+        color: 0x888888, // Tint the texture
+        roughness: 0.9,
+        metalness: 0.1
+    });
     const top = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 22), tableMat);
     top.position.y = -1; top.receiveShadow = true; top.castShadow = true;
     tableGroup.add(top);
