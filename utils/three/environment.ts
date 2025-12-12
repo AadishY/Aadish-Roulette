@@ -546,9 +546,9 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     const boxGeo = new THREE.BoxGeometry(3, 3, 3);
     const boxMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.85 });
 
-    // === AMP RACK (Left Side - pushed back) ===
+    // === AMP RACK (Left Side - visible) ===
     const rackGroup = new THREE.Group();
-    rackGroup.position.set(-18, -1, -15);
+    rackGroup.position.set(-10, -1, -12); // Moved closer (was -18)
     rackGroup.rotation.y = 0.5;
 
     const rackFrame = new THREE.Mesh(new THREE.BoxGeometry(5, 8, 4), new THREE.MeshStandardMaterial({ color: 0x353030 }));
@@ -583,9 +583,9 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     rackGroup.add(sub);
     scene.add(rackGroup);
 
-    // === EXTRA LEFT PROPS ===
+    // === EXTRA LEFT PROPS (Visible) ===
     const leftStack = new THREE.Group();
-    leftStack.position.set(-22, -4, -8);
+    leftStack.position.set(-14, -4, -8); // Moved closer (was -22)
     leftStack.rotation.y = 0.8;
     const box1 = new THREE.Mesh(new THREE.BoxGeometry(3, 4, 3), new THREE.MeshStandardMaterial({ color: 0x4a3a2a }));
     const box2 = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), new THREE.MeshStandardMaterial({ color: 0x3a2a1a }));
@@ -594,9 +594,9 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     scene.add(leftStack);
 
 
-    // === RIGHT GENERATOR STACK ===
+    // === RIGHT GENERATOR STACK (Visible) ===
     const genGroup = new THREE.Group();
-    genGroup.position.set(20, -3, -10);
+    genGroup.position.set(12, -3, -10); // Moved closer (was 20)
     genGroup.rotation.y = -0.6;
 
     const genBase = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 4), new THREE.MeshStandardMaterial({ color: 0x334433 }));
@@ -612,12 +612,30 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     }
     scene.add(genGroup);
 
+    // Ceiling Fan (Industrial)
+    const fanGroup = new THREE.Group();
+    fanGroup.position.set(0, 10, -5);
+    const bladeGeo = new THREE.BoxGeometry(12, 0.2, 1);
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const blade1 = new THREE.Mesh(bladeGeo, bladeMat);
+    const blade2 = new THREE.Mesh(bladeGeo, bladeMat);
+    blade2.rotation.y = Math.PI / 2;
+    fanGroup.add(blade1); fanGroup.add(blade2);
+    scene.add(fanGroup);
+
+    // Animate fan (simple)
+    const animateFan = () => {
+        fanGroup.rotation.y += 0.01;
+        requestAnimationFrame(animateFan);
+    };
+    animateFan();
+
     // Random Cables hanging
     const cableCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-15, 15, -5),
-        new THREE.Vector3(-5, 9, -5),
-        new THREE.Vector3(5, 12, -5),
-        new THREE.Vector3(15, 15, -5),
+        new THREE.Vector3(-10, 15, -5),
+        new THREE.Vector3(-4, 9, -5),
+        new THREE.Vector3(4, 12, -5),
+        new THREE.Vector3(10, 15, -5),
     ]);
     const cableGeo = new THREE.TubeGeometry(cableCurve, 20, 0.1, 8, false);
     const cableMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
@@ -950,7 +968,7 @@ export const createTable = (scene: THREE.Scene) => {
         emissiveIntensity: 0.15
     });
 
-    const top = new THREE.Mesh(new THREE.BoxGeometry(26, 0.6, 22), tableMat);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(20, 0.6, 18), tableMat);
     top.position.y = -1;
     top.receiveShadow = true;
     top.castShadow = true;
@@ -1014,25 +1032,25 @@ export const createTable = (scene: THREE.Scene) => {
     const rimHeight = 1.2;
     const rimThickness = 0.8;
 
-    // Front/Back rims
-    const rimF = new THREE.Mesh(new THREE.BoxGeometry(27, rimHeight, rimThickness), rimMat);
-    rimF.position.set(0, -0.6, 11.4);
+    // Front/Back rims - shorter width (19)
+    const rimF = new THREE.Mesh(new THREE.BoxGeometry(19, rimHeight, rimThickness), rimMat);
+    rimF.position.set(0, -0.6, 7.4); // Adjusted Z
     rimF.castShadow = true;
     tableGroup.add(rimF);
 
-    const rimB = new THREE.Mesh(new THREE.BoxGeometry(27, rimHeight, rimThickness), rimMat);
-    rimB.position.set(0, -0.6, -11.4);
+    const rimB = new THREE.Mesh(new THREE.BoxGeometry(19, rimHeight, rimThickness), rimMat);
+    rimB.position.set(0, -0.6, -7.4); // Adjusted Z
     rimB.castShadow = true;
     tableGroup.add(rimB);
 
-    // Left/Right rims
-    const rimL = new THREE.Mesh(new THREE.BoxGeometry(rimThickness, rimHeight, 22), rimMat);
-    rimL.position.set(-13.5, -0.6, 0);
+    // Left/Right rims - shorter length (14)
+    const rimL = new THREE.Mesh(new THREE.BoxGeometry(rimThickness, rimHeight, 14), rimMat);
+    rimL.position.set(-9.4, -0.6, 0); // Adjusted X
     rimL.castShadow = true;
     tableGroup.add(rimL);
 
-    const rimR = new THREE.Mesh(new THREE.BoxGeometry(rimThickness, rimHeight, 22), rimMat);
-    rimR.position.set(13.5, -0.6, 0);
+    const rimR = new THREE.Mesh(new THREE.BoxGeometry(rimThickness, rimHeight, 14), rimMat);
+    rimR.position.set(9.4, -0.6, 0); // Adjusted X
     rimR.castShadow = true;
     tableGroup.add(rimR);
 
@@ -1049,10 +1067,10 @@ export const createTable = (scene: THREE.Scene) => {
     // Chunky square legs
     const legGeo = new THREE.BoxGeometry(1.2, 8, 1.2);
     const legPositions = [
-        [-12, -5, -10],
-        [12, -5, -10],
-        [-12, -5, 10],
-        [12, -5, 10]
+        [-8, -5, -6], // Adjusted leg positions
+        [8, -5, -6],
+        [-8, -5, 6],
+        [8, -5, 6]
     ];
 
     legPositions.forEach(pos => {

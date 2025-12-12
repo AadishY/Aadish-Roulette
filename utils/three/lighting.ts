@@ -160,8 +160,8 @@ export const setupLighting = (scene: THREE.Scene) => {
     const hemiLight = new THREE.HemisphereLight(0x443333, 0x221111, 0.6);
     scene.add(hemiLight);
 
-    // Background fill - Reduced to not washout
-    const deepBgLight = new THREE.PointLight(0x445566, 30, 100);
+    // Background fill - Stronger for props
+    const deepBgLight = new THREE.PointLight(0x445566, 40, 100);
     deepBgLight.position.set(0, 12, -15);
     scene.add(deepBgLight);
 
@@ -191,13 +191,22 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(wallWash.target);
 
     // Side wall fill - subtle
-    const leftWallLight = new THREE.PointLight(0x665544, 15, 40);
+    const leftWallLight = new THREE.PointLight(0x665544, 20, 40);
     leftWallLight.position.set(-15, 8, -8);
     scene.add(leftWallLight);
 
-    const rightWallLight = new THREE.PointLight(0x445566, 15, 40);
+    const rightWallLight = new THREE.PointLight(0x445566, 20, 40);
     rightWallLight.position.set(15, 8, -8);
     scene.add(rightWallLight);
+
+    // Dedicated Right Generator Spot
+    const genSpot = new THREE.SpotLight(0xaaccff, 50);
+    genSpot.position.set(15, 10, 0);
+    genSpot.target.position.set(12, -3, -10);
+    genSpot.angle = 0.5;
+    genSpot.penumbra = 1;
+    scene.add(genSpot);
+    scene.add(genSpot.target);
 
     // Camera fill - minimal
     const cameraFill = new THREE.PointLight(0x443333, 10, 40);
@@ -216,6 +225,6 @@ export const setupLighting = (scene: THREE.Scene) => {
         bgRim,
         dealerRim,
         underLight,
-        mainSpotlight // Export for flickering
+        mainSpotlight
     };
 };

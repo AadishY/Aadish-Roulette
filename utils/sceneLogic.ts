@@ -231,18 +231,19 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     }
 
     // Dealer Animation - Enhanced with better drop/recovery
-    let dealerTargetY = dealerGroup.userData.targetY ?? (Math.sin(time) * 0.05);
+    const baseY = 3.0;
+    let dealerTargetY = dealerGroup.userData.targetY ?? (baseY + Math.sin(time) * 0.05);
 
     // DEALER RECOVERY ANIMATION
     if (animState.dealerRecovering && !animState.dealerDropping) {
         const wobble = Math.sin(time * 4) * 0.15;
-        dealerTargetY = wobble;
+        // dealerTargetY = wobble; // OLD
 
         if (!scene.userData.dealerRecoveryStart) {
             scene.userData.dealerRecoveryStart = time;
         }
         const recoveryProgress = Math.min(1, (time - scene.userData.dealerRecoveryStart) / 1.5);
-        dealerTargetY = wobble * (1 - recoveryProgress);
+        dealerTargetY = baseY + wobble * (1 - recoveryProgress);
     } else if (animState.dealerDropping) {
         scene.userData.dealerRecoveryStart = null;
     } else {

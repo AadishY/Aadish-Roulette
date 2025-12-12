@@ -63,25 +63,26 @@ export const createDealerModel = (scene: THREE.Scene) => {
 
     // === HEAD ===
     const headGroup = new THREE.Group();
+    headGroup.name = "HEAD"; // Important for animation
 
-    // Distorted Sphere Head
-    const skullGeo = new THREE.SphereGeometry(1.6, 64, 64);
+    // Distorted Sphere Head - LARGER
+    const skullGeo = new THREE.SphereGeometry(2.1, 64, 64);
     const posAttribute = skullGeo.attributes.position;
     for (let i = 0; i < posAttribute.count; i++) {
         const x = posAttribute.getX(i);
         const y = posAttribute.getY(i);
         const z = posAttribute.getZ(i);
 
-        // Simple noise-like distortion
-        const noise = Math.sin(x * 2.5) * Math.cos(y * 2.5) * 0.04 +
-            Math.cos(z * 2.0) * 0.04;
+        // More intense distortion
+        const noise = Math.sin(x * 3.0) * Math.cos(y * 3.0) * 0.06 +
+            Math.cos(z * 2.5) * 0.06;
 
         // Scale slightly based on noise
         const scale = 1.0 + noise;
         posAttribute.setXYZ(i, x * scale, y * scale, z * scale);
     }
     skullGeo.computeVertexNormals();
-    skullGeo.scale(1.0, 1.15, 0.95); // Slightly elongated
+    skullGeo.scale(1.0, 1.2, 0.95); // Elongated
 
     const skull = new THREE.Mesh(skullGeo, skullMat);
     skull.castShadow = true;
@@ -94,30 +95,30 @@ export const createDealerModel = (scene: THREE.Scene) => {
         return new THREE.ShapeGeometry(shape);
     };
 
-    const lEye = new THREE.Mesh(createOvalEye(0.55, 0.7), voidMat); // Much smaller
-    lEye.position.set(-0.95, 0.5, 1.3); // Adjusted Z for elongated head
+    const lEye = new THREE.Mesh(createOvalEye(0.65, 0.8), voidMat);
+    lEye.position.set(-1.2, 0.6, 1.8);
     lEye.rotation.z = 0.15;
-    lEye.rotation.y = -0.2;
+    lEye.rotation.y = -0.3;
     headGroup.add(lEye);
 
-    const rEye = new THREE.Mesh(createOvalEye(0.55, 0.7), voidMat);
-    rEye.position.set(0.95, 0.5, 1.3);
+    const rEye = new THREE.Mesh(createOvalEye(0.65, 0.8), voidMat);
+    rEye.position.set(1.2, 0.6, 1.8);
     rEye.rotation.z = -0.15;
-    rEye.rotation.y = 0.2;
+    rEye.rotation.y = 0.3;
     headGroup.add(rEye);
 
     // Red glowing pupils - SLIT SHAPE
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const pupilGeo = new THREE.CapsuleGeometry(0.1, 0.35, 4, 8);
+    const pupilGeo = new THREE.CapsuleGeometry(0.15, 0.45, 4, 8);
 
     const lPupil = new THREE.Mesh(pupilGeo, pupilMat);
-    lPupil.position.set(-0.95, 0.5, 1.35);
+    lPupil.position.set(-1.2, 0.6, 1.9);
     lPupil.rotation.z = 0.1;
     lPupil.name = 'LEFT_PUPIL';
     headGroup.add(lPupil);
 
     const rPupil = new THREE.Mesh(pupilGeo, pupilMat);
-    rPupil.position.set(0.95, 0.5, 1.35);
+    rPupil.position.set(1.2, 0.6, 1.9);
     rPupil.rotation.z = -0.1;
     rPupil.name = 'RIGHT_PUPIL';
     headGroup.add(rPupil);
@@ -129,108 +130,178 @@ export const createDealerModel = (scene: THREE.Scene) => {
         opacity: 0.6
     });
 
-    const lGlow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), glowMat);
-    lGlow.position.set(-0.95, 0.5, 1.35);
+    const lGlow = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), glowMat);
+    lGlow.position.set(-1.2, 0.6, 1.95);
+    lGlow.name = 'LEFT_GLOW';
     headGroup.add(lGlow);
 
-    const rGlow = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), glowMat);
-    rGlow.position.set(0.95, 0.5, 1.35);
+    const rGlow = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), glowMat);
+    rGlow.position.set(1.2, 0.6, 1.95);
+    rGlow.name = 'RIGHT_GLOW';
     headGroup.add(rGlow);
+
+    // Add general face glow light
+    const faceLight = new THREE.PointLight(0xff0000, 2.0, 5);
+    faceLight.position.set(0, 0, 2.5);
+    faceLight.name = "FACE_LIGHT";
+    headGroup.add(faceLight);
 
     // === MOUTH - Jagged Horror Grin ===
     const grinShape = new THREE.Shape();
-    grinShape.moveTo(-1.2, 0.2);
+    grinShape.moveTo(-1.5, 0.3);
     // Jagged bottom lip
-    grinShape.bezierCurveTo(-0.5, -0.8, 0.5, -0.8, 1.2, 0.2);
+    grinShape.bezierCurveTo(-0.6, -1.0, 0.6, -1.0, 1.5, 0.3);
     // Jagged top lip connection
-    grinShape.bezierCurveTo(0.6, -0.3, -0.6, -0.3, -1.2, 0.2);
+    grinShape.bezierCurveTo(0.8, -0.4, -0.8, -0.4, -1.5, 0.3);
 
-    const grinGeo = new THREE.ExtrudeGeometry(grinShape, { depth: 0.4, bevelEnabled: false });
+    const grinGeo = new THREE.ExtrudeGeometry(grinShape, { depth: 0.5, bevelEnabled: false });
     const mouthVoid = new THREE.Mesh(grinGeo, voidMat);
-    mouthVoid.position.set(0, -0.5, 1.2);
+    mouthVoid.position.set(0, -0.8, 1.6);
     mouthVoid.scale.set(1.1, 1, 1);
-    mouthVoid.rotation.x = 0.1;
+    mouthVoid.rotation.x = 0.15;
     headGroup.add(mouthVoid);
 
     // === TEETH ===
     // Blood gum mat
-    const gumMat = new THREE.MeshStandardMaterial({ color: 0x330000, roughness: 0.4 });
-    const gum = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 0.5), gumMat);
-    gum.position.set(0, -1.0, 1.2);
+    const gumMat = new THREE.MeshStandardMaterial({ color: 0x220000, roughness: 0.3 });
+    const gum = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.3, 0.6), gumMat);
+    gum.position.set(0, -1.4, 1.6);
     headGroup.add(gum);
 
-    // Sharp uneven teeth
-    for (let i = 0; i < 14; i++) {
-        const t = (i / 13) * 2 - 1; // -1 to 1
+    // Sharp uneven teeth - MORE JAGGED
+    for (let i = 0; i < 16; i++) {
+        const t = (i / 15) * 2 - 1; // -1 to 1
 
         // Upper
-        const h = 0.4 + Math.random() * 0.3;
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.06, h, 4), teethMat);
-        cone.position.set(t * 1.0, -0.5, 1.6); // Adjusted Z
+        const h = 0.5 + Math.random() * 0.4;
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.08, h, 4), teethMat);
+        cone.position.set(t * 1.3, -0.8, 2.1);
         cone.rotation.x = Math.PI - 0.2;
-        cone.rotation.z = (Math.random() - 0.5) * 0.4;
+        cone.rotation.z = (Math.random() - 0.5) * 0.5;
         headGroup.add(cone);
 
         // Lower
-        const h2 = 0.3 + Math.random() * 0.3;
-        const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.05, h2, 4), teethMat);
-        cone2.position.set(t * 0.9 + (Math.random() - 0.5) * 0.1, -1.0, 1.55);
-        cone2.rotation.z = (Math.random() - 0.5) * 0.4;
+        const h2 = 0.4 + Math.random() * 0.4;
+        const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.07, h2, 4), teethMat);
+        cone2.position.set(t * 1.1 + (Math.random() - 0.5) * 0.1, -1.4, 2.05);
+        cone2.rotation.z = (Math.random() - 0.5) * 0.5;
         headGroup.add(cone2);
     }
 
     dealerGroup.add(headGroup);
 
     // === BODY ===
-    const suitMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+    // Dark, ill-fitting suit - Buckshot style (Black/Dark Grey)
+    const suitMat = new THREE.MeshStandardMaterial({
+        color: 0x080808, // Almost black
+        roughness: 0.7,  // Worn fabric
+        metalness: 0.1,
+        emissive: 0x000000,
+        emissiveIntensity: 0
+    });
 
-    // Neck
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.8), skullMat);
-    neck.position.y = -1.2;
-    headGroup.add(neck);
+    // Neck - thicker
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 1.0), skullMat);
+    neck.position.set(0, -1.8, 0);
+    neck.castShadow = true;
+    dealerGroup.add(neck);
 
-    // Shoulders - Broader and higher
+    // Shoulders - Hunched and Broad
     const shoulders = new THREE.Mesh(
-        new THREE.BoxGeometry(4.2, 1.4, 1.8),
+        new THREE.BoxGeometry(5.5, 1.5, 2.0),
         suitMat
     );
-    shoulders.position.set(0, -1.8, 0);
+    shoulders.position.set(0, -2.5, 0);
+    // Hunch effect
+    shoulders.rotation.x = 0.2;
+    shoulders.castShadow = true;
     dealerGroup.add(shoulders);
 
-    // Torso - Much taller and imposing
-    const torso = new THREE.Mesh(
-        new THREE.BoxGeometry(3.0, 7.0, 1.4), // Taller (was 4.0)
+    // Upper Torso - Bulky
+    const upperTorso = new THREE.Mesh(
+        new THREE.BoxGeometry(4.2, 3.0, 1.8),
         suitMat
     );
-    torso.position.set(0, -5.5, 0); // Lowered center to account for height
-    dealerGroup.add(torso);
+    upperTorso.position.set(0, -4.5, 0.2);
+    upperTorso.castShadow = true;
+    dealerGroup.add(upperTorso);
 
-    // Arms - Adjusted for new height
-    const armGeo = new THREE.CylinderGeometry(0.35, 0.25, 8); // Longer arms
+    // Mid Torso
+    const midTorso = new THREE.Mesh(
+        new THREE.BoxGeometry(3.5, 2.5, 1.6),
+        suitMat
+    );
+    midTorso.position.set(0, -6.5, 0.2);
+    midTorso.castShadow = true;
+    dealerGroup.add(midTorso);
 
-    const lArm = new THREE.Mesh(armGeo, suitMat);
-    lArm.position.set(-2.4, -4.5, 0.5);
-    lArm.rotation.z = 0.15;
-    dealerGroup.add(lArm);
+    // Arms - Longer and lanky but thick cloth
+    const upperArmGeo = new THREE.CylinderGeometry(0.6, 0.5, 3.5);
 
-    const rArm = new THREE.Mesh(armGeo, suitMat);
-    rArm.position.set(2.4, -4.5, 0.5);
-    rArm.rotation.z = -0.15;
-    dealerGroup.add(rArm);
+    const lUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
+    lUpperArm.position.set(-3.2, -3.5, 0.5);
+    lUpperArm.rotation.z = 0.3;
+    lUpperArm.rotation.x = -0.2;
+    lUpperArm.castShadow = true;
+    dealerGroup.add(lUpperArm);
 
-    // Hands
-    const handGeo = new THREE.BoxGeometry(0.9, 1.4, 0.4);
+    const rUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
+    rUpperArm.position.set(3.2, -3.5, 0.5);
+    rUpperArm.rotation.z = -0.3;
+    rUpperArm.rotation.x = -0.2;
+    rUpperArm.castShadow = true;
+    dealerGroup.add(rUpperArm);
+
+    // Forearms
+    const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.2);
+
+    const lForearm = new THREE.Mesh(forearmGeo, suitMat);
+    lForearm.position.set(-4.2, -5.8, 2.0);
+    lForearm.rotation.x = -0.8;
+    lForearm.rotation.z = 0.2;
+    lForearm.castShadow = true;
+    dealerGroup.add(lForearm);
+
+    const rForearm = new THREE.Mesh(forearmGeo, suitMat);
+    rForearm.position.set(4.2, -5.8, 2.0);
+    rForearm.rotation.x = -0.8;
+    rForearm.rotation.z = -0.2;
+    rForearm.castShadow = true;
+    dealerGroup.add(rForearm);
+
+    // Hands - Giant Claws
+    const handGeo = new THREE.BoxGeometry(1.0, 0.5, 1.4);
+
     const lHand = new THREE.Mesh(handGeo, skullMat);
-    lHand.position.set(-2.8, -8.5, 2); // Lower reach
-    lHand.rotation.x = -Math.PI / 2;
+    lHand.position.set(-4.5, -6.8, 4.0);
+    lHand.rotation.x = -0.4;
+    lHand.castShadow = true;
     dealerGroup.add(lHand);
 
     const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(2.8, -8.5, 2);
-    rHand.rotation.x = -Math.PI / 2;
+    rHand.position.set(4.5, -6.8, 4.0);
+    rHand.rotation.x = -0.4;
+    rHand.castShadow = true;
     dealerGroup.add(rHand);
 
-    dealerGroup.position.set(0, 5.5, -10); // Raised base position
+    // Fingers - Long and creepy
+    const fingerGeo = new THREE.CylinderGeometry(0.09, 0.07, 0.8);
+    for (let i = 0; i < 4; i++) {
+        const lFinger = new THREE.Mesh(fingerGeo, skullMat);
+        lFinger.position.set(-4.9 + i * 0.25, -7.0, 4.6);
+        lFinger.rotation.x = -Math.PI / 2 - 0.2;
+        dealerGroup.add(lFinger);
+
+        const rFinger = new THREE.Mesh(fingerGeo, skullMat);
+        rFinger.position.set(4.1 + i * 0.25, -7.0, 4.6);
+        rFinger.rotation.x = -Math.PI / 2 - 0.2;
+        dealerGroup.add(rFinger);
+    }
+
+    // Position the entire dealer group
+    dealerGroup.position.set(0, 3.0, -8);
+    dealerGroup.scale.set(0.75, 0.75, 0.75); // Larger size
+
     scene.add(dealerGroup);
     return dealerGroup;
 };
