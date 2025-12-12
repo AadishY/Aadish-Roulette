@@ -5,11 +5,11 @@ export const setupLighting = (scene: THREE.Scene) => {
     // BUCKSHOT ROULETTE STYLE LIGHTING - Dark Industrial Bunker
     // ═══════════════════════════════════════════════════════════════
 
-    // Slight fog for depth, but keep it transparent enough
-    scene.fog = new THREE.FogExp2(0x050404, 0.012);
+    // Slight fog for depth, denser with slightly darker color
+    scene.fog = new THREE.FogExp2(0x080606, 0.02);
 
-    // Very strong ambient so everything is visible
-    const ambient = new THREE.AmbientLight(0x444040, 0.6);
+    // Strong ambient but slightly reduced for contrast
+    const ambient = new THREE.AmbientLight(0x444040, 0.5);
     scene.add(ambient);
 
     // ═══════════════════════════════════════════════════════════════
@@ -18,7 +18,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     // Creates the dramatic cone of light hitting the table
     // ═══════════════════════════════════════════════════════════════
 
-    const mainSpotlight = new THREE.SpotLight(0xffddaa, 3200); // Warm tungsten (Boosted)
+    const mainSpotlight = new THREE.SpotLight(0xffddaa, 4200); // Brighter main spot
     mainSpotlight.position.set(0, 18, -2);
     mainSpotlight.target.position.set(0, -1, 0);
     mainSpotlight.angle = 0.35; // Tighter cone
@@ -62,7 +62,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     // ═══════════════════════════════════════════════════════════════
 
     // Warm rim from back-right (cinematic edge lighting)
-    const bgRim = new THREE.SpotLight(0xff4422, 20); // Boosted
+    const bgRim = new THREE.SpotLight(0xff4422, 35); // Boosted further
     bgRim.position.set(18, 8, -22);
     bgRim.target.position.set(0, 2, -10);
     bgRim.angle = 0.8;
@@ -80,7 +80,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(coldRim.target);
 
     // Dealer backlight - Strong silhouette rim
-    const dealerRim = new THREE.SpotLight(0xffaa66, 25); // Boosted
+    const dealerRim = new THREE.SpotLight(0xffaa66, 40); // Stronger rim
     dealerRim.position.set(0, 12, -30);
     dealerRim.target.position.set(0, 4, -14);
     dealerRim.angle = 0.5;
@@ -149,7 +149,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     scene.add(roomRedLight);
 
     // Under-lighting for dealer face (horror effect)
-    const underLight = new THREE.PointLight(0xff2222, 3.5, 12); // Much stronger horror uplight
+    const underLight = new THREE.PointLight(0xff1111, 5.0, 15); // Intense Deep Red
     underLight.position.set(0, -2, -12);
     scene.add(underLight);
 
