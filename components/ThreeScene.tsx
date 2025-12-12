@@ -55,6 +55,22 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     const sceneRef = useRef<SceneContext | null>(null);
 
+    // Helper to recursively dispose objects
+    const cleanScene = (scene: THREE.Scene) => {
+        scene.traverse((object) => {
+            if (object instanceof THREE.Mesh) {
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) {
+                    if (Array.isArray(object.material)) {
+                        object.material.forEach((mat) => mat.dispose());
+                    } else {
+                        object.material.dispose();
+                    }
+                }
+            }
+        });
+    };
+
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -66,6 +82,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             if (width === 0 || height === 0) return;
 
             if (sceneRef.current) {
+                // Proper cleanup
+                cleanScene(sceneRef.current.scene);
                 sceneRef.current.renderer.dispose();
                 if (containerRef.current.contains(sceneRef.current.renderer.domElement)) {
                     containerRef.current.removeChild(sceneRef.current.renderer.domElement);
@@ -80,40 +98,48 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const camera = new THREE.PerspectiveCamera(propsRef.current.settings.fov || defaultFov, width / height, 0.1, 100);
             camera.position.set(0, 4, 14);
 
-            // Detect mobile and Android specifically for performance optimization
+            // Device Detection & Performance Tuning
             const userAgent = navigator.userAgent.toLowerCase();
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || width < 900;
             const isAndroid = userAgent.includes('android');
-            const isLowEndDevice = isMobile && (width < 700 || (window.devicePixelRatio && window.devicePixelRatio < 2));
+            // Low end if mobile and low res or low pixel ratio
+            const isLowEndDevice = isMobile && (width < 600 || (window.devicePixelRatio || 1) < 2);
 
             const renderer = new THREE.WebGLRenderer({
-                antialias: false,
-                powerPreference: isAndroid ? 'low-power' : (isMobile ? 'low-power' : 'high-performance'),
+                antialias: false, // Performance + Style
+                powerPreference: 'default', // 'low-power' can be too aggressive on some Androids causing stutter
                 alpha: false,
-                stencil: false, // Disable stencil buffer for performance
+                stencil: false,
                 depth: true,
-                precision: isAndroid ? 'lowp' : 'mediump' // Lower precision on Android
+                precision: isLowEndDevice ? 'lowp' : 'mediump'
             });
 
-            // Much lower resolution on Android for better performance
-            const pixelScale = isAndroid ? 5 : (isMobile ? 4 : (propsRef.current.settings.pixelScale || 3));
+            // Polished Resolution Scaling
+            // Android: Divisor 3 (decent balance) | Mobile: Divisor 2 | Desktop: User Setting (default 1-ish)
+            // Note: propsRef.current.settings.pixelScale is a divisor (1 = native, 2 = half res)
+            const mobilePixelScale = isAndroid ? 3 : 2;
+            const pixelScale = isMobile ? mobilePixelScale : (propsRef.current.settings.pixelScale || 3);
 
-            // Limit pixel ratio on mobile to prevent excessive GPU load
-            const maxPixelRatio = isAndroid ? 1 : (isMobile ? 1.5 : window.devicePixelRatio);
+            // Limit Max Pixel Ratio
+            const maxPixelRatio = isMobile ? 1.5 : window.devicePixelRatio;
             renderer.setPixelRatio(Math.min(maxPixelRatio, window.devicePixelRatio));
 
             renderer.setSize(width / pixelScale, height / pixelScale, false);
             renderer.domElement.style.width = '100%';
             renderer.domElement.style.height = '100%';
-            renderer.domElement.style.imageRendering = 'pixelated';
+            renderer.domElement.style.imageRendering = 'pixelated'; // Essential for aesthetic at low res
 
-            // Disable shadows on mobile for performance
-            renderer.shadowMap.enabled = !isMobile;
+            // Shadow Logic:
+            // Low End: No shadows.
+            // Mobile (Decent): BasicShadowMap (faster).
+            // Desktop: PCFSoftShadowMap (nicer).
+            renderer.shadowMap.enabled = !isLowEndDevice;
             renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-            renderer.toneMapping = isAndroid ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+
+            // Consistent Tone Mapping
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.1;
 
-            // Store mobile flags for later use
             scene.userData.isMobile = isMobile;
             scene.userData.isAndroid = isAndroid;
             scene.userData.isLowEndDevice = isLowEndDevice;
@@ -137,9 +163,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const itemInverter = createInverter(); itemInverter.visible = false; scene.add(itemInverter);
             const itemAdrenaline = createAdrenaline(); itemAdrenaline.visible = false; scene.add(itemAdrenaline);
 
-            // Item illumination light - follows active items to make them visible
-            const itemLight = new THREE.PointLight(0xffffee, 0, 25); // Warm white, starts off
-            itemLight.position.set(0, 5, -12); // Default at dealer position
+            const itemLight = new THREE.PointLight(0xffffee, 0, 25);
+            itemLight.position.set(0, 5, -12);
             scene.add(itemLight);
 
             const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemLight };
@@ -150,19 +175,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
             const mpPlayers = propsRef.current.players || [];
             const myId = propsRef.current.playerId;
-            // Filter opponents by ID (not name) since playerId is socket ID in multiplayer
             const opponents = mpPlayers.filter(p => p.id !== myId && p.id);
             const isMultiplayerGame = opponents.length > 0;
 
             if (isMultiplayerGame) {
-                // Position opponents around the table based on count
-                // Table positions: 0 = opposite (dealer position), 1 = left, 2 = right
                 const positions = [
-                    { pos: new THREE.Vector3(0, -5, -14), rot: 0 },           // Opposite (default)
-                    { pos: new THREE.Vector3(-14, -5, 0), rot: Math.PI / 2 },  // Left
-                    { pos: new THREE.Vector3(14, -5, 0), rot: -Math.PI / 2 }   // Right
+                    { pos: new THREE.Vector3(0, -5, -14), rot: 0 },
+                    { pos: new THREE.Vector3(-14, -5, 0), rot: Math.PI / 2 },
+                    { pos: new THREE.Vector3(14, -5, 0), rot: -Math.PI / 2 }
                 ];
-
                 opponents.forEach((opp, i) => {
                     if (i < positions.length) {
                         const { pos, rot } = positions[i];
@@ -173,26 +194,19 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                         playerAvatars.push(avatar);
                     }
                 });
-
-                // Wider camera FOV for multiplayer to see all players
                 camera.fov = opponents.length >= 2 ? 100 : 95;
                 camera.updateProjectionMatrix();
             } else {
-                // Singleplayer - use creepy dealer
                 dealerGroup = createDealerModel(scene);
             }
 
-            // Store avatars in scene for later updates
             scene.userData.playerAvatars = playerAvatars;
             scene.userData.isMultiplayer = isMultiplayerGame;
 
-            // dedicated light on gunGroup for visibility when dealer holds it
             const gunLight = new THREE.PointLight(0xffeebb, 0, 15);
             gunLight.position.set(0, 0.5, 0);
             gunGroup.add(gunLight);
 
-            // Capture base intensities for scaling brightness
-            // Capture base intensities for scaling brightness dynamically
             const baseLights = [
                 { light: bulbLight, baseIntensity: bulbLight.intensity },
                 { light: gunSpot, baseIntensity: gunSpot.intensity },
@@ -205,8 +219,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 { light: underLight, baseIntensity: underLight.intensity }
             ];
 
-            // Particles setup (Reduced significantly on Android)
-            const particleCount = isAndroid ? 20 : (isMobile ? 40 : 150);
+            // Particles
+            const particleCount = isLowEndDevice ? 15 : (isMobile ? 30 : 150);
             const particles = new THREE.BufferGeometry();
             const pPositions = new Float32Array(particleCount * 3);
             const pVelocities = new Float32Array(particleCount * 3);
@@ -219,7 +233,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const bloodParticles = new THREE.Points(particles, pMat);
             scene.add(bloodParticles);
 
-            const sparkCount = isAndroid ? 15 : (isMobile ? 30 : 100);
+            const sparkCount = isLowEndDevice ? 10 : (isMobile ? 25 : 100);
             const sparkGeo = new THREE.BufferGeometry();
             const sPos = new Float32Array(sparkCount * 3);
             const sVel = new Float32Array(sparkCount * 3);
@@ -239,14 +253,12 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 pumpMesh: pump, magTubeMesh: magTube,
                 bloodParticles, sparkParticles, dustParticles, baseLights, underLight,
                 itemsGroup,
-                nextShellIndex: 0 // Track which shell to use next
+                nextShellIndex: 0
             };
-
 
             updateCameraResponsive();
         };
 
-        // Detect mobile and Android for FPS limiting (outside initThree for access in animate)
         const userAgent = navigator.userAgent.toLowerCase();
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 900;
         const isAndroid = userAgent.includes('android');
@@ -254,18 +266,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         let frameId = 0;
         let time = 0;
         let lastTime = performance.now();
-        // Lower FPS on Android for battery and performance (24fps feels smooth for this game)
-        const targetFPS = isAndroid ? 24 : (isMobile ? 30 : 60);
+        const targetFPS = isAndroid ? 30 : (isMobile ? 30 : 60); // Bumped Android target to 30 for smoothness
         const frameInterval = 1000 / targetFPS;
         let lastFrameTime = 0;
         let isTabVisible = true;
 
-        // Handle tab visibility changes to prevent animation jumps
         const handleVisibilityChange = () => {
             if (document.hidden) {
                 isTabVisible = false;
             } else {
-                // Reset timing when returning to tab
                 isTabVisible = true;
                 lastTime = performance.now();
                 lastFrameTime = performance.now();
@@ -276,53 +285,67 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const animate = (currentTime: number = 0) => {
             frameId = requestAnimationFrame(animate);
             if (!sceneRef.current) return;
-
-            // Skip animation when tab is not visible
             if (!isTabVisible) {
-                lastTime = currentTime;
-                lastFrameTime = currentTime;
-                return;
+                lastTime = currentTime; lastFrameTime = currentTime; return;
             }
 
-            // Frame rate limiting for mobile
-            const elapsed = currentTime - lastFrameTime;
-            if (elapsed < frameInterval) return;
-            lastFrameTime = currentTime - (elapsed % frameInterval);
-
-            // Delta time for smooth animations (capped to prevent jumps after tab switch)
-            // Cap at 100ms (0.1s) to prevent huge time jumps
             const rawDelta = (currentTime - lastTime) / 1000;
+            // Cap delta to prevent huge jumps
             const delta = Math.min(rawDelta, 0.1);
             lastTime = currentTime;
 
-            // Only advance time if delta is reasonable (prevents jumps)
-            if (rawDelta < 0.5) {
-                time += delta;
+            // Frame Limiting Logic
+            if (isMobile) {
+                const elapsed = currentTime - lastFrameTime;
+                if (elapsed < frameInterval) return;
+                lastFrameTime = currentTime - (elapsed % frameInterval);
+            } else {
+                lastFrameTime = currentTime;
             }
 
-            updateScene(sceneRef.current, propsRef.current, time);
+            time += delta;
+
+            updateScene(sceneRef.current, propsRef.current, time, delta);
         };
 
-        // --- INPUT & RESIZE HANDLERS ---
         const handleMouseMove = (e: MouseEvent) => {
             if (!containerRef.current || !sceneRef.current) return;
+            // Cheap update, no heavy calcs
             sceneRef.current.mouse.x = ((e.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
             sceneRef.current.mouse.y = -((e.clientY - containerRef.current.offsetTop) / containerRef.current.clientHeight) * 2 + 1;
         };
+
         const handleClick = () => {
             if (!sceneRef.current) return;
             sceneRef.current.raycaster.setFromCamera(sceneRef.current.mouse, sceneRef.current.camera);
             const intersects = sceneRef.current.raycaster.intersectObjects(sceneRef.current.gunGroup.children);
             if (intersects.find(i => i.object.userData.type === 'GUN')) onGunClick();
-        }
+        };
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (!containerRef.current || !sceneRef.current || e.changedTouches.length === 0) return;
+            const touch = e.changedTouches[0];
+            sceneRef.current.mouse.x = ((touch.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
+            sceneRef.current.mouse.y = -((touch.clientY - containerRef.current.offsetTop) / containerRef.current.clientHeight) * 2 + 1;
+        };
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            handleClick();
+        };
+
         const updateCameraResponsive = () => {
             if (!containerRef.current || !sceneRef.current) return;
             const width = containerRef.current.clientWidth;
             const height = containerRef.current.clientHeight;
             if (width === 0 || height === 0) return;
 
-            const pixelScale = propsRef.current.settings.pixelScale;
-            sceneRef.current.renderer.setSize(width / pixelScale, height / pixelScale, false);
+            // Re-calc scale
+            const isMob = window.innerWidth < 900;
+            const isAnd = navigator.userAgent.toLowerCase().includes('android');
+            const mobScale = isAnd ? 3 : 2;
+            const pxScale = isMob ? mobScale : (propsRef.current.settings.pixelScale || 3);
+
+            sceneRef.current.renderer.setSize(width / pxScale, height / pxScale, false);
 
             const aspect = width / height;
             sceneRef.current.camera.aspect = aspect;
@@ -350,6 +373,9 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('click', handleClick);
+        // Add touch listeners for low-latency firing
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchend', handleTouchEnd);
 
         return () => {
             clearTimeout(timeout);
@@ -357,11 +383,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('click', handleClick);
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchend', handleTouchEnd);
             resizeObserver.disconnect();
-            if (sceneRef.current) sceneRef.current.renderer.dispose();
+            if (sceneRef.current) {
+                cleanScene(sceneRef.current.scene);
+                sceneRef.current.renderer.dispose();
+            }
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
-        // Reinit when players change - use IDs string to detect when game state players arrive
     }, [settings.pixelScale, players?.map(p => p.id).join(',')]);
 
     // --- SYNC EFFECTS ---
@@ -425,30 +455,21 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (!sceneRef.current) return;
         const { barrelMesh, pumpMesh, magTubeMesh } = sceneRef.current;
         if (animState.isSawing) {
-            // During sawing animation, keep at full size
             barrelMesh.scale.y = 1;
             pumpMesh.scale.y = 1;
             magTubeMesh.scale.y = 1;
         } else if (isSawed) {
-            // Sawed off - shorten barrel, pump (brown foregrip), and mag tube
             barrelMesh.scale.y = 0.43;
             barrelMesh.position.z = 2.5;
-
-            // Also cut the pump (brown wooden foregrip)
             pumpMesh.scale.y = 0.5;
             pumpMesh.position.z = 2.8;
-
-            // Also cut the mag tube
             magTubeMesh.scale.y = 0.45;
             magTubeMesh.position.z = 2.0;
         } else {
-            // Normal state
             barrelMesh.scale.y = 1;
             barrelMesh.position.z = 4.5;
-
             pumpMesh.scale.y = 1;
             pumpMesh.position.z = 4.5;
-
             magTubeMesh.scale.y = 1;
             magTubeMesh.position.z = 4.0;
         }
@@ -464,7 +485,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         muzzleLight.position.add(dir.multiplyScalar(8));
         if (animState.muzzleFlashIntensity > 0) {
             if (animState.isLiveShot) {
-                // Handle Muzzle Flash Group
                 muzzleFlash.visible = true;
                 muzzleFlash.children.forEach((child) => {
                     const mesh = child as THREE.Mesh;
@@ -475,23 +495,21 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                     }
                 });
 
-                muzzleFlash.rotation.z = Math.random() * Math.PI * 2; // Random rotation
+                muzzleFlash.rotation.z = Math.random() * Math.PI * 2;
                 muzzleLight.color.setHex(0xffaa00);
                 roomRedLight.intensity = 20 * (propsRef.current.settings.brightness || 1.0);
 
                 const pos = sparkParticles.geometry.attributes.position.array as Float32Array;
                 const vel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
-                // Spawn more sparks
                 const count = pos.length / 3;
                 for (let i = 0; i < count; i++) {
-                    // Only respawn if off screen or inactive to avoid resetting ALL just 30
                     if (i < 60) {
                         const idx = i * 3;
                         pos[idx] = muzzleLight.position.x + (Math.random() - 0.5) * 0.3;
                         pos[idx + 1] = muzzleLight.position.y + (Math.random() - 0.5) * 0.3;
                         pos[idx + 2] = muzzleLight.position.z + (Math.random() - 0.5) * 0.3;
                         const spread = new THREE.Vector3((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2).multiplyScalar(0.5);
-                        const blast = dir.clone().multiplyScalar(1.0 + Math.random() * 2.0); // Faster sparks
+                        const blast = dir.clone().multiplyScalar(1.0 + Math.random() * 2.0);
                         vel[idx] = blast.x + spread.x;
                         vel[idx + 1] = blast.y + spread.y;
                         vel[idx + 2] = blast.z + spread.z;
@@ -499,7 +517,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 }
                 sparkParticles.geometry.attributes.position.needsUpdate = true;
             } else {
-                // Blank shot or fade instant
                 muzzleFlash.children.forEach((child) => {
                     const mesh = child as THREE.Mesh;
                     if (mesh.material) (mesh.material as THREE.Material).opacity = 0;
@@ -508,7 +525,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 muzzleLight.intensity = 0; roomRedLight.intensity = 0;
             }
         } else {
-            // Idle Loop - Reduce opacity if visible
             let isVis = false;
             muzzleFlash.children.forEach((child) => {
                 const mesh = child as THREE.Mesh;
@@ -519,7 +535,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 }
             });
 
-            // Force hide if intended to be off
             if (animState.muzzleFlashIntensity === 0) {
                 isVis = false;
                 muzzleFlash.visible = false;
@@ -528,8 +543,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             }
 
             roomRedLight.intensity = THREE.MathUtils.lerp(roomRedLight.intensity, 0, 0.2);
-
-            // Safety: Force hide if very low opacity
             if (!isVis && muzzleFlash.visible) muzzleFlash.visible = false;
         }
     }, [animState.muzzleFlashIntensity, animState.isLiveShot]);
@@ -553,55 +566,39 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     useEffect(() => {
         if (animState.triggerRack === 0 || !sceneRef.current) return;
         const { shellCasings, shellVelocities, gunGroup } = sceneRef.current;
-
         if (!shellCasings || !shellVelocities) return;
-
-        // Get next shell index (rotating 0, 1, 2, 0, 1, 2...)
         const nextIdx = sceneRef.current.nextShellIndex ?? 0;
         const shell = shellCasings[nextIdx];
         const vel = shellVelocities[nextIdx];
-
-        // Update to next index for next ejection
         sceneRef.current.nextShellIndex = (nextIdx + 1) % 3;
-
         const mat = shell.material as THREE.MeshStandardMaterial;
 
-        // Set shell color based on ejected shell type
         if (animState.ejectedShellColor === 'blue') {
-            mat.color.setHex(0x3b82f6); // Brighter blue
+            mat.color.setHex(0x3b82f6);
             mat.emissive.setHex(0x1e40af);
             mat.emissiveIntensity = 0.5;
         } else {
-            mat.color.setHex(0xef4444); // Brighter red
+            mat.color.setHex(0xef4444);
             mat.emissive.setHex(0x991b1b);
             mat.emissiveIntensity = 0.4;
         }
 
-        // Make shell more visible
         shell.scale.setScalar(2.0);
         shell.visible = true;
-
-        // Use predefined position for this shell slot + small random variation
         const basePos = shell.userData.basePosition || { x: 0, z: 0 };
         shell.position.set(
-            basePos.x + (Math.random() - 0.5) * 0.3, // Small X variation around slot
-            3, // Start from above
-            basePos.z + (Math.random() - 0.5) * 0.3  // Small Z variation
+            basePos.x + (Math.random() - 0.5) * 0.3,
+            3,
+            basePos.z + (Math.random() - 0.5) * 0.3
         );
-
-        // Reset landing timer
         shell.userData.landedAt = null;
-
-        // Minimal velocity - just drop straight down with tiny wobble
         vel.set(
             (Math.random() - 0.5) * 0.02,
             0.05,
             (Math.random() - 0.5) * 0.02
         );
-
         gunGroup.rotation.x -= 0.4;
     }, [animState.triggerRack, animState.ejectedShellColor]);
-
 
     return <div ref={containerRef} className="absolute inset-0 z-0 bg-neutral-950" />;
 };

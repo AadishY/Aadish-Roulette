@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { SceneContext, SceneProps } from '../types';
 import { audioManager } from './audioManager';
 
-export function updateScene(context: SceneContext, props: SceneProps, time: number) {
+export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, messages } = props; // Added 'messages'
+
+    const dt = delta || 0.016; // Fallback to ~60fps if undefined
 
 
     // --- BRIGHTNESS & FOV ---
@@ -58,7 +60,7 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // Aggressive Fish Eye Simulation (Wider FOV)
     const targetFOV = settings.fishEye ? (baseFOV + 35) : baseFOV;
     if (Math.abs(camera.fov - targetFOV) > 0.1) {
-        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 0.05);
+        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 1 - Math.exp(-3 * dt));
         camera.updateProjectionMatrix();
     }
 
@@ -120,18 +122,20 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // NOTE: When Dealer decides to shoot, `useDealerAI` sets aimTarget to OPPONENT/SELF. 
     // So gun will fly from table to hand. That works.
 
-    gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 0.1);
+    gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 1 - Math.exp(-5 * dt));
 
-    // Gun Animation Lerp
-    gunGroup.position.lerp(targets.targetPos, 0.08);
-    gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * 0.08;
-    gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * 0.08;
-    gunGroup.rotation.z += (targets.targetRot.z - gunGroup.rotation.z) * 0.08;
+    // Gun Animation Lerp (Time-based Damping)
+    const gunDamping = 1 - Math.exp(-6 * dt);
+    gunGroup.position.lerp(targets.targetPos, gunDamping);
+    gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * gunDamping;
+    gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * gunDamping;
+    gunGroup.rotation.z += (targets.targetRot.z - gunGroup.rotation.z) * gunDamping;
 
     if (gunGroup.userData.isSawing) {
-        gunGroup.position.x += Math.sin(time * 150) * 0.08;
-        gunGroup.position.y += Math.cos(time * 120) * 0.05;
-        gunGroup.rotation.z += Math.sin(time * 80) * 0.1;
+        const timeScale = dt / 0.0166;
+        gunGroup.position.x += Math.sin(time * 150) * 0.08 * timeScale;
+        gunGroup.position.y += Math.cos(time * 120) * 0.05 * timeScale;
+        gunGroup.rotation.z += Math.sin(time * 80) * 0.1 * timeScale;
     }
 
     // --- CAMERA LOGIC ---
@@ -221,10 +225,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     }
 
-    // Camera Lerp
-    camera.position.x += (targetCamPos.x - camera.position.x) * 0.03;
-    camera.position.y += (targetCamPos.y - camera.position.y) * 0.03;
-    camera.position.z += (targetCamPos.z - camera.position.z) * 0.03;
+    // Camera Lerp (Time-based)
+    const camDamping = 1 - Math.exp(-2.5 * dt);
+    camera.position.x += (targetCamPos.x - camera.position.x) * camDamping;
+    camera.position.y += (targetCamPos.y - camera.position.y) * camDamping;
+    camera.position.z += (targetCamPos.z - camera.position.z) * camDamping;
 
     // Breathing
     if (aimTarget !== 'SELF' && cameraView !== 'TABLE') {
@@ -270,8 +275,9 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     }
 
     // Smoother lerp for dealer position - slower during recovery
-    const dealerLerpSpeed = animState.dealerRecovering ? 0.08 : 0.25;
-    dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * dealerLerpSpeed;
+    const dealerSpeed = animState.dealerRecovering ? 4.0 : 12.0;
+    const dealerDamping = 1 - Math.exp(-dealerSpeed * dt);
+    dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * dealerDamping;
 
     const headGroup = dealerGroup.getObjectByName("HEAD");
     if (headGroup) {
@@ -370,7 +376,7 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     // --- ITEM ANIMATIONS ---
     // --- ITEM ANIMATIONS ---
-    updateItemAnimations(context, props, time);
+    updateItemAnimations(context, props, time, dt);
 
     // Muzzle Flash Randomness
     if (muzzleFlash.visible) {
@@ -383,24 +389,24 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         });
     }
 
-    updateBlood(bloodParticles);
+    updateBlood(bloodParticles, dt);
 
     // Force immediate blood visibility if just hit
     if (animState.playerHit || animState.dealerHit) {
         bloodParticles.visible = true;
         // Spam update for first frame
-        updateBlood(bloodParticles);
+        updateBlood(bloodParticles, 0.016);
     }
 
-    updateSparks(sparkParticles);
+    updateSparks(sparkParticles, dt);
 
     // Update projectiles - fixes bullets floating in sky
-    updateBullet(bulletMesh);
+    updateBullet(bulletMesh, dt);
 
     // Update all shell casings
     if (shellCasings && shellVelocities) {
         for (let i = 0; i < shellCasings.length; i++) {
-            updateShell(shellCasings[i], shellVelocities[i], time);
+            updateShell(shellCasings[i], shellVelocities[i], time, dt);
         }
     }
 
@@ -430,16 +436,19 @@ function updateParticles(p: THREE.Points, limit: number) {
     p.geometry.attributes.position.needsUpdate = true;
 }
 
-function updateShell(shell: THREE.Mesh, vel: THREE.Vector3, time: number) {
+function updateShell(shell: THREE.Mesh, vel: THREE.Vector3, time: number, dt: number) {
+    const timeScale = dt / 0.0166;
     if (shell.visible) {
-        shell.position.add(vel);
-        vel.y -= 0.012; // Lighter gravity
+        shell.position.x += vel.x * timeScale;
+        shell.position.y += vel.y * timeScale;
+        shell.position.z += vel.z * timeScale;
+        vel.y -= 0.012 * timeScale; // Lighter gravity
 
         // Only tumble while moving fast
         const speed = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
         if (speed > 0.02) {
-            shell.rotation.x += speed * 0.5;
-            shell.rotation.z += speed * 0.3;
+            shell.rotation.x += speed * 0.5 * timeScale;
+            shell.rotation.z += speed * 0.3 * timeScale;
         }
 
         // Ground/Table collision (Table height approx -0.85)
@@ -482,18 +491,20 @@ function updateShell(shell: THREE.Mesh, vel: THREE.Vector3, time: number) {
     }
 }
 
-function updateBullet(bullet: THREE.Mesh) {
+function updateBullet(bullet: THREE.Mesh, dt: number) {
     if (bullet.visible) {
         const speed = 5.0;
+        const moveDist = speed * (dt / 0.0166);
         const dir = bullet.userData.velocity;
-        if (dir) bullet.position.add(dir.clone().multiplyScalar(speed));
+        if (dir) bullet.position.add(dir.clone().multiplyScalar(moveDist));
         if (bullet.position.distanceTo(new THREE.Vector3(0, 0, 0)) > 60) bullet.visible = false;
     }
 }
 
-function updateBlood(p: THREE.Points) {
+function updateBlood(p: THREE.Points, dt: number) {
     const bPos = p.geometry.attributes.position.array as Float32Array;
     const bVel = p.geometry.attributes.velocity.array as Float32Array;
+    const timeScale = dt / 0.0166;
     let activeBlood = false;
     for (let i = 0; i < bPos.length / 3; i++) {
         const idx = i * 3;
@@ -502,25 +513,30 @@ function updateBlood(p: THREE.Points) {
         // Let's use Y position check. Spawner sets Y approx 5. Dead sets Y = 9999.
         if (bPos[idx + 1] < 100) {
             activeBlood = true;
-            bPos[idx] += bVel[idx]; bPos[idx + 1] += bVel[idx + 1]; bPos[idx + 2] += bVel[idx + 2];
-            bVel[idx + 1] -= 0.05; // Heavier gravity
+            bPos[idx] += bVel[idx] * timeScale;
+            bPos[idx + 1] += bVel[idx + 1] * timeScale;
+            bPos[idx + 2] += bVel[idx + 2] * timeScale;
+            bVel[idx + 1] -= 0.05 * timeScale; // Heavier gravity
             if (bPos[idx + 1] < -15) bPos[idx + 1] = 9999;
         }
     }
     if (activeBlood) p.geometry.attributes.position.needsUpdate = true;
 }
 
-function updateSparks(p: THREE.Points) {
+function updateSparks(p: THREE.Points, dt: number) {
     const sPosArr = p.geometry.attributes.position.array as Float32Array;
     const sVelArr = p.geometry.attributes.velocity.array as Float32Array;
+    const timeScale = dt / 0.0166;
     let activeSparks = false;
     for (let i = 0; i < sPosArr.length / 3; i++) {
         const idx = i * 3;
         // Same fix for X check -> Y check
         if (sPosArr[idx + 1] < 100) {
             activeSparks = true;
-            sPosArr[idx] += sVelArr[idx]; sPosArr[idx + 1] += sVelArr[idx + 1]; sPosArr[idx + 2] += sVelArr[idx + 2];
-            sVelArr[idx + 1] -= 0.02;
+            sPosArr[idx] += sVelArr[idx] * timeScale;
+            sPosArr[idx + 1] += sVelArr[idx + 1] * timeScale;
+            sPosArr[idx + 2] += sVelArr[idx + 2] * timeScale;
+            sVelArr[idx + 1] -= 0.02 * timeScale;
             if (sPosArr[idx + 1] < -2) sPosArr[idx + 1] = 9999;
         }
     }
@@ -608,7 +624,7 @@ function updatePlayerHealthBars(scene: THREE.Scene, players: any[]) {
     });
 }
 
-function updateItemAnimations(context: SceneContext, props: SceneProps, time: number) {
+function updateItemAnimations(context: SceneContext, props: SceneProps, time: number, dt: number) {
     const items = context.itemsGroup;
     const scene = context.scene;
     const camera = context.camera;
@@ -768,11 +784,12 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     camera.rotation.x = -0.15 * sipP;
                 } else { // Drop - faster exit
                     const p = (drinkTime - 2.5) / 1.0;
-                    items.itemBeer.position.y -= p * 0.8;
-                    items.itemBeer.position.x += p * 0.3;
-                    items.itemBeer.rotation.z += p * 0.5;
+                    const timeScale = dt / 0.0166;
+                    items.itemBeer.position.y -= p * 0.8 * timeScale;
+                    items.itemBeer.position.x += p * 0.3 * timeScale;
+                    items.itemBeer.rotation.z += p * 0.5 * timeScale;
                     if (p > 0.6) items.itemBeer.visible = false;
-                    camera.rotation.x *= 0.85;
+                    camera.rotation.x *= Math.pow(0.85, timeScale);
                 }
             } else {
                 // DEALER drinking beer - Position at dealer's location (far from camera)
@@ -860,9 +877,10 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     camera.rotation.z = Math.sin(time) * 0.005;
                 } else {
                     // Flick away
-                    items.itemCigs.position.x += 0.15;
-                    items.itemCigs.position.y -= 0.15;
-                    items.itemCigs.rotation.z -= 0.3;
+                    const timeScale = dt / 0.0166;
+                    items.itemCigs.position.x += 0.15 * timeScale;
+                    items.itemCigs.position.y -= 0.15 * timeScale;
+                    items.itemCigs.rotation.z -= 0.3 * timeScale;
                 }
             } else {
                 // DEALER SMOKING - Position at dealer's location (far from camera)
@@ -1027,8 +1045,9 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                     }
                 } else {
                     // Lower
-                    items.itemPhone.position.y -= 0.15;
-                    items.itemPhone.rotation.x += 0.05;
+                    const timeScale = dt / 0.0166;
+                    items.itemPhone.position.y -= 0.15 * timeScale;
+                    items.itemPhone.rotation.x += 0.05 * timeScale;
                 }
             } else {
                 // DEALER using phone - Position at dealer's actual location (z=-14)
@@ -1096,8 +1115,9 @@ function updateItemAnimations(context: SceneContext, props: SceneProps, time: nu
                 } else {
                     // Lower with slowdown
                     const p = (invTime - 2.0) / 0.5;
-                    items.itemInverter.position.y -= p * 0.3;
-                    items.itemInverter.rotation.y += 0.2 * (1 - p);
+                    const timeScale = dt / 0.0166;
+                    items.itemInverter.position.y -= p * 0.3 * timeScale;
+                    items.itemInverter.rotation.y += 0.2 * (1 - p) * timeScale;
                 }
             } else {
                 // DEALER using inverter - Position at dealer's location (far from camera)
