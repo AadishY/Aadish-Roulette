@@ -7,7 +7,7 @@ interface IntroScreenProps {
     playerName: string;
     inputName: string;
     setInputName: (name: string) => void;
-    onStartGame: () => void;
+    onStartGame: (hardMode?: boolean) => void;
     onStartMultiplayer: () => void;
     onOpenSettings: () => void;
     onOpenGuide: () => void;
@@ -17,6 +17,7 @@ interface IntroScreenProps {
 export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputName, onStartGame, onStartMultiplayer, onOpenSettings, onOpenGuide, onOpenScoreboard }) => {
     const nameInputRef = useRef<HTMLInputElement>(null);
     const [scale, setScale] = React.useState(1);
+    const [showHardModeWarning, setShowHardModeWarning] = React.useState(false);
 
     useEffect(() => {
         // Prevent keyboard popup on mobile (touch devices or small screens)
@@ -39,7 +40,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
             let newScale = Math.min(hScale, wScale);
 
             // Clamp scale for better readability on small mobiles
-            if (newScale < 0.5) newScale = 0.5;
+            if (newScale < 0.6) newScale = 0.6;
             if (newScale > 1.2) newScale = 1.2;
 
             setScale(newScale);
@@ -53,6 +54,35 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden pointer-events-auto bg-black/60 backdrop-blur-sm">
+            {showHardModeWarning && (
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 animate-in fade-in duration-300">
+                    <div className="bg-stone-900 border-4 border-red-900 p-8 max-w-md text-center shadow-[0_0_50px_rgba(255,0,0,0.3)]">
+                        <h2 className="text-4xl font-black text-red-600 mb-6 tracking-widest text-glitch">WARNING</h2>
+                        <p className="text-stone-300 text-xl font-bold mb-2">You have to pay with your soul!</p>
+                        <p className="text-red-500/50 text-sm font-mono mb-8">DOUBLLE OR NOTHING</p>
+                        <p className="text-red-500/50 text-sm font-mono mb-8">DEALER IS MORE SMARTER | 3 ROUNDS</p>
+
+                        <div className="flex flex-col gap-4">
+                            <button
+                                onClick={() => {
+                                    audioManager.playSound('click');
+                                    onStartGame(true);
+                                }}
+                                className="w-full py-4 bg-red-900 hover:bg-red-700 text-white font-black text-xl tracking-widest border-2 border-red-600 transition-all hover:scale-105"
+                            >
+                                I ACCEPT
+                            </button>
+                            <button
+                                onClick={() => setShowHardModeWarning(false)}
+                                className="w-full py-3 bg-transparent text-stone-500 font-bold hover:text-white transition-colors"
+                            >
+                                TURN BACK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div
                 className="relative z-10 text-center max-w-lg w-full p-4 flex flex-col justify-center origin-center transition-transform duration-100"
                 style={{ transform: `scale(${scale})` }}
@@ -70,12 +100,23 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                         maxLength={12}
                         className="bg-stone-900 border-2 border-stone-700 p-4 text-2xl font-black text-white outline-none focus:border-red-600 focus:shadow-[0_0_30px_rgba(220,38,38,0.3)] transition-all duration-300 tracking-widest uppercase text-center placeholder-stone-700"
                     />
-                    <button onClick={() => {
-                        audioManager.playSound('click');
-                        onStartGame();
-                    }} disabled={!inputName.trim()} className="w-full px-6 py-4 bg-red-600 text-white font-black text-xl hover:bg-red-500 hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:grayscale tracking-widest text-shadow-none border-2 border-red-500">
-                        START GAME
-                    </button>
+
+                    <div className="flex gap-3">
+                        <button onClick={() => {
+                            audioManager.playSound('click');
+                            onStartGame(false);
+                        }} disabled={!inputName.trim()} className="flex-1 px-4 py-4 bg-red-600 text-white font-black text-xl hover:bg-red-500 hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:grayscale tracking-widest text-shadow-none border-2 border-red-500">
+                            START GAME
+                        </button>
+
+                        <button onClick={() => {
+                            audioManager.playSound('click');
+                            setShowHardModeWarning(true);
+                        }} disabled={!inputName.trim()} className="px-6 py-4 bg-stone-950 text-red-800 font-black text-xl hover:bg-black hover:text-red-600 hover:shadow-[0_0_25px_rgba(220,38,38,0.4)] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:grayscale tracking-widest border-2 border-red-900/50 flex flex-col leading-none justify-center items-center gap-1">
+                            <span className="text-[10px] tracking-[0.2em] text-stone-600">ENTER</span>
+                            HARD MODE
+                        </button>
+                    </div>
 
                     <button onClick={() => {
                         audioManager.playSound('click');

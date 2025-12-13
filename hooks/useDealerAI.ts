@@ -7,7 +7,7 @@ interface DealerAIProps {
     dealer: PlayerState;
     player: PlayerState;
     knownShell: ShellType | null;
-    animState: AnimationState; // Added for recovery state checking
+    animState: AnimationState;
     fireShot: (shooter: TurnOwner, target: TurnOwner) => Promise<void>;
     processItemEffect: (user: TurnOwner, item: ItemType) => Promise<boolean>;
     setDealer: React.Dispatch<React.SetStateAction<PlayerState>>;
@@ -15,7 +15,8 @@ interface DealerAIProps {
     setTargetAim: (aim: AimTarget) => void;
     setCameraView: (view: CameraView) => void;
     setOverlayText?: React.Dispatch<React.SetStateAction<string | null>>;
-    isMultiplayer?: boolean; // Disable AI in multiplayer mode
+    isMultiplayer?: boolean;
+    isProcessing: boolean;
 }
 
 export const useDealerAI = ({
@@ -31,10 +32,11 @@ export const useDealerAI = ({
     setTargetAim,
     setCameraView,
     setOverlayText,
-    isMultiplayer = false
+    isMultiplayer = false,
+    isProcessing
 }: DealerAIProps) => {
     const isAITurnInProgress = useRef(false);
-    // AI Memory: Map<shellIndex, type> - Tracks specifically known shells (from Glass, Phone, etc.)
+    // AI Memory: Map<shellIndex, type> - Tracks specifically known shells
     const aiMemory = useRef<Map<number, ShellType>>(new Map());
     const [aiTick, setAiTick] = useState(0);
 
@@ -53,271 +55,265 @@ export const useDealerAI = ({
 
     useEffect(() => {
         if (isMultiplayer) return;
+        if (isProcessing) return;
 
         if (gameState.phase === 'DEALER_TURN' && !isAITurnInProgress.current) {
             isAITurnInProgress.current = true;
-            // setTargetAim('IDLE'); // Stick to current aim until ready
-            setCameraView('PLAYER'); // Force camera to look at Dealer
+            setCameraView('PLAYER');
 
             const runAITurn = async () => {
                 try {
-                    // 1. WAIT FOR PLAYER OR DEALER RECOVERY - Ensure smooth turn transition
-                    let waitCount = 0;
-                    while ((animStateRef.current.playerHit || animStateRef.current.playerRecovering || animStateRef.current.dealerRecovering) && waitCount < 30) {
-                        await wait(500); // Check every 500ms
-                        waitCount++;
-                    }
+                    // Small human-like delay
+                    await wait(800 + Math.random() * 800);
 
-                    await wait(800 + Math.random() * 600); // Organic thinking pause
+                    // Re-check validity after delay
+                    if (gameState.phase !== 'DEALER_TURN' || gameState.winner) return;
 
-                    // --- STATE ANALYSIS ---
-                    const currentIdx = gameState.currentShellIndex;
                     const chamber = gameState.chamber;
-                    const totalRemaining = chamber.length - currentIdx;
+                    const currentIdx = gameState.currentShellIndex;
+                    const remainingShells = chamber.slice(currentIdx);
+                    const totalRemaining = remainingShells.length;
 
-                    // Re-scan memory validity (remove old indices)
-                    for (const k of aiMemory.current.keys()) {
-                        if (k < currentIdx) aiMemory.current.delete(k);
+                    // --- ANALYSIS ---
+                    const liveCountReal = remainingShells.filter(s => s === 'LIVE').length;
+                    // Cheat capability: Calculate real probabilities sometimes if wanted,
+                    // but for fairness/logic we mimic knowledge.
+
+                    // Check Global Known (Glass)
+                    if (knownShell) {
+                        aiMemory.current.set(currentIdx, knownShell);
                     }
 
-                    // Calculate Probabilities
-                    let knownLive = 0;
-                    let knownBlank = 0;
-                    let knownIndices = new Set<number>();
-
-                    // Sum up what we know from memory within remaining range
-                    for (let i = currentIdx; i < chamber.length; i++) {
-                        if (aiMemory.current.has(i)) {
-                            knownIndices.add(i);
-                            if (aiMemory.current.get(i) === 'LIVE') knownLive++;
-                            else knownBlank++;
-                        }
-                    }
-
-                    // Global stats (AI knows the total counts like player)
-                    const totalLive = gameState.liveCount;
-                    const totalBlank = gameState.blankCount;
-
-                    // Unknown stats
-                    const unknownLive = Math.max(0, totalLive - knownLive);
-                    const unknownTotal = Math.max(0, totalRemaining - knownIndices.size);
-
-                    const unknownLiveProb = unknownTotal > 0 ? unknownLive / unknownTotal : 0;
-
-                    // Determine status of CURRENT shell
                     let currentKnown = aiMemory.current.get(currentIdx);
-                    // Also use user-provided knownShell prop if passed (e.g. from Glass used by player? No, dealer doesn't see that usually, but if global)
-                    if (knownShell && !currentKnown) currentKnown = knownShell;
 
-                    // Probability of current being LIVE
-                    const currentLiveProb = currentKnown ? (currentKnown === 'LIVE' ? 1.0 : 0.0) : unknownLiveProb;
+                    // Count what IS known in memory ahead
+                    let knownLiveDelta = 0;
+                    let knownSafeCnt = 0;
+
+                    // Simple logic for unknown probability
+                    // (liveCount visible in game state is global real count? or tracked?
+                    //  In this implementation, gameState.liveCount is visible to player, so AI uses it)
+                    const visibleLive = gameState.liveCount;
+                    const visibleBlank = gameState.blankCount;
+                    // BUT these counts might be outdated if we haven't tracked properly, 
+                    // usually gameState is accurate to "what is in the gun".
+
+                    // Logic:
+                    // unknownLive = VisibleLive - KnownLiveInFuture
+                    // unknownTotal = TotalRemaining - KnownInFuture
+
+                    // Let's assume naive probability for simplicity unless we have verified state
+                    // (If we want a "God Tier" that knows everything, we can just peek `chamber[currentIdx]`)
+
+                    const unknownLiveProb = (visibleLive / (visibleLive + visibleBlank)) || 0;
 
                     let itemToUse: ItemType | null = null;
-                    let itemIndex = -1;
 
-                    // --- ADVANCED ITEM STRATEGY (V3 - SMARTER) ---
-
-                    // 1. SURVIVAL HEAL
-                    // Use Cigs if hurt at all, priority increases as HP drops.
-                    // If HP <= 2, absolute top priority.
-                    if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS') && !itemToUse) {
-                        // Always heal if critical (<=2) or 50% chance if just scratched
-                        if (dealer.hp <= 2 || Math.random() > 0.5) {
-                            itemToUse = 'CIGS';
+                    // --- HARD MODE LOGIC (GOD TIER) ---
+                    if (gameState.isHardMode) {
+                        // 0. SUPERNATURAL INTUITION (The Dealer can smell the gunpowder)
+                        // 40% chance to just KNOW update memory
+                        if (!currentKnown && Math.random() < 0.40) {
+                            const actual = chamber[currentIdx];
+                            aiMemory.current.set(currentIdx, actual);
+                            currentKnown = actual;
                         }
-                    }
 
-                    // 2. ADRENALINE THEFT
-                    else if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
-                        const threats = ['SAW', 'CUFFS', 'INVERTER', 'ADRENALINE', 'CIGS'];
-                        const hasThreat = player.items.some(i => threats.includes(i));
-                        // Steal if they have something good
-                        if (hasThreat) itemToUse = 'ADRENALINE';
-                    }
+                        // 1. KILL CONFIRMATION (Priority 1)
+                        if (currentKnown === 'LIVE') {
+                            if (dealer.items.includes('SAW') && !dealer.isSawedActive) itemToUse = 'SAW';
+                            else if (dealer.items.includes('CUFFS') && !player.isHandcuffed && totalRemaining > 1) itemToUse = 'CUFFS';
+                        }
 
-                    // 3. INVERTER (Aggressive Flip)
-                    // If Known/High Prob BLANK -> Flip to LIVE to shoot player
-                    else if (dealer.items.includes('INVERTER') && !itemToUse && totalRemaining > 1) {
-                        if (currentKnown === 'BLANK' || (!currentKnown && currentLiveProb < 0.35)) {
+                        // 2. CONVERSION (Priority 2) - "No U" Strat
+                        else if (currentKnown === 'BLANK' && dealer.items.includes('INVERTER')) {
                             itemToUse = 'INVERTER';
                         }
-                    }
 
-                    // 4. SAW (Damage Amp)
-                    // Only use if we are fairly confident it's LIVE
-                    else if (dealer.items.includes('SAW') && !dealer.isSawedActive && !itemToUse && player.hp > 1) {
-                        if (currentKnown === 'LIVE' || currentLiveProb >= 0.55) {
+                        // 3. INFORMATION (Priority 3)
+                        else if (!currentKnown && dealer.items.includes('GLASS') && !itemToUse) itemToUse = 'GLASS';
+                        else if (dealer.items.includes('PHONE') && totalRemaining > 1 && !itemToUse) itemToUse = 'PHONE';
+
+                        // 4. THEFT & DEFENSE (Priority 4)
+                        else if (dealer.hp <= 2 && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
+                        // Adrenaline: Steal critical items
+                        else if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
+                            const targets = ['INVERTER', 'SAW', 'CIGS', 'GLASS'];
+                            if (player.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
+                        }
+
+                        // 5. GAMBLE / CYCLE (Priority 5)
+                        else if (unknownLiveProb < 0.4 && dealer.items.includes('BEER') && !itemToUse) itemToUse = 'BEER';
+                        else if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
+                    }
+                    else {
+                        // --- NORMAL LOGIC ---
+                        if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS') && !itemToUse) {
+                            if (dealer.hp <= 2 || Math.random() > 0.5) itemToUse = 'CIGS';
+                        }
+                        else if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
+                            const threats = ['SAW', 'CUFFS', 'INVERTER', 'ADRENALINE', 'CIGS'];
+                            if (player.items.some(i => threats.includes(i))) itemToUse = 'ADRENALINE';
+                        }
+                        // GOD MODE COMBO: BLANK -> INVERT -> LIVE -> SAW
+                        else if (dealer.items.includes('INVERTER') && !itemToUse && currentKnown === 'BLANK') {
+                            itemToUse = 'INVERTER';
+                        }
+                        else if (dealer.items.includes('SAW') && !dealer.isSawedActive && !itemToUse && currentKnown === 'LIVE' && player.hp > 1) {
                             itemToUse = 'SAW';
                         }
-                    }
-
-                    // 5. HANDCUFFS (Control)
-                    // Use if we think it's LIVE (to shoot and keep turn) OR if we just want to block player
-                    else if (dealer.items.includes('CUFFS') && !player.isHandcuffed && !itemToUse && totalRemaining > 1) {
-                        // Don't cuff on the very last shell (pointless)
-                        itemToUse = 'CUFFS';
-                    }
-
-                    // 6. MAGNIFYING GLASS (Intel)
-                    else if (!currentKnown && dealer.items.includes('GLASS') && totalRemaining >= 2 && !itemToUse) {
-                        itemToUse = 'GLASS';
-                    }
-
-                    // 7. PHONE (Future Intel)
-                    else if (dealer.items.includes('PHONE') && unknownTotal > 2 && !itemToUse) {
-                        itemToUse = 'PHONE';
-                    }
-
-                    // 8. BEER (Cycle)
-                    // Skip if current is likely BLANK and we don't want to risk shooting self
-                    // OR if current is UNKNOWN and we want to cycle to find a better shell
-                    else if (dealer.items.includes('BEER') && !itemToUse) {
-                        // If current is bad (BLANK) OR if it's unknown but we have many beers
-                        // Don't waste beer if we think it's LIVE (unless we have Inverter combo? Too complex for this AI level)
-                        if (currentKnown === 'BLANK' || (!currentKnown && unknownTotal > 2)) {
-                            itemToUse = 'BEER';
+                        // Probabilistic Fallbacks
+                        else if (dealer.items.includes('INVERTER') && !itemToUse && !currentKnown && unknownLiveProb < 0.35 && totalRemaining > 1) {
+                            itemToUse = 'INVERTER';
+                        }
+                        else if (dealer.items.includes('SAW') && !dealer.isSawedActive && !itemToUse && !currentKnown && unknownLiveProb >= 0.55 && player.hp > 1) {
+                            itemToUse = 'SAW';
+                        }
+                        else if (dealer.items.includes('CUFFS') && !player.isHandcuffed && !itemToUse && totalRemaining > 1) {
+                            itemToUse = 'CUFFS';
+                        }
+                        else if (!currentKnown && dealer.items.includes('GLASS') && totalRemaining >= 2 && !itemToUse) {
+                            itemToUse = 'GLASS';
+                        }
+                        else if (dealer.items.includes('PHONE') && totalRemaining > 2 && !itemToUse) {
+                            itemToUse = 'PHONE';
+                        }
+                        else if (dealer.items.includes('BEER') && !itemToUse) {
+                            if (currentKnown === 'BLANK' || (!currentKnown && totalRemaining > 2)) itemToUse = 'BEER';
                         }
                     }
 
-                    // --- EXECUTE ITEM OR SHOOT ---
-
+                    // --- EXECUTION ---
                     if (itemToUse) {
-                        itemIndex = dealer.items.indexOf(itemToUse);
-                        setDealer(d => ({ ...d, items: d.items.filter((_, i) => i !== itemIndex) }));
-
-                        // --- LOGIC INTEGRATION ---
-                        // Update Memory *before* action resolves to simulate knowledge
-                        if (itemToUse === 'GLASS') {
-                            aiMemory.current.set(currentIdx, chamber[currentIdx]);
-                        }
-                        if (itemToUse === 'BEER') {
-                            // Ejecting current, remove from memory
-                            aiMemory.current.delete(currentIdx);
-                        }
-                        if (itemToUse === 'INVERTER') {
-                            const actual = chamber[currentIdx];
-                            const inverted = actual === 'LIVE' ? 'BLANK' : 'LIVE';
-                            // Manual update because game state update is async
-                            aiMemory.current.set(currentIdx, inverted);
-                        }
-                        if (itemToUse === 'PHONE') {
-                            // "Cheat": Peek at a random future shell
-                            const futureIndices = [];
-                            for (let i = currentIdx + 1; i < chamber.length; i++) futureIndices.push(i);
-                            if (futureIndices.length > 0) {
-                                const peekIdx = futureIndices[Math.floor(Math.random() * futureIndices.length)];
-                                // 90% chance to remember correctly (simulating 'reading' the phone)
-                                if (Math.random() < 0.9) {
-                                    aiMemory.current.set(peekIdx, chamber[peekIdx]);
-                                }
-                            }
-                        }
-
-                        // Call Game Logic
-                        const roundEnded = await processItemEffect('DEALER', itemToUse);
-
-                        // Handle Adrenaline Steal specially
-                        if (itemToUse === 'ADRENALINE') {
+                        const idx = dealer.items.indexOf(itemToUse);
+                        if (idx !== -1) {
                             await wait(500);
-                            let stealIdx = -1;
-                            // Priority List
-                            const priorities: ItemType[] = ['SAW', 'INVERTER', 'CUFFS', 'PHONE', 'GLASS', 'CIGS', 'BEER'];
-                            // Adjust priority based on state
-                            let activePriorities = priorities;
-                            if (dealer.hp < 2) activePriorities = ['CIGS', 'ADRENALINE', ...priorities];
+                            setTargetAim('SELF');
+                            await wait(500);
 
-                            for (const pItem of activePriorities) {
-                                const idx = player.items.indexOf(pItem as ItemType);
-                                if (idx !== -1) {
-                                    stealIdx = idx;
-                                    break;
-                                }
-                            }
-                            // Fallback
-                            if (stealIdx === -1 && player.items.length > 0) stealIdx = 0;
-
-                            if (stealIdx !== -1) {
-                                const stolen = player.items[stealIdx];
-                                setPlayer(p => {
-                                    const ni = [...p.items];
-                                    ni.splice(stealIdx, 1);
-                                    return { ...p, items: ni };
+                            // Helper to trigger item use
+                            const triggerItemUse = async (index: number) => {
+                                const item = dealer.items[index];
+                                setDealer(d => {
+                                    const ni = [...d.items];
+                                    ni.splice(index, 1);
+                                    return { ...d, items: ni };
                                 });
-                                // Show overlay
-                                if (setOverlayText) {
-                                    setOverlayText(`DEALER STOLE ${stolen}`);
-                                    setTimeout(() => setOverlayText?.(null), 1500);
-                                }
-                                await wait(1000);
+                                await processItemEffect('DEALER', item);
+                            };
 
-                                // Use if valid
-                                if (stolen !== 'ADRENALINE') {
-                                    // Memory updates for stolen items
-                                    if (stolen === 'GLASS') aiMemory.current.set(currentIdx, chamber[currentIdx]);
-                                    if (stolen === 'INVERTER') {
-                                        const actual = chamber[currentIdx];
-                                        aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
+                            if (itemToUse === 'ADRENALINE') {
+                                // Remove Adrenaline
+                                setDealer(d => {
+                                    const ni = [...d.items];
+                                    ni.splice(idx, 1);
+                                    return { ...d, items: ni };
+                                });
+                                await processItemEffect('DEALER', 'ADRENALINE');
+                                await wait(1500);
+
+                                // Simulate Steal
+                                let stealIdx = -1;
+                                const priorities: ItemType[] = gameState.isHardMode
+                                    ? ['INVERTER', 'SAW', 'CUFFS', 'CIGS', 'PHONE', 'GLASS', 'BEER']
+                                    : ['SAW', 'INVERTER', 'CUFFS', 'PHONE', 'GLASS', 'CIGS', 'BEER'];
+
+                                let activePriorities = priorities;
+                                if (dealer.hp < 2) activePriorities = ['CIGS', 'ADRENALINE', ...priorities];
+
+                                for (const pItem of activePriorities) {
+                                    const pIdx = player.items.indexOf(pItem as ItemType);
+                                    if (pIdx !== -1) {
+                                        stealIdx = pIdx;
+                                        break;
                                     }
-                                    await processItemEffect('DEALER', stolen);
                                 }
-                            } else {
-                                if (setOverlayText) {
-                                    setOverlayText("NOTHING TO STEAL");
-                                    setTimeout(() => setOverlayText?.(null), 1000);
+                                if (stealIdx === -1 && player.items.length > 0) stealIdx = 0;
+
+                                if (stealIdx !== -1) {
+                                    const stolen = player.items[stealIdx];
+                                    setPlayer(p => {
+                                        const ni = [...p.items];
+                                        ni.splice(stealIdx, 1);
+                                        return { ...p, items: ni };
+                                    });
+                                    if (setOverlayText) {
+                                        setOverlayText(`DEALER STOLE ${stolen}`);
+                                        setTimeout(() => setOverlayText?.(null), 1500);
+                                    }
+                                    await wait(1000);
+
+                                    if (stolen !== 'ADRENALINE') {
+                                        if (stolen === 'GLASS') aiMemory.current.set(currentIdx, chamber[currentIdx]);
+                                        if (stolen === 'INVERTER') {
+                                            const actual = chamber[currentIdx];
+                                            aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
+                                        }
+                                        await processItemEffect('DEALER', stolen);
+                                    }
+                                } else {
+                                    if (setOverlayText) {
+                                        setOverlayText("NOTHING TO STEAL");
+                                        setTimeout(() => setOverlayText?.(null), 1000);
+                                    }
                                 }
+                                setAiTick(t => t + 1);
+                                isAITurnInProgress.current = false;
+                                return;
+                            }
+                            // Non-stealing items
+                            else {
+                                await triggerItemUse(idx);
+                                if (itemToUse === 'GLASS') {
+                                    aiMemory.current.set(currentIdx, chamber[currentIdx]);
+                                }
+                                if (itemToUse === 'INVERTER') {
+                                    const actual = chamber[currentIdx];
+                                    aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
+                                }
+                                await wait(500);
+                                setAiTick(t => t + 1);
+                                isAITurnInProgress.current = false;
+                                return;
                             }
                         }
-
-                        await wait(600);
-                        if (!roundEnded) {
-                            setAiTick(t => t + 1); // Continue turn
-                        } else {
-                            aiMemory.current.clear(); // Clear memory on round end
-                        }
-                        isAITurnInProgress.current = false;
-                        return;
                     }
 
                     // --- SHOOTING DECISION ---
-                    await wait(500); // Pickup
+                    await wait(500);
                     setTargetAim('IDLE');
                     await wait(600);
 
-                    // Re-evaluate current shell status after items
+                    // Re-evaluate known after item usage
                     currentKnown = aiMemory.current.get(currentIdx);
-                    // Update probability if we just inverted it
+                    // Or if inverted
+
                     const finalLiveProb = currentKnown ? (currentKnown === 'LIVE' ? 1.0 : 0.0) : unknownLiveProb;
 
                     let target: TurnOwner = 'PLAYER';
 
-                    // 1. KNOWN LIVE -> SHOOT PLAYER
+                    // DECISION LOGIC
                     if (finalLiveProb === 1.0) target = 'PLAYER';
-
-                    // 2. KNOWN BLANK -> SHOOT SELF (Free Turn)
                     else if (finalLiveProb === 0.0) target = 'DEALER';
-
-                    // 3. UNKNOWN -> PROBABILITY CHECK (Optimized)
                     else {
-                        // If we sawed off, we are COMMITTED to violence unless we KNOW it's a blank
-                        if (dealer.isSawedActive && finalLiveProb > 0.1) {
-                            target = 'PLAYER';
+                        if (dealer.isSawedActive) {
+                            // If sawed, almost always shoot player unless we are sure it's blank
+                            target = finalLiveProb > 0.1 ? 'PLAYER' : 'DEALER'; // Risk it
+                        } else {
+                            // Hard Mode is more aggressive with probabilities
+                            const threshold = gameState.isHardMode ? 0.35 : 0.40;
+                            target = finalLiveProb >= threshold ? 'PLAYER' : 'DEALER';
                         }
-                        // Standard Risk Assessment
-                        // If chance is > 40%, shoot player. This is slightly aggressive.
-                        // Ideally: Shoot Player if E(Shot) > E(Pass).
-                        // E(Pass) = 1 (Keep turn). E(Shot) = P(Live) * Damage.
-                        // But shooting self on Blank gives another turn.
-                        // So if P(Live) < 50%, P(Blank) > 50%. Shooting self is +EV for turn retention.
-                        // However, Dealer is a psycho.
-                        else if (finalLiveProb >= 0.40) target = 'PLAYER';
-                        else target = 'DEALER';
+
+                        // Normal Mode Personality override: Sometimes dumb
+                        if (!gameState.isHardMode && Math.random() < 0.1) {
+                            target = target === 'PLAYER' ? 'DEALER' : 'PLAYER'; // 10% chance to be an idiot
+                        }
                     }
 
                     setTargetAim(target === 'PLAYER' ? 'OPPONENT' : 'SELF');
                     await wait(1000);
-
-                    // Fire
-                    aiMemory.current.delete(currentIdx); // Consumed
+                    aiMemory.current.delete(currentIdx); // Clear memory of this shell once used
                     await fireShot('DEALER', target);
 
                 } catch (e) {
@@ -328,5 +324,5 @@ export const useDealerAI = ({
             };
             runAITurn();
         }
-    }, [gameState.phase, aiTick, gameState.turnOwner]);
+    }, [gameState.phase, aiTick, gameState.turnOwner, isProcessing]);
 };

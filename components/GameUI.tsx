@@ -35,7 +35,7 @@ interface GameUIProps {
     isProcessing: boolean;
     isRecovering?: boolean; // Added for blocking gun pickup during recovery
     settings: GameSettings;
-    onStartGame: (name: string) => void;
+    onStartGame: (name: string, hardMode?: boolean) => void;
     onStartMultiplayer: () => void;
     onResetGame: (toMenu: boolean) => void;
     onFireShot: (target: TurnOwner) => void;
@@ -54,7 +54,7 @@ interface GameUIProps {
     onMpShoot?: (targetId: string) => void;
     onStealItem?: (index: number) => void;
     onBootComplete?: () => void;
-    matchData?: any; // To avoid circular dependency for now or import MatchStats
+    matchData?: any;
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -117,7 +117,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
     useEffect(() => { if (playerName) setInputName(playerName); }, [playerName]);
 
-    const handleStartGame = () => {
+    const handleStartGame = (hardMode?: boolean) => {
         if (inputName.trim()) {
             if (onUpdateName) onUpdateName(inputName.trim());
             try {
@@ -125,7 +125,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                     document.documentElement.requestFullscreen().catch(() => { });
                 }
             } catch (e) { }
-            onStartGame(inputName.trim());
+            onStartGame(inputName.trim(), hardMode);
         }
     };
 

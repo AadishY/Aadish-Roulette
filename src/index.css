@@ -64,7 +64,7 @@
     .shell-fall {
         animation-duration: 30s !important;
     }
-}
+
 
 @keyframes controls-pop {
     0% { transform: translateY(20px) scale(0.95); opacity: 0; }

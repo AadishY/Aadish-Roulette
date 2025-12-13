@@ -26,6 +26,7 @@ interface ShootingContext {
     startRound: (resetItems?: boolean) => void;
     setIsProcessing: StateSetter<boolean>;
     matchStats?: React.MutableRefObject<MatchStats>; // Added
+    handleHardModeRoundEnd?: (winner: TurnOwner) => void;
 }
 
 export const performShot = async (
@@ -36,7 +37,8 @@ export const performShot = async (
     const {
         gameState, setGameState, player, setPlayer, dealer, setDealer,
         setAnim, setKnownShell, setAimTarget, setCameraView, setOverlayText, setOverlayColor,
-        setShowFlash, setShowBlood, addLog, playerName, startRound, setIsProcessing, matchStats
+        setShowFlash, setShowBlood, addLog, playerName, startRound, setIsProcessing, matchStats,
+        handleHardModeRoundEnd
     } = ctx;
 
     setIsProcessing(true);
@@ -142,6 +144,12 @@ export const performShot = async (
             const newHp = Math.max(0, player.hp - damage);
             setPlayer(p => ({ ...p, hp: newHp }));
             if (newHp <= 0) {
+                if (gameState.isHardMode && handleHardModeRoundEnd) {
+                    addLog('ROUND LOST', 'danger');
+                    handleHardModeRoundEnd('DEALER');
+                    setIsProcessing(false);
+                    return; // Early return for Hard Mode
+                }
                 setGameState(prev => ({ ...prev, winner: 'DEALER', phase: 'GAME_OVER' }));
                 if (matchStats?.current) matchStats.current.result = 'LOSS';
                 gameOver = true;
@@ -152,6 +160,13 @@ export const performShot = async (
             setDealer(p => ({ ...p, hp: newHp }));
 
             if (newHp <= 0) {
+                if (gameState.isHardMode && handleHardModeRoundEnd) {
+                    // In Hard Mode, Dealer dies = Player wins Round
+                    addLog('ROUND WON', 'safe');
+                    handleHardModeRoundEnd('PLAYER');
+                    setIsProcessing(false);
+                    return; // Early return
+                }
                 setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
                 if (matchStats?.current) matchStats.current.result = 'WIN';
                 gameOver = true;

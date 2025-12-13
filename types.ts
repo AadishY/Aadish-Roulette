@@ -15,6 +15,12 @@ export interface GameState {
   blankCount: number;
   lastTurnWasSkipped?: boolean;
   roundCount: number;
+  isHardMode: boolean;
+  hardModeState?: {
+    round: number;
+    playerWins: number;
+    dealerWins: number;
+  };
 }
 
 export interface PlayerState {

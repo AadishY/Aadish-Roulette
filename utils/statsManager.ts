@@ -24,6 +24,8 @@ export interface MatchStats {
     damageTaken: number;
     totalScore: number;
     timestamp?: number;
+    isHardMode?: boolean;
+    roundResults?: string[]; // e.g. ['WIN', 'LOSS', 'WIN']
 }
 
 const STORAGE_KEY = 'aadish_roulette_stats_v1';
@@ -58,10 +60,12 @@ export const getStoredStats = (): GameStats => {
 };
 
 export const calculateMatchScore = (stats: MatchStats): number => {
+    if (stats.result === 'LOSS') return 0;
+
     let score = 0;
 
     // Base Score
-    score += stats.result === 'WIN' ? 1000 : 100;
+    score += 1000;
     score += stats.roundsSurvived * 100;
 
     // Performance
@@ -76,7 +80,14 @@ export const calculateMatchScore = (stats: MatchStats): number => {
     // Penalty for mistakes
     score -= stats.selfShots * 50;
 
-    return Math.max(0, Math.floor(score));
+    score = Math.max(0, Math.floor(score));
+
+    // Hard Mode Multiplier
+    if (stats.isHardMode) {
+        score *= 2;
+    }
+
+    return score;
 };
 
 export const saveGameStats = (matchStats: MatchStats) => {
@@ -106,7 +117,7 @@ export const saveGameStats = (matchStats: MatchStats) => {
     if (!current.matchHistory) current.matchHistory = [];
     const historyEntry = {
         ...matchStats,
-        totalScore: calculateMatchScore(matchStats), // Ensure score is set
+        totalScore: calculateMatchScore(matchStats), // Ensure score is set with multiplier
         timestamp: Date.now()
     };
     current.matchHistory.unshift(historyEntry);

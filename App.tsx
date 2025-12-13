@@ -70,6 +70,7 @@ export default function App() {
   }, []);
 
   const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
+  const [isHardModeSelected, setIsHardModeSelected] = useState(false);
 
   const handleConnect = useCallback(() => { }, []);
   const [socketError, setSocketError] = useState<string | null>(null);
@@ -152,7 +153,8 @@ export default function App() {
     setTargetAim: spGame.setAimTarget,
     setCameraView: spGame.setCameraView,
     setOverlayText: spGame.setOverlayText,
-    isMultiplayer: isMultiplayerMode
+    isMultiplayer: isMultiplayerMode,
+    isProcessing: spGame.isProcessing
   });
 
   const handleResetSettings = () => setSettings(DEFAULT_SETTINGS);
@@ -163,8 +165,11 @@ export default function App() {
     audioManager.playMusic('menu');
   }, [spGame]);
 
-  const handleStartSP = () => {
+  const handleStartSP = (name: string, hardMode: boolean = false) => {
     setIsMultiplayerMode(false);
+    setIsHardModeSelected(hardMode);
+    if (name) spGame.setPlayerName(name);
+
     audioManager.stopMusic(); // Stop menu music immediately
     setAppState('LOADING_SP');
   };
@@ -187,8 +192,7 @@ export default function App() {
     }
     if (appState === 'LOADING_SP') {
       setAppState('GAME');
-      spGame.resetGame(false);
-      setTimeout(() => spGame.startGame(spGame.playerName), 100);
+      setTimeout(() => spGame.startGame(spGame.playerName, isHardModeSelected), 100);
     }
     if (appState === 'LOADING_GAME') {
       setAppState('GAME');

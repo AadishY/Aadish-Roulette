@@ -58,12 +58,12 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                             }
                         }}
                         disabled={isProcessing || isRecovering}
-                        className={`bg-black/90 border px-3 py-2 lg:px-8 lg:py-5 font-black text-[10px] lg:text-xl transition-all active:scale-95 shadow-lg tracking-wider flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isRecovering
+                        className={`bg-black/90 border px-6 py-4 lg:px-10 lg:py-6 font-black text-xs lg:text-xl transition-all active:scale-95 shadow-lg tracking-wider flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isRecovering
                             ? 'border-red-800 text-red-500 disabled:animate-none'
                             : 'border-stone-500 text-stone-200 hover:bg-stone-800 hover:text-white hover:border-white animate-pulse'
                             }`}
                     >
-                        <Hand size={14} className="lg:w-6 lg:h-6" />
+                        <Hand size={18} className="lg:w-6 lg:h-6" />
                         {isRecovering ? (
                             <><span className="hidden md:inline">WAIT </span>RECOVERING...</>
                         ) : (
@@ -86,9 +86,9 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                     disabled={isProcessing}
                                     onMouseEnter={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('OPPONENT')}
                                     onMouseLeave={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('CHOOSING')}
-                                    className="bg-black/90 border border-red-800 px-2 py-2 lg:px-6 lg:py-4 text-red-500 font-black text-[10px] lg:text-lg hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-1 lg:gap-2 disabled:opacity-50"
+                                    className="bg-black/90 border border-red-800 px-5 py-3 lg:px-6 lg:py-4 text-red-500 font-black text-xs lg:text-lg hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-1 lg:gap-2 disabled:opacity-50"
                                 >
-                                    <Target size={14} className="lg:w-5 lg:h-5" />
+                                    <Target size={18} className="lg:w-5 lg:h-5" />
                                     {opp.name}
                                 </button>
                             ))
@@ -101,9 +101,9 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                 disabled={isProcessing}
                                 onMouseEnter={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('OPPONENT')}
                                 onMouseLeave={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('CHOOSING')}
-                                className="bg-black/90 border border-red-800 px-2 py-2 lg:px-8 lg:py-5 text-red-500 font-black text-[10px] lg:text-xl hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
+                                className="bg-black/90 border border-red-800 px-5 py-3 lg:px-8 lg:py-5 text-red-500 font-black text-xs lg:text-xl hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
                             >
-                                <Target size={14} className="lg:w-6 lg:h-6" />
+                                <Target size={18} className="lg:w-6 lg:h-6" />
                                 SHOOT DEALER
                             </button>
                         )}
@@ -117,9 +117,9 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                             // Prevent hover events on touch devices to avoid ghost inputs (auto-aiming at self)
                             onMouseEnter={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('SELF')}
                             onMouseLeave={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('CHOOSING')}
-                            className="bg-black/90 border border-stone-700 px-2 py-2 lg:px-8 lg:py-5 text-stone-400 font-black text-[10px] lg:text-xl hover:bg-stone-800 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
+                            className="bg-black/90 border border-stone-700 px-5 py-3 lg:px-8 lg:py-5 text-stone-400 font-black text-xs lg:text-xl hover:bg-stone-800 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
                         >
-                            <User size={14} className="lg:w-6 lg:h-6" />
+                            <User size={18} className="lg:w-6 lg:h-6" />
                             SHOOT SELF
                         </button>
                     </>

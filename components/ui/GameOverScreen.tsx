@@ -10,25 +10,25 @@ interface GameOverScreenProps {
 }
 
 const WIN_QUOTES = [
-  "DEATH MISSED ITS MARK.",
-  "LUCK WAS MERELY AN OPTION.",
-  "ONE MORE BREATH, ONE MORE VICTORY.",
-  "SHEER WILL OUTLIVED THE BULLET.",
-  "FORTUNE SMILED BLOODLESSLY.",
-  "SURVIVAL IS YOUR TROPHY.",
-  "YOU MAY BREATHE AGAIN.",
+    "DEATH MISSED ITS MARK.",
+    "LUCK WAS MERELY AN OPTION.",
+    "ONE MORE BREATH, ONE MORE VICTORY.",
+    "SHEER WILL OUTLIVED THE BULLET.",
+    "FORTUNE SMILED BLOODLESSLY.",
+    "SURVIVAL IS YOUR TROPHY.",
+    "YOU MAY BREATHE AGAIN.",
 
 ];
 
 
 const LOSS_QUOTES = [
-  "YOUR LUCK RAN DRY.",
-  "CONNECTION TERMINATED. GAME OVER.",
-  "VOID ACCEPTED YOU.",
-  "SIGNAL LOST. LIGHTS OUT.",
-  "SYSTEM FAILURE: HEART STOPPED.",
-  "CONGRATS. YOU FOUND THE BULLET.",
-  "PRESS ALT+F4 NEXT TIME",
+    "YOUR LUCK RAN DRY.",
+    "CONNECTION TERMINATED. GAME OVER.",
+    "VOID ACCEPTED YOU.",
+    "SIGNAL LOST. LIGHTS OUT.",
+    "SYSTEM FAILURE: HEART STOPPED.",
+    "CONGRATS. YOU FOUND THE BULLET.",
+    "PRESS ALT+F4 NEXT TIME",
 ];
 
 
@@ -95,6 +95,18 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
                 <div className="text-2xl md:text-3xl text-yellow-500 font-black mt-1 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
                     SCORE: {displayedScore.toLocaleString()}
                 </div>
+                {matchData?.isHardMode && (
+                    <div className="mt-2 text-red-600 font-black tracking-widest border border-red-800 px-3 py-1 bg-black/50 text-xs md:text-sm animate-pulse">
+                        ☠️ HARD MODE ☠️
+                    </div>
+                )}
+                {matchData?.roundResults && (
+                    <div className="flex gap-2 mt-2">
+                        {matchData.roundResults.map((res, i) => (
+                            <div key={i} className={`w-3 h-3 md:w-4 md:h-4 rounded-full border border-stone-800 ${res === 'WIN' ? 'bg-green-600 shadow-[0_0_8px_rgba(0,255,0,0.6)]' : 'bg-red-600 shadow-[0_0_8px_rgba(255,0,0,0.6)]'}`} title={`Round ${i + 1}: ${res}`} />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Match Stats Grid - Super Compact */}
@@ -102,26 +114,26 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
                 <div className="grid grid-cols-4 gap-2 mb-3 w-full max-w-2xl px-2">
                     <div className="bg-stone-900/50 border border-stone-800 p-1 md:p-2 flex flex-col items-center hover:bg-stone-900 transition-colors">
                         <Activity className="text-blue-500 mb-0.5" size={14} />
-                        <div className="text-stone-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider">Survived</div>
+                        <div className="text-stone-500 text-[10px] md:text-xs font-bold uppercase tracking-wider">Survived</div>
                         <div className="text-sm md:text-xl font-black text-white">{matchData.roundsSurvived}</div>
                     </div>
                     <div className="bg-stone-900/50 border border-stone-800 p-1 md:p-2 flex flex-col items-center hover:bg-stone-900 transition-colors">
                         <Target className="text-red-500 mb-0.5" size={14} />
-                        <div className="text-stone-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider">Accuracy</div>
+                        <div className="text-stone-500 text-[10px] md:text-xs font-bold uppercase tracking-wider">Accuracy</div>
                         <div className="text-sm md:text-xl font-black text-white">
                             {matchData.shotsFired > 0 ? Math.round((matchData.shotsHit / matchData.shotsFired) * 100) : 0}%
                         </div>
                     </div>
                     <div className="bg-stone-900/50 border border-stone-800 p-1 md:p-2 flex flex-col items-center hover:bg-stone-900 transition-colors">
                         <Zap className="text-yellow-500 mb-0.5" size={14} />
-                        <div className="text-stone-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider">Items</div>
+                        <div className="text-stone-500 text-[10px] md:text-xs font-bold uppercase tracking-wider">Items</div>
                         <div className="text-sm md:text-xl font-black text-white">
                             {Object.values(matchData.itemsUsed).reduce((a, b) => a + b, 0)}
                         </div>
                     </div>
                     <div className="bg-stone-900/50 border border-stone-800 p-1 md:p-2 flex flex-col items-center hover:bg-stone-900 transition-colors">
                         <Skull className="text-purple-500 mb-0.5" size={14} />
-                        <div className="text-stone-500 text-[7px] md:text-[9px] font-bold uppercase tracking-wider">Damage</div>
+                        <div className="text-stone-500 text-[10px] md:text-xs font-bold uppercase tracking-wider">Damage</div>
                         <div className="text-sm md:text-xl font-black text-white">{matchData.damageDealt}</div>
                     </div>
                 </div>
@@ -130,23 +142,23 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
             {/* Lifetime Stats Footer - Super Compact */}
             {stats && (
                 <div className="mb-3 w-full max-w-xl text-stone-500 font-mono text-center border-t border-stone-800 py-2 px-2 bg-stone-950/50">
-                    <div className="text-[8px] tracking-[0.2em] mb-1 uppercase text-stone-600 font-bold">LIFETIME RECORD</div>
+                    <div className="text-[10px] tracking-[0.2em] mb-1 uppercase text-stone-600 font-bold">LIFETIME RECORD</div>
                     <div className="flex gap-4 justify-center items-center flex-wrap">
                         <div className="flex flex-col items-center">
                             <span className="text-sm md:text-lg font-black text-green-600">{stats.wins}</span>
-                            <span className="text-[6px] font-bold">WINS</span>
+                            <span className="text-[9px] font-bold">WINS</span>
                         </div>
                         <div className="flex flex-col items-center">
                             <span className="text-sm md:text-lg font-black text-red-600">{stats.losses}</span>
-                            <span className="text-[6px] font-bold">LOSSES</span>
+                            <span className="text-[9px] font-bold">LOSSES</span>
                         </div>
                         <div className="flex flex-col items-center">
                             <span className="text-sm md:text-lg font-black text-stone-300">{stats.highestRound}</span>
-                            <span className="text-[6px] font-bold">BEST</span>
+                            <span className="text-[9px] font-bold">BEST</span>
                         </div>
                         <div className="flex flex-col items-center">
                             <span className="text-sm md:text-lg font-black text-yellow-600">{stats.itemPoints}</span>
-                            <span className="text-[6px] font-bold">PTS</span>
+                            <span className="text-[9px] font-bold">PTS</span>
                         </div>
                     </div>
                 </div>

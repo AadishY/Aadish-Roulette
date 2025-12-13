@@ -6,26 +6,33 @@ import { MAX_ITEMS } from '../../constants';
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 
 // From useGameLogic
-const getRandomItem = (): ItemType => {
-    // BEER: 20%
-    // CIGS: 14%
-    // GLASS: 12%
-    // CUFFS: 14%
-    // PHONE: 16%
-    // SAW: 10%
-    // INVERTER: 16%
-    // ADRENALINE: 10%
-    // Total Weight: 112
-
-    const r = Math.random() * 112;
-    if (r < 20) return 'BEER';
-    if (r < 34) return 'CIGS';
-    if (r < 46) return 'GLASS';
-    if (r < 60) return 'CUFFS';
-    if (r < 76) return 'PHONE';
-    if (r < 86) return 'SAW';
-    if (r < 102) return 'INVERTER';
-    return 'ADRENALINE';
+// Adjusted for Hard Mode support
+const getRandomItem = (isHardMode: boolean = false): ItemType => {
+    if (isHardMode) {
+        // BEER: 20%, CIGS: 8%, GLASS: 12%, CUFFS: 10%, PHONE: 16%, SAW: 10%, INVERTER: 16%, ADRENALINE: 10%
+        // Total: 102
+        const r = Math.random() * 102;
+        if (r < 20) return 'BEER';
+        if (r < 28) return 'CIGS';
+        if (r < 40) return 'GLASS';
+        if (r < 50) return 'CUFFS';
+        if (r < 66) return 'PHONE';
+        if (r < 76) return 'SAW';
+        if (r < 92) return 'INVERTER';
+        return 'ADRENALINE';
+    } else {
+        // Normal Mode
+        // Total Weight: 112
+        const r = Math.random() * 112;
+        if (r < 20) return 'BEER';
+        if (r < 34) return 'CIGS';
+        if (r < 46) return 'GLASS';
+        if (r < 60) return 'CUFFS';
+        if (r < 76) return 'PHONE';
+        if (r < 86) return 'SAW';
+        if (r < 102) return 'INVERTER';
+        return 'ADRENALINE';
+    }
 };
 
 export const distributeItems = async (
@@ -45,13 +52,37 @@ export const distributeItems = async (
     }
 
     // Generate items based on round count
-    // Rounds 1-3: 2 items, Rounds 4-9: 3 items, Rounds 10+: 4 items
-    const roundNum = forceClear ? 1 : gameState.roundCount + 1;
+    let amount = 2;
 
-    let amount = 2; // Default start with 2 items
-    if (roundNum >= 10) amount = 4;
-    else if (roundNum >= 4) amount = 3;
-    else amount = 2;
+    if (gameState.isHardMode) {
+        // HARD MODE LOGIC
+        // Round 1 (Batch 1? No, Round 1 of match): 2 items
+        // Round 2: 3 items
+        // Round 3: Random 1-4
+        // Logic assumption: gameState.roundCount resets to 1 for each new Game Round in HM?
+        // OR we track match round in hardModeState.
+        // Let's assume gameState.hardModeState?.round is the source of truth for "Stage".
+
+        // However, distributeItems is called with gameState. 
+        // We need to know which STAGE we are in.
+        // If forceClear is true, we are starting a new Stage (or batch 1 of stage?).
+        // In Hard Mode, if we are in Stage 3, we always get 1-4 items per batch?
+        // Prompt says "Round 3- 4 health and random no. of items between 1 to 4".
+
+        const currentStage = gameState.hardModeState?.round || 1;
+
+        if (currentStage === 1) amount = 2;
+        else if (currentStage === 2) amount = 3;
+        else if (currentStage === 3) amount = randomInt(1, 4);
+        else amount = 4; // Fallback
+    } else {
+        // NORMAL MODE LOGIC
+        // Rounds 1-3: 2 items, Rounds 4-9: 3 items, Rounds 10+: 4 items
+        const roundNum = forceClear ? 1 : gameState.roundCount + 1;
+        if (roundNum >= 10) amount = 4;
+        else if (roundNum >= 4) amount = 3;
+        else amount = 2;
+    }
 
     const generateLoot = () => {
         const batch: ItemType[] = [];
@@ -63,7 +94,7 @@ export const distributeItems = async (
 
             // Soft duplicate limit: Max 2 of same item per batch
             do {
-                const candidate = getRandomItem();
+                const candidate = getRandomItem(gameState.isHardMode);
                 const currentCount = counts[candidate] || 0;
 
                 if (currentCount < 2) {
@@ -73,7 +104,7 @@ export const distributeItems = async (
             } while (!item && tries < 15);
 
             // Fallback if random keeps giving same item
-            if (!item) item = getRandomItem();
+            if (!item) item = getRandomItem(gameState.isHardMode);
 
             batch.push(item);
             counts[item] = (counts[item] || 0) + 1;
