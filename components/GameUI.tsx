@@ -215,7 +215,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
                 {/* Overlay Text - Centered Announcements */}
                 {overlayText && !showLootOverlay && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none px-4">
+                    <div className="absolute left-0 right-0 top-[60%] z-50 flex justify-center pointer-events-none px-4">
                         <div className="text-lg md:text-4xl font-black tracking-tight text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center bg-black/60 px-4 py-2 md:px-8 md:py-4">
                             <RenderColoredText text={overlayText} />
                         </div>
@@ -332,7 +332,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         </div>
 
                         {/* Controls - Positioned Absolute to prevent floating high on mobile */}
-                        <div className="absolute bottom-24 md:bottom-40 left-0 right-0 flex justify-center pointer-events-none z-30 pb-2 md:pb-0">
+                        <div className="absolute bottom-8 lg:bottom-40 left-0 right-0 flex justify-center pointer-events-none z-30 pb-2 lg:pb-0">
                             {/* Only show controls if not stealing phase */}
                             {gameState.phase !== 'STEALING' && isMyTurn && !showLootOverlay && (
                                 <Controls
@@ -363,7 +363,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         )}
 
                         {/* Bottom - Chat/Logs + Inventory */}
-                        <div className="flex justify-between items-end gap-2 w-full h-24 md:h-40 pointer-events-none">
+                        <div className="flex justify-between items-end gap-2 w-full h-24 lg:h-40 pointer-events-none">
                             {/* Chat (MP) or Logs (SP) */}
                             {isMultiplayer ? (
                                 <div className="pointer-events-auto flex-1 max-w-[280px] md:max-w-[350px] bg-black/70 border border-stone-800 flex flex-col h-full text-[10px] md:text-xs font-mono">
