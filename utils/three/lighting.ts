@@ -62,7 +62,7 @@ export const setupLighting = (scene: THREE.Scene) => {
     // ═══════════════════════════════════════════════════════════════
 
     // Warm rim from back-right (cinematic edge lighting)
-    const bgRim = new THREE.SpotLight(0xff4422, 35); // Boosted further
+    const bgRim = new THREE.SpotLight(0xff4422, 60); // Boosted further for drama
     bgRim.position.set(18, 8, -22);
     bgRim.target.position.set(0, 2, -10);
     bgRim.angle = 0.8;

@@ -214,8 +214,33 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 sceneRef.current.renderer.dispose();
             }
             if (containerRef.current) containerRef.current.innerHTML = '';
+            if (containerRef.current) containerRef.current.innerHTML = '';
         };
-    }, [settings.pixelScale, players?.map(p => p.id).join(',')]);
+    }, [players?.map(p => p.id).join(',')]); // Removed settings.pixelScale to prevent full rebuild
+
+    // Separate effect for Pixel Scale / Resolution updates (No Rebuild)
+    useEffect(() => {
+        if (!containerRef.current || !sceneRef.current) return;
+
+        const updateRes = () => {
+            const width = containerRef.current!.clientWidth;
+            const height = containerRef.current!.clientHeight;
+            if (width === 0 || height === 0) return;
+
+            const isMob = window.innerWidth < 900;
+            const isAnd = navigator.userAgent.toLowerCase().includes('android');
+            const mobScale = isAnd ? 3 : 2;
+            const pxScale = isMob ? mobScale : (propsRef.current.settings.pixelScale || 4);
+
+            sceneRef.current!.renderer.setSize(width / pxScale, height / pxScale, false);
+
+            const aspect = width / height;
+            sceneRef.current!.camera.aspect = aspect;
+            sceneRef.current!.camera.updateProjectionMatrix();
+        };
+
+        updateRes();
+    }, [settings.pixelScale]);
 
     // --- SYNC EFFECTS ---
     useEffect(() => {

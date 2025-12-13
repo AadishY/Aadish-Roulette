@@ -135,6 +135,17 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
     const animState = props.animState;
     const isPlayerTurn = props.turnOwner === 'PLAYER';
 
+    const easeOutBack = (t: number) => {
+        const c1 = 1.70158;
+        const c3 = c1 + 1;
+        return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    };
+
+    const easeOutElastic = (t: number) => {
+        const c4 = (2 * Math.PI) / 3;
+        return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+    };
+
     if (items) {
         // ITEM LIGHT HELPER - Illuminate visible items
         const updateItemLight = () => {
@@ -159,7 +170,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemLight.position.z += 3;
 
                 const isDealerItem = activeItem.position.z < -2; // Adjusted check for new positions
-                items.itemLight.intensity = isDealerItem ? 25 : 15;
+                items.itemLight.intensity = isDealerItem ? 35 : 15; // Brighter for dealer
                 items.itemLight.distance = isDealerItem ? 30 : 20;
             } else {
                 items.itemLight.intensity = 0;
@@ -187,14 +198,14 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         const glassTime = time - (scene.userData.glassStart || -999);
-        const glassDuration = isPlayerTurn ? 2.5 : 1.8;
+        const glassDuration = isPlayerTurn ? 2.5 : 2.5; // Longer for dealer too
         if (glassTime >= 0 && glassTime < glassDuration) {
             items.itemGlass.visible = true;
 
             if (isPlayerTurn) {
                 if (glassTime < 0.5) {
                     const p = glassTime / 0.5;
-                    const ease = 1 - Math.pow(1 - p, 3);
+                    const ease = easeOutBack(p);
                     items.itemGlass.position.set(0.5 - ease * 0.3, -3 + ease * 4.5, 6);
                     items.itemGlass.rotation.set(0, 0, 0);
                 } else if (glassTime < 2.0) {
@@ -204,24 +215,33 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     items.itemGlass.rotation.x = -0.2;
                 } else {
                     items.itemGlass.position.y -= 0.15;
+                    items.itemGlass.visible = false; // Early hide
                 }
             } else {
-                // DEALER uses glass - SMALLER Scale
-                items.itemGlass.scale.setScalar(1.3);
-                if (glassTime < 0.4) {
-                    const p = glassTime / 0.4;
-                    items.itemGlass.position.set(0, -1 + p * 6, -4.0);
-                    items.itemGlass.rotation.set(-0.2, 0, 0);
-                } else if (glassTime < 1.5) {
-                    items.itemGlass.position.set(0, 5 + Math.sin(glassTime * 3) * 0.1, -4.0);
-                    items.itemGlass.rotation.set(-0.3, Math.sin(glassTime * 2) * 0.1, 0);
+                // DEALER uses glass - Improved with Arc
+                items.itemGlass.scale.setScalar(1.0);
+                if (glassTime < 0.6) {
+                    const p = glassTime / 0.6;
+                    const ease = easeOutBack(p);
+                    // Arc from right side
+                    items.itemGlass.position.set(3.0 * (1 - ease), -2 + ease * 7, -4.0 + ease * 1);
+                    items.itemGlass.rotation.set(-0.2, 0.5 * (1 - ease), 0);
+                } else if (glassTime < 2.0) {
+                    items.itemGlass.position.set(
+                        Math.sin(time * 2) * 0.1,
+                        5 + Math.sin(glassTime * 3) * 0.1,
+                        -3.0
+                    );
+                    items.itemGlass.rotation.set(-0.3, Math.sin(glassTime * 2) * 0.2, 0);
                 } else {
-                    const p = (glassTime - 1.5) / 0.3;
-                    items.itemGlass.position.y = 5 - p * 4;
-                    items.itemGlass.position.z = -4.0;
-                    if (glassTime > 1.7) items.itemGlass.visible = false;
+                    const p = (glassTime - 2.0) / 0.4;
+                    items.itemGlass.position.y = 5 - p * 6;
+                    items.itemGlass.position.x = p * 4; // Throw away
+                    if (glassTime > 2.3) items.itemGlass.visible = false;
                 }
             }
+        } else {
+            items.itemGlass.visible = false;
         }
 
         // BEER ANIMATION
@@ -238,46 +258,48 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             items.itemBeer.scale.setScalar(2.2);
 
             if (isPlayerTurn) {
-                if (drinkTime < 0.8) {
-                    const p = drinkTime / 0.8;
-                    const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemBeer.position.set(0.3, -3 + ease * 4.5, 5);
-                    items.itemBeer.rotation.set(ease * 0.4, 0, ease * 0.1);
+                if (drinkTime < 0.6) {
+                    const p = drinkTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemBeer.position.set(1.5 - ease * 1.2, -3 + ease * 4.5, 5);
+                    items.itemBeer.rotation.set(0, 0, ease * 0.2);
                 } else if (drinkTime < 2.5) {
-                    const sipPhase = (drinkTime - 0.8) / 1.7;
+                    const sipPhase = (drinkTime - 0.6) / 1.9;
                     const sipP = Math.min(1, sipPhase);
-                    items.itemBeer.position.set(0.3, 1.5 + Math.sin(drinkTime * 3) * 0.05, 5);
-                    const tiltAmount = 0.4 + Math.sin(sipPhase * Math.PI) * 1.0;
+                    // Shake with sip
+                    items.itemBeer.position.set(0.3 + (Math.random() - 0.5) * 0.02, 1.5 + Math.sin(drinkTime * 10) * 0.05, 5);
+                    const tiltAmount = 0.4 + Math.sin(sipPhase * Math.PI) * 1.2;
                     items.itemBeer.rotation.set(tiltAmount, 0, 0.1);
-                    camera.rotation.x = -0.15 * sipP;
+                    camera.rotation.x = -0.2 * Math.sin(sipPhase * Math.PI); // Head tilt
                 } else {
-                    const p = (drinkTime - 2.5) / 1.0;
-                    const timeScale = dt / 0.0166;
-                    items.itemBeer.position.y -= p * 0.8 * timeScale;
-                    items.itemBeer.position.x += p * 0.3 * timeScale;
-                    items.itemBeer.rotation.z += p * 0.5 * timeScale;
-                    if (p > 0.6) items.itemBeer.visible = false;
-                    camera.rotation.x *= Math.pow(0.85, timeScale);
+                    items.itemBeer.position.y -= 0.5; // Fast drop
+                    if (drinkTime > 2.8) items.itemBeer.visible = false;
+                    camera.rotation.x *= 0.9;
                 }
             } else {
-                // DEALER drinking beer - SMALLER Scale
-                items.itemBeer.scale.setScalar(1.3);
-                if (drinkTime < 0.5) {
-                    const p = drinkTime / 0.5;
-                    items.itemBeer.position.set(0.5, -1 + p * 6, -4.0);
-                    items.itemBeer.rotation.set(-0.3, 0, 0);
+                // DEALER drinking beer - Organic Arc
+                items.itemBeer.scale.setScalar(1.0);
+                if (drinkTime < 0.6) {
+                    const p = drinkTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemBeer.position.set(2.0 * (1 - ease), -2 + ease * 7, -4.0);
+                    items.itemBeer.rotation.set(-0.3, 0, -0.5 * (1 - ease));
                 } else if (drinkTime < 2.5) {
-                    const tiltP = Math.min(1, (drinkTime - 0.5) / 0.5);
-                    items.itemBeer.position.set(0.5, 5 + Math.sin(drinkTime) * 0.2, -4.0);
-                    items.itemBeer.rotation.set(-0.3 - tiltP * 1.2, 0, 0);
+                    const tiltP = Math.min(1, (drinkTime - 0.6) / 0.5);
+                    // Crushing can shake
+                    const shake = Math.sin(time * 50) * 0.02;
+                    items.itemBeer.position.set(0 + shake, 5, -4.0 + shake);
+                    items.itemBeer.rotation.set(-0.3 - tiltP * 1.5, 0, 0);
                 } else {
                     const p = (drinkTime - 2.5) / 1.0;
-                    items.itemBeer.position.y = 5 - p * 4;
-                    items.itemBeer.position.z = -4.0;
-                    items.itemBeer.rotation.z += 0.15;
-                    if (drinkTime > 3.2) items.itemBeer.visible = false;
+                    items.itemBeer.position.y = 5 - p * 6;
+                    items.itemBeer.position.x = -p * 3; // Toss aside
+                    items.itemBeer.rotation.z += 0.2;
+                    if (drinkTime > 3.0) items.itemBeer.visible = false;
                 }
             }
+        } else {
+            items.itemBeer.visible = false;
         }
 
         // RACK ANIMATION
@@ -288,8 +310,8 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
         const rackTime = time - (scene.userData.rackStart || -999);
         if (rackTime < 0.4) {
-            context.gunGroup.position.z += (rackTime < 0.1) ? 0.3 : -0.1;
-            context.gunGroup.rotation.z += (rackTime < 0.1) ? 0.1 : -0.05;
+            context.gunGroup.position.z += (rackTime < 0.15) ? 0.35 : -0.15; // Snappier
+            context.gunGroup.rotation.z += (rackTime < 0.15) ? 0.15 : -0.05;
         }
 
         // CIGARETTE
@@ -304,13 +326,14 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             items.itemCigs.visible = true;
             if (isPlayerTurn) {
                 items.itemCigs.scale.setScalar(2.0);
-                if (healTime < 1.0) {
-                    const p = healTime;
-                    items.itemCigs.position.set(0.8 - p * 0.3, -1 + p * 2.5, 4);
-                    items.itemCigs.rotation.set(0.2, -0.3, 0);
+                if (healTime < 0.8) {
+                    const p = healTime / 0.8;
+                    const ease = easeOutBack(p);
+                    items.itemCigs.position.set(2.0 * (1 - ease) + 0.5, -3 + ease * 4.5, 4);
+                    items.itemCigs.rotation.set(0.2, -0.3 + (1 - ease), 0);
                 } else if (healTime < 3.0) {
                     items.itemCigs.position.set(0.5, 1.5 + Math.sin(time) * 0.05, 4);
-                    items.itemCigs.rotation.set(0.3, -0.2, 0.1);
+                    items.itemCigs.rotation.set(0.3 + Math.sin(time * 5) * 0.05, -0.2, 0.1);
 
                     const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
                     if (tip) {
@@ -334,20 +357,19 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     }
                     camera.rotation.z = Math.sin(time) * 0.005;
                 } else {
-                    const timeScale = dt / 0.0166;
-                    items.itemCigs.position.x += 0.15 * timeScale;
-                    items.itemCigs.position.y -= 0.15 * timeScale;
-                    items.itemCigs.rotation.z -= 0.3 * timeScale;
+                    items.itemCigs.visible = false;
                 }
             } else {
                 items.itemCigs.scale.setScalar(2.0);
-                if (healTime < 0.5) {
-                    const p = healTime / 0.5;
-                    items.itemCigs.position.set(0.3, -1 + p * 6, -4.0);
-                    items.itemCigs.rotation.set(0, 0.2, 0.3);
+                if (healTime < 0.6) {
+                    const p = healTime / 0.6;
+                    const ease = easeOutBack(p); // Smooth raise
+                    // Start right, move center
+                    items.itemCigs.position.set(2.0 * (1 - ease), -2 + ease * 7, -4.0);
+                    items.itemCigs.rotation.set(0, 0.2, 0.3 * (1 - ease));
                 } else if (healTime < 3.0) {
-                    items.itemCigs.position.set(0.3, 5 + Math.sin(healTime * 2) * 0.1, -4.0);
-                    items.itemCigs.rotation.set(0, 0.2, 0.3);
+                    items.itemCigs.position.set(0, 5 + Math.sin(healTime * 2) * 0.1, -4.0);
+                    items.itemCigs.rotation.set(0, 0.2 + Math.sin(time * 2) * 0.1, 0.3);
 
                     const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
                     if (tip) {
@@ -371,16 +393,14 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                         });
                     }
                 } else {
-                    const p = (healTime - 3.0) / 1.0;
-                    items.itemCigs.position.y = 5 - p * 4;
-                    items.itemCigs.position.z = -4.0;
-                    items.itemCigs.rotation.z += 0.1;
-                    if (healTime > 3.5) {
-                        items.itemCigs.visible = false;
-                        items.itemCigs.scale.setScalar(1);
-                    }
+                    const p = (healTime - 3.0) / 0.5;
+                    items.itemCigs.position.y = 5 - p * 6;
+                    items.itemCigs.position.x = -p * 2;
+                    if (healTime > 3.3) items.itemCigs.visible = false;
                 }
             }
+        } else {
+            items.itemCigs.visible = false;
         }
 
         // SAW ANIMATION
@@ -392,17 +412,18 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             }
             items.itemSaw.visible = true;
             items.itemSaw.position.copy(context.gunGroup.position);
-            const sawCycle = Math.sin(time * 30);
+            // More aggressive sawing motion
+            const sawCycle = Math.sin(time * 45);
 
             if (isPlayerTurn) {
                 // Optimization: reused vector
-                _v1.set(0.5 + sawCycle * 0.2, 0.5, 2.0);
+                _v1.set(0.5 + sawCycle * 0.4, 0.5 + Math.abs(sawCycle) * 0.1, 2.0);
                 items.itemSaw.position.add(_v1);
-                items.itemSaw.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+                items.itemSaw.rotation.set(Math.PI / 2, 0, Math.PI / 2 + sawCycle * 0.1);
             } else {
-                _v1.set(-0.5 + sawCycle * 0.2, 0.5, -2.0);
+                _v1.set(-0.5 + sawCycle * 0.4, 0.5 + Math.abs(sawCycle) * 0.1, -2.0);
                 items.itemSaw.position.add(_v1);
-                items.itemSaw.rotation.set(Math.PI / 2, 0, -Math.PI / 2);
+                items.itemSaw.rotation.set(Math.PI / 2, 0, -Math.PI / 2 - sawCycle * 0.1);
             }
         } else {
             items.itemSaw.visible = false;
@@ -420,26 +441,27 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         if (cuffTime < 1.8) {
             items.itemCuffs.visible = true;
             if (isPlayerTurn) {
-                _v1.set(2, -2, 10); // Start
-                _v2.set(0, 2, -8);  // End
+                _v1.set(4, -4, 8); // Start wide
+                _v2.set(0, 2, -6);  // End at opponent
             } else {
-                _v1.set(0, -1, -4.0); // Start
-                _v2.set(0, 0, 8); // End
+                _v1.set(-4, -2, -4.0); // Start wide
+                _v2.set(0, 0, 8); // End at player
             }
 
-            if (cuffTime < 1.2) {
-                const p = cuffTime / 1.2;
-                const ease = 1 - Math.pow(1 - p, 2);
+            if (cuffTime < 1.0) {
+                const p = cuffTime / 1.0;
+                const ease = easeOutBack(p);
                 items.itemCuffs.position.lerpVectors(_v1, _v2, ease);
-                items.itemCuffs.position.y += Math.sin(ease * Math.PI) * 3.0;
+                items.itemCuffs.position.y += Math.sin(ease * Math.PI) * 4.0; // High arc
                 const scalePulse = 1.0 + Math.sin(ease * Math.PI) * 0.5;
-                items.itemCuffs.scale.setScalar(isPlayerTurn ? 1.0 : scalePulse * 1.3);
-                items.itemCuffs.rotation.x = p * Math.PI * 3;
+                items.itemCuffs.scale.setScalar((isPlayerTurn ? 1.0 : 1.3) * scalePulse);
+                items.itemCuffs.rotation.x = p * Math.PI * 4; // Fast spin
                 items.itemCuffs.rotation.z = p * Math.PI * 2;
             } else {
                 items.itemCuffs.visible = false;
-                items.itemCuffs.scale.setScalar(1);
             }
+        } else {
+            items.itemCuffs.visible = false;
         }
 
         // PHONE ANIMATION
@@ -457,10 +479,10 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             const screen = items.itemPhone.getObjectByName('PHONE_SCREEN') as THREE.Mesh;
 
             if (isPlayerTurn) {
-                if (phoneTime < 0.5) {
-                    const p = phoneTime / 0.5;
-                    const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemPhone.position.set(0.2, -2 + ease * 3.5, 3.5);
+                if (phoneTime < 0.6) {
+                    const p = phoneTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemPhone.position.set(0.2, -3 + ease * 4.5, 3.5);
                     items.itemPhone.rotation.set(0.8 - ease * 0.3, 0, -0.2);
                 } else if (phoneTime < 3.0) {
                     items.itemPhone.position.set(0.2, 1.5 + Math.sin(time * 2) * 0.03, 3.5);
@@ -468,24 +490,20 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     if (screen) {
                         const glowPhase = (phoneTime - 0.5) / 2.5;
                         const mat = screen.material as THREE.MeshBasicMaterial;
-                        if (glowPhase < 0.3) {
-                            mat.color.setHex(0x003366);
-                        } else if (glowPhase < 0.6) {
-                            mat.color.setHex(Math.random() > 0.5 ? 0x00ff00 : 0x003366);
-                        } else {
-                            mat.color.setHex(0x00aa00);
-                        }
+                        if (glowPhase < 0.2) mat.color.setHex(0x003366);
+                        else if (glowPhase < 0.8) {
+                            mat.color.setHex((time * 10) % 2 > 1 ? 0x00ff00 : 0x004400); // Digital flickering
+                        } else mat.color.setHex(0x00aa00);
                     }
                 } else {
-                    const timeScale = dt / 0.0166;
-                    items.itemPhone.position.y -= 0.15 * timeScale;
-                    items.itemPhone.rotation.x += 0.05 * timeScale;
+                    items.itemPhone.visible = false;
                 }
             } else {
                 items.itemPhone.scale.setScalar(2.5);
-                if (phoneTime < 0.5) {
-                    const p = phoneTime / 0.5;
-                    items.itemPhone.position.set(0, -1 + p * 7, -4.0); // Z = -4
+                if (phoneTime < 0.6) {
+                    const p = phoneTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemPhone.position.set(2 * (1 - ease), -1 + ease * 7, -4.0);
                     items.itemPhone.rotation.set(0.5, 0, 0);
                 } else if (phoneTime < 2.5) {
                     const floatY = Math.sin(phoneTime * 2) * 0.1;
@@ -493,19 +511,18 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                     items.itemPhone.rotation.set(0.4, 0, 0);
                     if (screen) {
                         const mat = screen.material as THREE.MeshBasicMaterial;
-                        const glowPhase = (phoneTime - 0.5) / 2.0;
-                        if (glowPhase < 0.3) mat.color.setHex(0x003366);
-                        else if (glowPhase < 0.7) mat.color.setHex(Math.random() > 0.5 ? 0x00ff44 : 0x003366);
-                        else mat.color.setHex(0x00aa00);
+                        // Flicker
+                        mat.color.setHex((time * 15) % 2 > 1 ? 0x00ff44 : 0x002211);
                     }
                 } else {
-                    const p = (phoneTime - 2.5) / 1.0;
-                    items.itemPhone.position.y = 6 - p * 5;
-                    items.itemPhone.position.z = -4.0;
-                    items.itemPhone.rotation.z += 0.1;
-                    if (phoneTime > 3.2) items.itemPhone.visible = false;
+                    const p = (phoneTime - 2.5) / 0.5;
+                    items.itemPhone.position.y = 6 - p * 6;
+                    items.itemPhone.position.x = -p * 3;
+                    if (phoneTime > 2.8) items.itemPhone.visible = false;
                 }
             }
+        } else {
+            items.itemPhone.visible = false;
         }
 
         // INVERTER ANIMATION
@@ -521,46 +538,45 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         if (invTime < 2.5) {
             items.itemInverter.visible = true;
             if (isPlayerTurn) {
-                if (invTime < 0.5) {
-                    const p = invTime / 0.5;
-                    const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemInverter.position.set(0, -2 + ease * 3.5, 6);
-                    items.itemInverter.rotation.y = invTime * 10;
+                if (invTime < 0.6) {
+                    const p = invTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemInverter.position.set(0, -3 + ease * 4.5, 6);
+                    items.itemInverter.rotation.y = invTime * 15; // Fast spin
                 } else if (invTime < 2.0) {
-                    const pulseY = 1.5 + Math.sin(invTime * 10) * 0.2;
+                    const pulseY = 1.5 + Math.sin(invTime * 15) * 0.1;
                     items.itemInverter.position.set(0, pulseY, 6);
-                    items.itemInverter.rotation.y += 0.3;
+                    items.itemInverter.rotation.y += 0.5;
                     if (invTime > 0.8 && invTime < 1.5) {
-                        scene.userData.cameraShake = 0.2;
-                        camera.position.x += (Math.random() - 0.5) * 0.08;
+                        scene.userData.cameraShake = 0.25;
+                        camera.position.x += (Math.random() - 0.5) * 0.1;
                     }
                 } else {
-                    const p = (invTime - 2.0) / 0.5;
-                    const timeScale = dt / 0.0166;
-                    items.itemInverter.position.y -= p * 0.3 * timeScale;
-                    items.itemInverter.rotation.y += 0.2 * (1 - p) * timeScale;
+                    items.itemInverter.visible = false;
                 }
             } else {
                 items.itemInverter.scale.setScalar(2.0);
-                if (invTime < 0.5) {
-                    const p = invTime / 0.5;
-                    items.itemInverter.position.set(0, -1 + p * 7, -4.0); // Z = -4
-                    items.itemInverter.rotation.y = invTime * 8;
+                if (invTime < 0.6) {
+                    const p = invTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemInverter.position.set(3 * (1 - ease), -1 + ease * 7, -4.0);
+                    items.itemInverter.rotation.y = invTime * 10;
                 } else if (invTime < 1.8) {
-                    const spinSpeed = 0.4;
-                    items.itemInverter.position.set(0, 6 + Math.sin(invTime * 8) * 0.2, -4.0);
+                    const spinSpeed = 0.6;
+                    items.itemInverter.position.set(0, 6 + Math.sin(invTime * 10) * 0.2, -4.0);
                     items.itemInverter.rotation.y += spinSpeed;
                     if (invTime > 0.8 && invTime < 1.5) {
-                        scene.userData.cameraShake = 0.15;
+                        scene.userData.cameraShake = 0.2;
                     }
                 } else {
-                    const p = (invTime - 1.8) / 0.7;
+                    const p = (invTime - 1.8) / 0.5;
                     items.itemInverter.position.y = 6 - p * 6;
-                    items.itemInverter.position.z = -4.0;
-                    items.itemInverter.rotation.y += 0.1 * (1 - p);
-                    if (invTime > 2.3) items.itemInverter.visible = false;
+                    items.itemInverter.position.x = -p * 3;
+                    if (invTime > 2.2) items.itemInverter.visible = false;
                 }
             }
+        } else {
+            items.itemInverter.visible = false;
         }
 
         // ADRENALINE ANIMATION
@@ -575,43 +591,43 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         if (adrTime < 2.5) {
             items.itemAdrenaline.visible = true;
             if (isPlayerTurn) {
-                if (adrTime < 0.4) {
-                    const p = adrTime / 0.4;
-                    const ease = 1 - Math.pow(1 - p, 3);
-                    items.itemAdrenaline.position.set(2.0 - ease * 1.5, -2 + ease * 3.5, 7);
+                if (adrTime < 0.5) {
+                    const p = adrTime / 0.5;
+                    const ease = easeOutBack(p);
+                    items.itemAdrenaline.position.set(2.0 - ease * 1.5, -3 + ease * 4.5, 7);
                     items.itemAdrenaline.rotation.set(-0.5 + ease * 0.3, 0, -0.5 + ease * 0.3);
-                } else if (adrTime < 1.0) {
-                    const p = (adrTime - 0.4) / 0.6;
+                } else if (adrTime < 1.2) {
                     items.itemAdrenaline.position.set(0.5, 1.5, 7);
                     items.itemAdrenaline.rotation.set(-0.2, 0, -0.2);
-                    items.itemAdrenaline.rotation.z = Math.PI / 2 * p;
-                } else if (adrTime < 1.8) {
+                    // Jab effect
+                    items.itemAdrenaline.rotation.z = Math.PI / 2 * (1 - Math.exp(-(adrTime - 0.5) * 10));
+                } else if (adrTime < 2.0) {
                     items.itemAdrenaline.position.set(0.5, 1.2, 7);
-                    camera.position.x += (Math.random() - 0.5) * 0.15;
-                    camera.position.y += (Math.random() - 0.5) * 0.1;
+                    camera.position.x += (Math.random() - 0.5) * 0.2;
+                    camera.position.y += (Math.random() - 0.5) * 0.15;
                 } else {
-                    const p = (adrTime - 1.8) / 0.7;
-                    items.itemAdrenaline.position.y = 1.2 - p * 2;
-                    items.itemAdrenaline.rotation.z = Math.PI / 2 + p * 0.5;
+                    items.itemAdrenaline.visible = false;
                 }
             } else {
                 items.itemAdrenaline.scale.setScalar(2.0);
-                if (adrTime < 0.5) {
-                    const p = adrTime / 0.5;
-                    items.itemAdrenaline.position.set(0.5, -1 + p * 7, -4.0); // Z = -4
+                if (adrTime < 0.6) {
+                    const p = adrTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemAdrenaline.position.set(2.0 * (1 - ease) + 0.5, -1 + ease * 7, -4.0);
                     items.itemAdrenaline.rotation.set(0.3, 0, 0.3);
-                } else if (adrTime < 1.5) {
-                    items.itemAdrenaline.position.set(0.5, 6 + Math.sin(adrTime * 3) * 0.1, -4.0);
+                } else if (adrTime < 1.8) {
+                    items.itemAdrenaline.position.set(0.5, 6 + Math.sin(adrTime * 5) * 0.2, -4.0);
                     items.itemAdrenaline.rotation.z = Math.PI / 2;
-                    if (adrTime > 0.8) scene.userData.cameraShake = 0.12;
+                    if (adrTime > 0.8) scene.userData.cameraShake = 0.15;
                 } else {
-                    const p = (adrTime - 1.5) / 1.0;
+                    const p = (adrTime - 1.8) / 0.5;
                     items.itemAdrenaline.position.y = 6 - p * 6;
-                    items.itemAdrenaline.position.z = -4.0;
-                    items.itemAdrenaline.rotation.z = Math.PI / 2 + p * 0.3;
+                    items.itemAdrenaline.position.x = -p * 3;
                     if (adrTime > 2.2) items.itemAdrenaline.visible = false;
                 }
             }
+        } else {
+            items.itemAdrenaline.visible = false;
         }
 
         // SAFETY: Final cleanup

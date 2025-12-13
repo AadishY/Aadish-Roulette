@@ -53,7 +53,7 @@ export const performShot = async (
     const isSelf = shooter === target;
     setAimTarget(isSelf ? 'SELF' : 'OPPONENT');
 
-    await wait(50);
+    await wait(800); // Allow gun to aim before firing
 
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';

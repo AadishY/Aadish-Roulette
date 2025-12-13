@@ -314,7 +314,7 @@ export const createDealerModel = (scene: THREE.Scene) => {
 
     // Position the entire dealer group
     dealerGroup.position.set(0, 3.0, -8);
-    dealerGroup.scale.set(0.75, 0.75, 0.75); // Larger size
+    dealerGroup.scale.set(0.9, 0.9, 0.9); // Larger size
 
     scene.add(dealerGroup);
     return dealerGroup;

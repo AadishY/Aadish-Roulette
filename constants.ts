@@ -21,7 +21,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   brightness: 1.1,
   uiScale: 0.8,
   fishEye: false,
-  fov: 70,
+  fov: 60,
   musicVolume: 0.3,
   sfxVolume: 1.0
 };
+
+export const GAME_VERSION = '1.0.6';

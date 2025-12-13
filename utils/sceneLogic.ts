@@ -117,11 +117,31 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 1 - Math.exp(-5 * dt));
 
     // Gun Animation Lerp (Time-based Damping)
-    const gunDamping = 1 - Math.exp(-6 * dt);
+    // Gun Animation Lerp (Time-based Damping)
+    const gunDamping = 1 - Math.exp(-7 * dt);
     gunGroup.position.lerp(targets.targetPos, gunDamping);
     gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * gunDamping;
     gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * gunDamping;
     gunGroup.rotation.z += (targets.targetRot.z - gunGroup.rotation.z) * gunDamping;
+
+    // RECOIL LOGIC
+    if (scene.userData.lastRecoil === undefined) scene.userData.lastRecoil = animState.triggerRecoil;
+    if (animState.triggerRecoil > scene.userData.lastRecoil) {
+        scene.userData.lastRecoil = animState.triggerRecoil;
+        // Apply Kick Impulse (fighting the lerp for a frame, creating a bounce)
+        // Backwards kick
+        const kickDir = new THREE.Vector3(0, 0, 1).applyEuler(gunGroup.rotation);
+        gunGroup.position.addScaledVector(kickDir, 0.8); // 0.8 units kick back
+
+        // Muzzle Rise
+        gunGroup.rotation.x += 0.5; // Kick up
+
+        // Random shake
+        gunGroup.rotation.z += (Math.random() - 0.5) * 0.2;
+
+        // Camera shake impulse
+        scene.userData.cameraShake = 0.5;
+    }
 
     if (gunGroup.userData.isSawing) {
         const timeScale = dt / 0.0166;

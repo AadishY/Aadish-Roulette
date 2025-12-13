@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Target, Beer, Cigarette, Scale, Link, Scissors, Phone, RefreshCw, Zap, Settings, Users, Code, Github, Instagram, Gamepad2, HelpCircle, Shield, Heart, Crosshair, CircleDot, Smartphone, Monitor, Volume2, Maximize, Eye } from 'lucide-react';
+import { GAME_VERSION } from '../constants';
 
 interface TutorialGuideProps {
     onClose: () => void;
@@ -225,17 +226,17 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <ItemCard
                             icon={<RefreshCw size={20} />}
                             name="POLARITY INVERTER"
-                            description="Swaps the current shell: LIVE becomes BLANK."
+                            description="Swaps the current shell: LIVE becomes BLANK and vice-versa."
                             color="text-green-400"
-                            effect="→ SWAPS SHELL TYPE"
+                            effect="→ INVERTS POLARITY"
                         />
 
                         <ItemCard
                             icon={<Zap size={20} />}
                             name="ADRENALINE"
-                            description="Steal and use an item from your opponent."
+                            description="Steals an item from your opponent's inventory and uses it immediately."
                             color="text-pink-500"
-                            effect="→ STEAL + USE ITEM"
+                            effect="→ STEAL & USE"
                         />
                     </div>
                 </div>
@@ -392,7 +393,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
 
                         <div className="mt-5 pt-4 border-t border-stone-800 text-center">
                             <p className="text-stone-600 text-[10px] md:text-xs font-mono">
-                                AADISH ROULETTE v1.0.4 • REACT + THREE.JS
+                                AADISH ROULETTE v{GAME_VERSION} • REACT + THREE.JS
                             </p>
                             <p className="text-stone-700 text-[10px] md:text-xs font-mono mt-1">
                                 © 2024 AADISH NETWORKS

@@ -383,16 +383,7 @@
       padding: 20px;
     }
 
-    /* Force landscape on mobile */
-    @media only screen and (max-width: 900px) and (orientation: portrait) {
-      #root {
-        display: none !important;
-      }
 
-      #rotate-warning {
-        display: flex !important;
-      }
-    }
 
     /* Performance optimizations for mobile */
     @media (max-width: 768px) {
@@ -577,18 +568,7 @@
     </div>
   </noscript>
 
-  <!-- Orientation Warning -->
-  <div id="rotate-warning">
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"
-      stroke-linejoin="round">
-      <path d="M17 2v4h4" />
-      <path d="M21 6L9 18" />
-      <path d="M20 21a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2" />
-    </svg>
-    <h1 style="font-size: 1.5rem; margin-top: 1rem; font-weight: 800; color: #ef4444;">ROTATE DEVICE</h1>
-    <p style="font-size: 0.9rem; color: #a8a29e; margin-top: 0.5rem;">LANDSCAPE ORIENTATION REQUIRED</p>
-    <p style="font-size: 0.75rem; color: #57534e; margin-top: 1rem;">Turn your device sideways to play</p>
-  </div>
+
 
   <!-- App Root -->
   <div id="root"></div>

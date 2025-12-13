@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { RotateCw } from 'lucide-react';
 import { ThreeScene } from './components/ThreeScene';
 import { GameUI } from './components/GameUI';
 import { useGameLogic } from './hooks/useGameLogic';
@@ -28,6 +29,35 @@ export default function App() {
       audioManager.playMusic('menu');
     }).catch(() => { });
   }, []);
+
+  // --- ORIENTATION CHECK ---
+  const [showRotateWarning, setShowRotateWarning] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerHeight > window.innerWidth && window.innerWidth < 900;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const isMobile = window.innerWidth < 900;
+      setShowRotateWarning(isPortrait && isMobile);
+    };
+
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, []);
+
+  if (showRotateWarning) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center text-red-600 p-8 text-center font-mono">
+        <RotateCw size={64} className="mb-6 animate-spin" />
+        <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-wider">ROTATE DEVICE</h1>
+        <p className="text-stone-500 text-sm md:text-lg font-bold">LANDSCAPE ORIENTATION REQUIRED</p>
+      </div>
+    );
+  }
   const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
 
   const handleConnect = useCallback(() => { }, []);

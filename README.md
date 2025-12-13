@@ -29,7 +29,7 @@
 |---------|-------------|
 | 🎮 **3D Environment** | Fully interactive table, gun, and dealer using Three.js |
 | 🌟 **Atmospheric Visuals** | Dynamic lighting, dust particles, CRT effects, volumetric fog |
-| 🤖 **Smart AI** | Dealer remembers revealed shells and uses items strategically |
+| 🤖 **Smarter AI** | Dealer tracks shells, uses aggressive combos, and takes calculated risks |
 | 🌐 **Multiplayer** | Play against real opponents online |
 | 📱 **Mobile Optimized** | 30 FPS cap, reduced effects, touch-friendly UI for Android/iOS |
 | 🎬 **Smooth Animations** | Sequential item animations with proper timing and feedback |
@@ -48,8 +48,8 @@ Use items strategically to gain an advantage:
 | 🔗 **Handcuffs** | Skips opponent's next turn |
 | ✂️ **Hand Saw** | Doubles damage of next shot (2 damage) |
 | 📞 **Burner Phone** | Reveals a random future shell position (95% accuracy) |
-| 🔄 **Inverter** | Swaps current shell (LIVE ↔ BLANK) |
-| 💉 **Adrenaline** | Steal and immediately use opponent's item (cannot steal Adrenaline) |
+| 🔄 **Inverter** | Swaps current shell polarity (LIVE ↔ BLANK) |
+| 💉 **Adrenaline** | Steals an item from opponent and uses it immediately |
 
 ---
 
@@ -173,7 +173,7 @@ This project is for educational and entertainment purposes. The original Bucksho
 
 **Made with ❤️ by [Aadish](https://github.com/AadishY)**
 
-*Version 1.0.5 • 2025*
+*Version 1.0.6 • 2025*
 
 [![GitHub Stars](https://img.shields.io/github/stars/AadishY/Aadish-Roulette?style=social)](https://github.com/AadishY/Aadish-Roulette)
 

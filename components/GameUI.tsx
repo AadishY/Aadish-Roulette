@@ -319,21 +319,23 @@ export const GameUI: React.FC<GameUIProps> = ({
                             </button>
                         </div>
 
-                        {/* Center - Controls */}
+                        {/* Center - Controls (Positioned at Bottom) */}
                         {isMyTurn && !isProcessing && !showLootOverlay && (
-                            <Controls
-                                isGunHeld={isGunHeld}
-                                isProcessing={isProcessing}
-                                isRecovering={isRecovering}
-                                onPickupGun={onPickupGun}
-                                onFireShot={onFireShot}
-                                onHoverTarget={onHoverTarget}
-                                currentAimTarget={aimTarget}
-                                isMultiplayer={isMultiplayer}
-                                mpGameState={mpGameState}
-                                mpMyPlayerId={mpMyPlayerId}
-                                onMpShoot={onMpShoot}
-                            />
+                            <div className="absolute bottom-16 md:bottom-24 left-0 right-0 flex justify-center pointer-events-none z-50">
+                                <Controls
+                                    isGunHeld={isGunHeld}
+                                    isProcessing={isProcessing}
+                                    isRecovering={isRecovering}
+                                    onPickupGun={onPickupGun}
+                                    onFireShot={onFireShot}
+                                    onHoverTarget={onHoverTarget}
+                                    currentAimTarget={aimTarget}
+                                    isMultiplayer={isMultiplayer}
+                                    mpGameState={mpGameState}
+                                    mpMyPlayerId={mpMyPlayerId}
+                                    onMpShoot={onMpShoot}
+                                />
+                            </div>
                         )}
 
                         {/* Waiting Message */}
