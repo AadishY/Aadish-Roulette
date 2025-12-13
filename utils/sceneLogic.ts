@@ -7,6 +7,7 @@ import { updateChatBubbles, updatePlayerHealthBars } from './scene/ui';
 export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, messages } = props;
+    const isMobile = scene.userData.isMobile;
 
     const MAX_DT = 0.05;
     const dt = Math.min(delta || 0.016, MAX_DT); // Clamp DT to prevent huge jumps/skips
@@ -124,7 +125,9 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 1 - Math.exp(-3 * dt));
 
     // Gun Animation Lerp (Time-based Damping) - Snappier movement
-    const gunDamping = 1 - Math.exp(-4.0 * dt); // Faster, more responsive
+    // Gun Animation Lerp (Time-based Damping) - Snappier movement
+    const gunDampingCurve = isMobile ? 6.0 : 4.0; // Snappier on mobile for better touch feel
+    const gunDamping = 1 - Math.exp(-gunDampingCurve * dt);
     gunGroup.position.lerp(targets.targetPos, gunDamping);
     gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * gunDamping;
     gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * gunDamping;
@@ -253,7 +256,6 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // Shake
     // Camera Shake Logic - Dampen for mobile
     let shake = scene.userData.cameraShake || 0;
-    const isMobile = scene.userData.isMobile;
     const shakeCap = isMobile ? 0.4 : 1.5;
     if (shake > shakeCap) shake = shakeCap;
 
