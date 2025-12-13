@@ -19,8 +19,13 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     const [scale, setScale] = React.useState(1);
 
     useEffect(() => {
-        // Only auto-focus on desktop to prevent keyboard popping up immediately on mobile
-        if (nameInputRef.current && window.innerWidth > 768) {
+        // Prevent keyboard popup on mobile (touch devices or small screens)
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isSmallScreen = window.innerWidth < 1024; // Increased threshold to cover tablets
+
+        // Only autofocus if definitely on desktop
+        if (nameInputRef.current && !isTouchDevice && !isMobileUA && !isSmallScreen) {
             nameInputRef.current.focus();
         }
 
