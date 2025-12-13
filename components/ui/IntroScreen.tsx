@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Globe, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
+import { Globe, Settings as SettingsIcon, HelpCircle, Trophy } from 'lucide-react';
 import { audioManager } from '../../utils/audioManager';
 
 
@@ -11,9 +11,10 @@ interface IntroScreenProps {
     onStartMultiplayer: () => void;
     onOpenSettings: () => void;
     onOpenGuide: () => void;
+    onOpenScoreboard: () => void;
 }
 
-export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputName, onStartGame, onStartMultiplayer, onOpenSettings, onOpenGuide }) => {
+export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputName, onStartGame, onStartMultiplayer, onOpenSettings, onOpenGuide, onOpenScoreboard }) => {
     const nameInputRef = useRef<HTMLInputElement>(null);
     const [scale, setScale] = React.useState(1);
 
@@ -67,7 +68,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                     <button onClick={() => {
                         audioManager.playSound('click');
                         onStartGame();
-                    }} disabled={!inputName.trim()} className="w-full px-6 py-4 bg-stone-100 text-black font-black text-xl hover:bg-red-600 hover:text-white hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:grayscale tracking-widest text-shadow-none border-2 border-stone-100">
+                    }} disabled={!inputName.trim()} className="w-full px-6 py-4 bg-red-600 text-white font-black text-xl hover:bg-red-500 hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:grayscale tracking-widest text-shadow-none border-2 border-red-500">
                         START GAME
                     </button>
 
@@ -82,18 +83,24 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                         <button onClick={() => {
                             audioManager.playSound('click');
                             onOpenGuide();
-                        }} className="flex-1 px-5 py-4 bg-stone-900 border-2 border-amber-900/50 text-amber-500 font-black text-lg flex items-center justify-center gap-2 tracking-widest hover:text-white hover:border-amber-500 hover:bg-amber-600 hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] active:scale-95 transition-all duration-200 shadow-[0_0_15px_rgba(217,119,6,0.1)]">
+                        }} className="flex-1 px-4 py-4 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg flex items-center justify-center gap-2 tracking-widest hover:text-white hover:border-stone-500 hover:bg-stone-800 active:scale-95 transition-all duration-200">
                             <HelpCircle size={20} /> GUIDE
                         </button>
                         <button onClick={() => {
                             audioManager.playSound('click');
+                            onOpenScoreboard();
+                        }} className="flex-1 px-4 py-4 bg-stone-900 border-2 border-stone-800 text-yellow-500 font-black text-lg flex items-center justify-center gap-2 tracking-widest hover:text-white hover:border-yellow-500 hover:bg-yellow-600/20 active:scale-95 transition-all duration-200">
+                            <Trophy size={20} /> STATS
+                        </button>
+                        <button onClick={() => {
+                            audioManager.playSound('click');
                             onOpenSettings();
-                        }} className="px-6 py-4 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg flex items-center justify-center gap-2 tracking-widest hover:text-white hover:border-stone-500 active:scale-95 transition-all duration-200">
+                        }} className="px-5 py-4 bg-stone-900 border-2 border-stone-800 text-stone-400 font-black text-lg flex items-center justify-center gap-2 tracking-widest hover:text-white hover:border-stone-500 active:scale-95 transition-all duration-200">
                             <SettingsIcon size={22} />
                         </button>
                     </div>
                 </div>
-                <div className="mt-8 text-stone-600 text-[10px] font-mono animate-pulse">VER 1.0.5 // ADD TO HOME SCREEN</div>
+                <div className="mt-8 text-stone-600 text-[10px] font-mono animate-pulse">VER 1.0.6 // ADD TO HOME SCREEN</div>
             </div>
         </div>
     );

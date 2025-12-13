@@ -11,11 +11,10 @@ interface InventoryProps {
     isProcessing: boolean;
     onUseItem: (index: number) => void;
     disabled?: boolean; // For multiplayer when not your turn
+    isGunHeld?: boolean;
 }
 
-const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false }) => {
-    const isGunHeld = cameraView === 'GUN';
-
+const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false, isGunHeld = false }) => {
     return (
         <div className="flex-1 flex justify-end gap-1 pointer-events-auto h-full items-end">
             {/* Changed overflow-x-auto to md:overflow-visible to let tooltips pop out on desktop */}

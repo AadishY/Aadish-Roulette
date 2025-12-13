@@ -82,7 +82,7 @@ class AudioManager {
 
             if (anySuccess) {
                 this.initialized = true;
-                console.log("Audio Initialized");
+                // Audio Initialized
 
                 // Restore music
                 if (this.currentMusic && this.music[this.currentMusic]) {
@@ -91,10 +91,10 @@ class AudioManager {
                     music.play().catch(() => { });
                 }
             } else {
-                console.log("Audio Autoplay Blocked - Waiting for User Interaction");
+                // Audio Autoplay Blocked - Waiting for User Interaction
             }
         } catch (e) {
-            console.warn("Audio initialization failed", e);
+            // Audio initialization failed
         }
     }
 

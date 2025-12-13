@@ -6,6 +6,7 @@ import * as ItemActions from '../utils/game/itemActions';
 import { audioManager } from '../utils/audioManager';
 import { performShot } from '../utils/game/shooting';
 import { distributeItems as distributeItemsAction } from '../utils/game/inventory';
+import { MatchStats } from '../utils/statsManager';
 
 export const useGameLogic = () => {
   // --- State ---
@@ -41,6 +42,19 @@ export const useGameLogic = () => {
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [knownShell, setKnownShell] = useState<ShellType | null>(null);
+
+  // Stats Ref to track current match performance
+  const matchStatsRef = useRef<MatchStats>({
+    result: 'LOSS',
+    roundsSurvived: 1,
+    shotsFired: 0,
+    shotsHit: 0,
+    selfShots: 0,
+    itemsUsed: {},
+    damageDealt: 0,
+    damageTaken: 0,
+    totalScore: 0
+  });
 
   // Animation State Group
   const [animState, setAnimState] = useState<AnimationState>({
@@ -97,6 +111,21 @@ export const useGameLogic = () => {
 
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Reset Stats on Start/Reset
+  const resetStats = () => {
+    matchStatsRef.current = {
+      result: 'LOSS',
+      roundsSurvived: 1,
+      shotsFired: 0,
+      shotsHit: 0,
+      selfShots: 0,
+      itemsUsed: {},
+      damageDealt: 0,
+      damageTaken: 0,
+      totalScore: 0
+    };
+  };
+
   // --- Logic ---
   const resetGame = (toMenu: boolean = false) => {
     // Clear any pending restart
@@ -109,6 +138,7 @@ export const useGameLogic = () => {
     setReceivedItems([]); // Clear loot overlay items
     setShowLootOverlay(false);
     setOverlayText(null);
+    resetStats();
 
     setGameState({
       phase: toMenu ? 'INTRO' : 'LOAD',
@@ -151,8 +181,18 @@ export const useGameLogic = () => {
 
   const startRound = async (resetItems: boolean = false) => {
     const total = randomInt(2, 8);
-    const lives = Math.max(1, Math.floor(total / 2));
+    // Ensure we don't have 0 blanks or 0 lives
+    // Randomize lives count between 1 and total - 1
+    // Bias slightly towards even split but allow variance
+    let lives = Math.floor(total / 2);
+    if (total > 2 && Math.random() > 0.5) {
+      // 50% chance to skew slightly (+/- 1)
+      lives += Math.random() > 0.5 ? 1 : -1;
+    }
+    // Clamp to ensure valid game state (at least 1 live, at least 1 blank)
+    lives = Math.max(1, Math.min(lives, total - 1));
     const blanks = total - lives;
+
     let chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
 
     // Shuffle
@@ -170,6 +210,12 @@ export const useGameLogic = () => {
       roundCount: resetItems ? 1 : prev.roundCount + 1, // Reset round count if new game
       phase: 'LOAD'
     }));
+
+    if (!resetItems) {
+      matchStatsRef.current.roundsSurvived = (gameState.roundCount || 0) + 1;
+    } else {
+      matchStatsRef.current.roundsSurvived = 1;
+    }
 
     setKnownShell(null);
     setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, items: resetItems ? [] : p.items }));
@@ -224,14 +270,20 @@ export const useGameLogic = () => {
     // Set Target Pointing (triggers animation)
     setAimTarget(target === (shooter === 'PLAYER' ? 'PLAYER' : 'DEALER') ? 'SELF' : 'OPPONENT');
 
-    // Wait for Aim Animation
-    await wait(600);
+    // Wait for Aim Animation (Reduced for responsiveness)
+    await wait(300);
+
+    // Update Stats - Shots Fired
+    matchStatsRef.current.shotsFired++;
+    if (target === shooter) matchStatsRef.current.selfShots++;
 
     await performShot(shooter, target, {
       gameState, setGameState, player, setPlayer, dealer, setDealer,
       setAnim, setKnownShell, setAimTarget, setCameraView, setOverlayText,
       setOverlayColor, setShowFlash, setShowBlood, addLog, playerName,
-      startRound, setIsProcessing
+      startRound, setIsProcessing,
+      // Pass stats ref to update hits/damage inside shooting logic
+      matchStats: matchStatsRef
     });
   };
 
@@ -254,6 +306,11 @@ export const useGameLogic = () => {
     addLog(`${userName} USED ${item}`, 'info');
     await wait(1500); // Brief display before animation starts
     setOverlayText(null);
+
+    // Track Item Usage
+    if (user === 'PLAYER') {
+      matchStatsRef.current.itemsUsed[item] = (matchStatsRef.current.itemsUsed[item] || 0) + 1;
+    }
 
     let roundEnded = false;
 
@@ -394,13 +451,13 @@ export const useGameLogic = () => {
     // Show steal message and wait for it to be visible
     addLog(`${playerName.toUpperCase()} STOLE ${itemToSteal}`, 'info');
     setOverlayText(`🎯 STOLE ${itemToSteal}!`);
-    await wait(1800); // Let player see the steal message
+    await wait(1000); // Faster feedback (was 1800)
     setOverlayText(null);
 
     setGameState(p => ({ ...p, phase: 'PLAYER_TURN' }));
 
     // 2. Use it immediately - with clear gap for readability
-    await wait(800); // Gap between steal and use
+    await wait(400); // Quicker transition (was 800)
     await processItemEffect('PLAYER', itemToSteal);
 
     // Final sync wait
@@ -439,6 +496,7 @@ export const useGameLogic = () => {
     setPlayerName,
     pickupGun,
     setGamePhase,
-    setOverlayText
+    setOverlayText,
+    matchStats: matchStatsRef.current // Export stats
   };
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { GameState, PlayerState, TurnOwner, ShellType, LogEntry, AnimationState, AimTarget, CameraView } from '../../types';
 import { wait } from '../gameUtils';
 import { audioManager } from '../audioManager';
+import { MatchStats } from '../../utils/statsManager';
 
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -24,6 +25,7 @@ interface ShootingContext {
     playerName: string;
     startRound: (resetItems?: boolean) => void;
     setIsProcessing: StateSetter<boolean>;
+    matchStats?: React.MutableRefObject<MatchStats>; // Added
 }
 
 export const performShot = async (
@@ -34,7 +36,7 @@ export const performShot = async (
     const {
         gameState, setGameState, player, setPlayer, dealer, setDealer,
         setAnim, setKnownShell, setAimTarget, setCameraView, setOverlayText, setOverlayColor,
-        setShowFlash, setShowBlood, addLog, playerName, startRound, setIsProcessing
+        setShowFlash, setShowBlood, addLog, playerName, startRound, setIsProcessing, matchStats
     } = ctx;
 
     setIsProcessing(true);
@@ -106,6 +108,17 @@ export const performShot = async (
 
     addLog(isLive ? `BANG! ${damage} DMG` : 'CLICK.', isLive ? 'danger' : 'safe');
 
+    // Update Match Stats
+    if (matchStats && matchStats.current) {
+        if (damage > 0) {
+            if (target === 'PLAYER') matchStats.current.damageTaken += damage;
+            else if (target === 'DEALER' && shooter === 'PLAYER') {
+                matchStats.current.damageDealt += damage;
+                matchStats.current.shotsHit++;
+            }
+        }
+    }
+
     // Rack Sequence
     await wait(500);
     setAnim(prev => ({
@@ -118,49 +131,54 @@ export const performShot = async (
     setOverlayText(null);
     setAimTarget('IDLE');
 
-    // Handle Damage - Updated to remove delayed visual effects for player as they are now instant
-    if (damage > 0) {
-        if (target === 'PLAYER') {
-            setPlayer(p => ({ ...p, hp: Math.max(0, p.hp - damage) }));
-            // Visuals moved to instant block
-        } else {
-            const newHp = Math.max(0, dealer.hp - damage);
-            setDealer(p => ({ ...p, hp: newHp }));
-            setOverlayColor('green');
-            // Mark dealer as recovering during stand-up animation
-            setAnim(prev => ({ ...prev, dealerRecovering: true }));
-
-            await wait(2000);
-
-            if (newHp > 0) {
-                setAnim(prev => ({ ...prev, dealerDropping: false }));
-                await wait(1500); // Longer recovery time for dealer stand-up
-                setAnim(prev => ({ ...prev, dealerRecovering: false }));
-            }
-            setOverlayColor('none');
-        }
-    }
-
     // Reset Saw
     if (shooter === 'PLAYER') setPlayer(p => ({ ...p, isSawedActive: false }));
     else setDealer(d => ({ ...d, isSawedActive: false }));
 
+    // Handle Damage & Win Check
+    let gameOver = false;
+    if (damage > 0) {
+        if (target === 'PLAYER') {
+            const newHp = Math.max(0, player.hp - damage);
+            setPlayer(p => ({ ...p, hp: newHp }));
+            if (newHp <= 0) {
+                setGameState(prev => ({ ...prev, winner: 'DEALER', phase: 'GAME_OVER' }));
+                if (matchStats?.current) matchStats.current.result = 'LOSS';
+                gameOver = true;
+                addLog('YOU DIED.', 'danger');
+            }
+        } else {
+            const newHp = Math.max(0, dealer.hp - damage);
+            setDealer(p => ({ ...p, hp: newHp }));
+
+            if (newHp <= 0) {
+                setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
+                if (matchStats?.current) matchStats.current.result = 'WIN';
+                gameOver = true;
+                addLog('DEALER ELIMINATED.', 'safe'); // Type: 'danger' | 'safe' | 'neutral' | 'info' | 'dealer'
+            } else {
+                setOverlayColor('green');
+                setAnim(prev => ({ ...prev, dealerRecovering: true }));
+                await wait(2000);
+                if (newHp > 0) {
+                    setAnim(prev => ({ ...prev, dealerDropping: false }));
+                    await wait(1500);
+                    setAnim(prev => ({ ...prev, dealerRecovering: false }));
+                }
+                setOverlayColor('none');
+            }
+        }
+    }
+
+    if (gameOver) {
+        setIsProcessing(false);
+        return;
+    }
+
     setKnownShell(null);
     await wait(1000);
 
-    // Win Check
-    if (player.hp - (target === 'PLAYER' ? damage : 0) <= 0) {
-        setGameState(prev => ({ ...prev, phase: 'GAME_OVER', winner: 'DEALER' }));
-        setIsProcessing(false);
-        return;
-    }
-    if (dealer.hp - (target === 'DEALER' ? damage : 0) <= 0) {
-        setGameState(prev => ({ ...prev, phase: 'GAME_OVER', winner: 'PLAYER' }));
-        setIsProcessing(false);
-        return;
-    }
-
-    // Update Shell Counts
+    // Update Shell Counts & Check End of Round
     const nextIndex = currentShellIndex + 1;
     const remaining = chamber.length - nextIndex;
 
@@ -177,16 +195,16 @@ export const performShot = async (
         return;
     }
 
-    // Determine Turn
-    let nextOwner = shooter;
-    let turnChanged = false;
+    // Pass Turn Logic
+    // - Shoot self (Blank) -> Go again (Keep Turn).
+    // - Any other case -> Pass Turn.
+    const keepTurn = target === shooter && !isLive;
+    let nextOwner = keepTurn ? shooter : (shooter === 'PLAYER' ? 'DEALER' : 'PLAYER');
+    let turnChanged = !keepTurn;
 
     const shooterName = shooter === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
-    if (!isLive && shooter === target) {
+    if (keepTurn) {
         addLog(`${shooterName} GOES AGAIN`, 'neutral');
-    } else {
-        nextOwner = shooter === 'PLAYER' ? 'DEALER' : 'PLAYER';
-        turnChanged = true;
     }
 
     // Handle Handcuffs Logic

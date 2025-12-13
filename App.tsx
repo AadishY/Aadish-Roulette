@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS } from './constants';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MultiplayerLobby } from './components/MultiplayerLobby';
 import { TutorialGuide } from './components/TutorialGuide';
+import { Scoreboard } from './components/ui/Scoreboard';
 import { audioManager } from './utils/audioManager';
 
 type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOBBY' | 'LOADING_GAME' | 'GAME';
@@ -86,6 +87,7 @@ export default function App() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isScoreboardOpen, setIsScoreboardOpen] = useState(false);
 
   const [settings, setSettings] = useState<GameSettings>(() => {
     const saved = localStorage.getItem('aadish_roulette_settings');
@@ -167,7 +169,7 @@ export default function App() {
     }
     if (appState === 'LOADING_SP') {
       setAppState('GAME');
-      spGame.resetGame(true);
+      spGame.resetGame(false);
       setTimeout(() => spGame.startGame(spGame.playerName), 100);
     }
     if (appState === 'LOADING_GAME') {
@@ -303,6 +305,7 @@ export default function App() {
         onPickupGun={handlePickupGun}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenScoreboard={() => setIsScoreboardOpen(true)}
         onUpdateName={spGame.setPlayerName}
         messages={socket.messages}
         onSendMessage={socket.sendMessage}
@@ -312,6 +315,7 @@ export default function App() {
         onMpShoot={socket.shootPlayer}
         onStealItem={spGame.stealItem}
         onBootComplete={handleBootComplete}
+        matchData={isMultiplayerMode ? undefined : spGame.matchStats}
       />
 
       {/* MP Game Over Screen */}
@@ -348,6 +352,13 @@ export default function App() {
             errorMsg={socketError}
           />
         </div>
+      )}
+
+      {/* Scoreboard */}
+      {isScoreboardOpen && (
+        <Scoreboard
+          onClose={() => setIsScoreboardOpen(false)}
+        />
       )}
 
       {/* Settings */}

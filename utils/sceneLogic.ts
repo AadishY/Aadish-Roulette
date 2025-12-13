@@ -121,12 +121,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     }
 
-    gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 1 - Math.exp(-5 * dt));
+    gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 1 - Math.exp(-3 * dt));
 
-    // Gun Animation Lerp (Time-based Damping)
-    // Gun Animation Lerp (Time-based Damping)
-    // Gun Animation Lerp (Time-based Damping) - Reduced to 4 for smoother, weightier feel
-    const gunDamping = 1 - Math.exp(-4 * dt);
+    // Gun Animation Lerp (Time-based Damping) - Snappier movement
+    const gunDamping = 1 - Math.exp(-4.0 * dt); // Faster, more responsive
     gunGroup.position.lerp(targets.targetPos, gunDamping);
     gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * gunDamping;
     gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * gunDamping;
@@ -139,16 +137,16 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         // Apply Kick Impulse (fighting the lerp for a frame, creating a bounce)
         // Backwards kick
         const kickDir = new THREE.Vector3(0, 0, 1).applyEuler(gunGroup.rotation);
-        gunGroup.position.addScaledVector(kickDir, 0.8); // 0.8 units kick back
+        gunGroup.position.addScaledVector(kickDir, 0.6); // Reduced kick dist for smoothness
 
         // Muzzle Rise
-        gunGroup.rotation.x += 0.5; // Kick up
+        gunGroup.rotation.x += 0.4; // Reduced kick up
 
         // Random shake
-        gunGroup.rotation.z += (Math.random() - 0.5) * 0.2;
+        gunGroup.rotation.z += (Math.random() - 0.5) * 0.15;
 
         // Camera shake impulse
-        scene.userData.cameraShake = 0.5;
+        scene.userData.cameraShake = 0.4;
     }
 
     if (gunGroup.userData.isSawing) {
@@ -240,7 +238,7 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     }
 
-    // Camera Lerp
+    // Camera Lerp - Cinematic and Smooth (2.5 speed)
     const camDamping = 1 - Math.exp(-2.5 * dt);
     camera.position.x += (targetCamPos.x - camera.position.x) * camDamping;
     camera.position.y += (targetCamPos.y - camera.position.y) * camDamping;
@@ -262,9 +260,16 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     if (shake > 0) {
         // Reduced frequency multiplier for mobile
         const jitter = isMobile ? 0.6 : 1.0;
-        camera.position.x += (Math.random() - 0.5) * shake * jitter;
-        camera.position.y += (Math.random() - 0.5) * shake * jitter;
-        camera.position.z += (Math.random() - 0.5) * shake * 0.5 * jitter;
+        const posPower = shake * jitter * 0.8;
+        const rotPower = shake * jitter * 0.15; // New Rotational Shake
+
+        camera.position.x += (Math.random() - 0.5) * posPower;
+        camera.position.y += (Math.random() - 0.5) * posPower;
+        camera.position.z += (Math.random() - 0.5) * posPower * 0.5;
+
+        // Add Cinematic Rotation Shake
+        camera.rotation.z += (Math.random() - 0.5) * rotPower;
+        camera.rotation.x += (Math.random() - 0.5) * rotPower * 0.5;
 
         // Time-based decay 
         const decay = Math.pow(0.1, dt);

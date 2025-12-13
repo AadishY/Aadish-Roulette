@@ -54,7 +54,31 @@ export const distributeItems = async (
     else amount = 2;
 
     const generateLoot = () => {
-        return Array(amount).fill(null).map(() => getRandomItem());
+        const batch: ItemType[] = [];
+        const counts: Record<string, number> = {};
+
+        for (let i = 0; i < amount; i++) {
+            let item: ItemType | null = null;
+            let tries = 0;
+
+            // Soft duplicate limit: Max 2 of same item per batch
+            do {
+                const candidate = getRandomItem();
+                const currentCount = counts[candidate] || 0;
+
+                if (currentCount < 2) {
+                    item = candidate;
+                }
+                tries++;
+            } while (!item && tries < 15);
+
+            // Fallback if random keeps giving same item
+            if (!item) item = getRandomItem();
+
+            batch.push(item);
+            counts[item] = (counts[item] || 0) + 1;
+        }
+        return batch;
     };
 
     // Generate BOTH loot pools at the same time

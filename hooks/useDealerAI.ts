@@ -61,9 +61,9 @@ export const useDealerAI = ({
 
             const runAITurn = async () => {
                 try {
-                    // 1. WAIT FOR PLAYER RECOVERY - Dealer waits if player is knocked down/recovering
+                    // 1. WAIT FOR PLAYER OR DEALER RECOVERY - Ensure smooth turn transition
                     let waitCount = 0;
-                    while ((animStateRef.current.playerHit || animStateRef.current.playerRecovering) && waitCount < 30) {
+                    while ((animStateRef.current.playerHit || animStateRef.current.playerRecovering || animStateRef.current.dealerRecovering) && waitCount < 30) {
                         await wait(500); // Check every 500ms
                         waitCount++;
                     }
@@ -115,84 +115,68 @@ export const useDealerAI = ({
                     let itemToUse: ItemType | null = null;
                     let itemIndex = -1;
 
-                    // --- ADVANCED ITEM STRATEGY (V2 - AGGRESSIVE) ---
-                    // Priority: Adrenaline/Steal > Survival > Kill Confirm > Intel > Manipulation
+                    // --- ADVANCED ITEM STRATEGY (V3 - SMARTER) ---
 
-                    // 1. ADRENALINE (High Priority) - Steal valuable items early
-                    if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
-                        // Scan player items for threats
-                        const threats = ['SAW', 'CUFFS', 'INVERTER', 'ADRENALINE'];
+                    // 1. SURVIVAL HEAL
+                    // Use Cigs if hurt at all, priority increases as HP drops.
+                    // If HP <= 2, absolute top priority.
+                    if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS') && !itemToUse) {
+                        // Always heal if critical (<=2) or 50% chance if just scratched
+                        if (dealer.hp <= 2 || Math.random() > 0.5) {
+                            itemToUse = 'CIGS';
+                        }
+                    }
+
+                    // 2. ADRENALINE THEFT
+                    else if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
+                        const threats = ['SAW', 'CUFFS', 'INVERTER', 'ADRENALINE', 'CIGS'];
                         const hasThreat = player.items.some(i => threats.includes(i));
-                        // Always steal if they have good loot, or if we have nothing else to do
-                        if (hasThreat || Math.random() > 0.3) {
-                            itemToUse = 'ADRENALINE';
-                        }
+                        // Steal if they have something good
+                        if (hasThreat) itemToUse = 'ADRENALINE';
                     }
 
-                    // 2. HEAL IF CRITICAL (HP <= 2)
-                    else if (dealer.hp <= 2 && dealer.items.includes('CIGS') && !itemToUse) {
-                        itemToUse = 'CIGS';
-                    }
-
-                    // 3. INVERTER (Strategic Flip)
-                    // If KNOWN BLANK -> Make LIVE to shoot player
-                    else if (dealer.items.includes('INVERTER') && !itemToUse) {
-                        if (currentKnown === 'BLANK') {
-                            itemToUse = 'INVERTER';
-                        }
-                        // If we are looking down the barrel of a BLANK (prob < 35%), flip it to likely LIVE
-                        else if (!currentKnown && currentLiveProb < 0.35 && totalRemaining > 1) {
+                    // 3. INVERTER (Aggressive Flip)
+                    // If Known/High Prob BLANK -> Flip to LIVE to shoot player
+                    else if (dealer.items.includes('INVERTER') && !itemToUse && totalRemaining > 1) {
+                        if (currentKnown === 'BLANK' || (!currentKnown && currentLiveProb < 0.35)) {
                             itemToUse = 'INVERTER';
                         }
                     }
 
-                    // 4. SAW (Aggressive Damage)
-                    // If we know/think it's LIVE, and Player HP > 1, use Saw.
+                    // 4. SAW (Damage Amp)
+                    // Only use if we are fairly confident it's LIVE
                     else if (dealer.items.includes('SAW') && !dealer.isSawedActive && !itemToUse && player.hp > 1) {
                         if (currentKnown === 'LIVE' || currentLiveProb >= 0.55) {
                             itemToUse = 'SAW';
                         }
                     }
 
-                    // 5. HANDCUFFS (Tempo Control)
-                    // If we are about to shoot Player (Live), cuff them to keep turn.
+                    // 5. HANDCUFFS (Control)
+                    // Use if we think it's LIVE (to shoot and keep turn) OR if we just want to block player
                     else if (dealer.items.includes('CUFFS') && !player.isHandcuffed && !itemToUse && totalRemaining > 1) {
-                        if (currentKnown === 'LIVE' || currentLiveProb >= 0.60) {
-                            itemToUse = 'CUFFS';
-                        }
+                        // Don't cuff on the very last shell (pointless)
+                        itemToUse = 'CUFFS';
                     }
 
-                    // 6. USE MEMORY / GLASS
+                    // 6. MAGNIFYING GLASS (Intel)
                     else if (!currentKnown && dealer.items.includes('GLASS') && totalRemaining >= 2 && !itemToUse) {
-                        // Don't use on last shell, we know it if we tracked cards (simulation) or it doesn't matter much
                         itemToUse = 'GLASS';
                     }
 
-                    // 7. PHONE INTEL (Future planning)
+                    // 7. PHONE (Future Intel)
                     else if (dealer.items.includes('PHONE') && unknownTotal > 2 && !itemToUse) {
                         itemToUse = 'PHONE';
                     }
 
-                    // 8. BEER (Cycle bad shells)
+                    // 8. BEER (Cycle)
+                    // Skip if current is likely BLANK and we don't want to risk shooting self
+                    // OR if current is UNKNOWN and we want to cycle to find a better shell
                     else if (dealer.items.includes('BEER') && !itemToUse) {
-                        // If we know it's BLANK and we want to shoot player (impossible), eject.
-                        // Actually, if it's BLANK, we usually shoot self for free turn.
-                        // So BEER is useful to Skip a KNOWN BLANK if we are forced to shoot player? (e.g. handcuffed? No)
-                        // Useful to skip UNKNOWN if odds are bad? NO, just shoot self.
-                        // BEER is best used to safely skip a LIVE shell if we are confused? No.
-                        // Use BEER if we have too many blanks and want to find a live one quickly without risking Shooting Self (which ends turn if Live)?
-                        // Simplest: Eject if we think it's blank but aren't sure enough to shoot self?
-                        // Or if we know it's blank and want to speed up?
-
-                        // Revised: Eject if Current Live Prob is low, to dig for a potential Live one for Saw combo?
-                        if (currentLiveProb < 0.45 && totalRemaining > 2) {
+                        // If we are confused (40-60%) or think it's blank, just skip.
+                        // Dealer prefers confirmed shots.
+                        if (!currentKnown && totalRemaining > 2) {
                             itemToUse = 'BEER';
                         }
-                    }
-
-                    // 9. TOP OFF HEALTH (If surplus)
-                    else if (dealer.items.includes('CIGS') && dealer.hp < dealer.maxHp && !itemToUse) {
-                        itemToUse = 'CIGS';
                     }
 
                     // --- EXECUTE ITEM OR SHOOT ---

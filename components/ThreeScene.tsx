@@ -206,22 +206,25 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             setTimeout(() => isTouchInteraction = false, 500);
         };
 
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('click', handleClick); // For desktop clicks
+        const el = containerRef.current;
+        if (!el) return;
+
+        window.addEventListener('mousemove', handleMouseMove); // Keep mouse move on window for smoother tracking
+        el.addEventListener('click', handleClick);
 
         // Passive false so we can preventDefault
         const touchOpt = { passive: false };
-        window.addEventListener('touchstart', handleTouchStart, touchOpt);
-        window.addEventListener('touchend', handleTouchEnd, touchOpt);
+        el.addEventListener('touchstart', handleTouchStart, touchOpt);
+        el.addEventListener('touchend', handleTouchEnd, touchOpt);
 
         return () => {
             clearTimeout(timeout);
             cancelAnimationFrame(frameId);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('click', handleClick);
-            window.removeEventListener('touchstart', handleTouchStart);
-            window.removeEventListener('touchend', handleTouchEnd);
+            el.removeEventListener('click', handleClick);
+            el.removeEventListener('touchstart', handleTouchStart);
+            el.removeEventListener('touchend', handleTouchEnd);
             resizeObserver.disconnect();
             if (sceneRef.current) {
                 cleanScene(sceneRef.current.scene);

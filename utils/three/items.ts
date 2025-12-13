@@ -1,26 +1,37 @@
 import * as THREE from 'three';
 
+// Shared Geometries Cache
+let beerBodyGeo: THREE.CylinderGeometry;
+let beerRimGeo: THREE.CylinderGeometry;
+let beerTabGeo: THREE.BoxGeometry;
+
 export const createBeerCan = (): THREE.Group => {
     const group = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({ color: 0xcc0000, metalness: 0.6, roughness: 0.3 });
     const topMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8 });
 
+    if (!beerBodyGeo) {
+        beerBodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.2, 16);
+        beerRimGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.05, 16);
+        beerTabGeo = new THREE.BoxGeometry(0.15, 0.02, 0.25);
+    }
+
     // Can Body
-    const can = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.2, 16), mat);
+    const can = new THREE.Mesh(beerBodyGeo, mat);
     can.castShadow = true;
     group.add(can);
 
     // Can Top/Rim
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.05, 16), topMat);
+    const top = new THREE.Mesh(beerRimGeo, topMat);
     top.position.y = 0.6;
     group.add(top);
 
-    const bottom = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.05, 16), topMat);
+    const bottom = new THREE.Mesh(beerRimGeo, topMat);
     bottom.position.y = -0.6;
     group.add(bottom);
 
     // Tab
-    const tab = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.25), topMat);
+    const tab = new THREE.Mesh(beerTabGeo, topMat);
     tab.position.set(0, 0.63, 0);
     group.add(tab);
 
@@ -28,25 +39,38 @@ export const createBeerCan = (): THREE.Group => {
     return group;
 };
 
+// Cigs Cache
+let cigStickGeo: THREE.CylinderGeometry;
+let cigFilterGeo: THREE.CylinderGeometry;
+let cigTipGeo: THREE.CylinderGeometry;
+let smokeGeo: THREE.SphereGeometry;
+
 export const createCigarette = (): THREE.Group => {
     const group = new THREE.Group();
 
+    if (!cigStickGeo) {
+        cigStickGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8);
+        cigFilterGeo = new THREE.CylinderGeometry(0.042, 0.042, 0.25, 8);
+        cigTipGeo = new THREE.CylinderGeometry(0.038, 0.038, 0.05, 8);
+        smokeGeo = new THREE.SphereGeometry(0.1, 4, 4);
+    }
+
     // Main Stick
     const stickMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8), stickMat);
+    const stick = new THREE.Mesh(cigStickGeo, stickMat);
     stick.rotation.z = Math.PI / 2;
     group.add(stick);
 
     // Filter
     const filterMat = new THREE.MeshStandardMaterial({ color: 0xd2691e }); // Chocolate/Orange
-    const filter = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.25, 8), filterMat);
+    const filter = new THREE.Mesh(cigFilterGeo, filterMat);
     filter.rotation.z = Math.PI / 2;
     filter.position.x = -0.525;
     group.add(filter);
 
     // Emissive Tip (for glow)
     const tipMat = new THREE.MeshBasicMaterial({ color: 0x555555 }); // Grey ash start
-    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.05, 8), tipMat);
+    const tip = new THREE.Mesh(cigTipGeo, tipMat);
     tip.rotation.z = Math.PI / 2;
     tip.position.x = 0.425;
     tip.name = 'CIG_TIP';
@@ -55,11 +79,16 @@ export const createCigarette = (): THREE.Group => {
     // Smoke Particles (Pool)
     const smokeGroup = new THREE.Group();
     smokeGroup.name = 'SMOKE_POOL';
+    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0 }); // Shared material? No, opacity changes per particle?
+    // Actually the logic uses opacity 0 initially.
+    // If I share material, they all fade together? 
+    // Usually particles need individual opacity if they fade individually.
+    // In animations.ts/updateItemAnimations, it iterates children and changes opacity.
+    // So they must have their own materials.
+
     for (let i = 0; i < 5; i++) {
-        const p = new THREE.Mesh(
-            new THREE.SphereGeometry(0.1, 4, 4),
-            new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0 })
-        );
+        // Geometry shared, Material distinct
+        const p = new THREE.Mesh(smokeGeo, smokeMat.clone());
         smokeGroup.add(p);
     }
     smokeGroup.position.set(0.425, 0, 0); // At tip

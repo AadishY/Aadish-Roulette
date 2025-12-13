@@ -44,6 +44,7 @@ interface GameUIProps {
     onPickupGun: () => void;
     onOpenSettings: () => void;
     onOpenGuide: () => void;
+    onOpenScoreboard: () => void;
     onUpdateName?: (name: string) => void;
     messages?: any[];
     onSendMessage?: (msg: string) => void;
@@ -53,6 +54,7 @@ interface GameUIProps {
     onMpShoot?: (targetId: string) => void;
     onStealItem?: (index: number) => void;
     onBootComplete?: () => void;
+    matchData?: any; // To avoid circular dependency for now or import MatchStats
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -96,6 +98,7 @@ export const GameUI: React.FC<GameUIProps> = ({
     onPickupGun,
     onOpenSettings,
     onOpenGuide,
+    onOpenScoreboard,
     onStartMultiplayer,
     onUpdateName,
     messages = [],
@@ -106,7 +109,8 @@ export const GameUI: React.FC<GameUIProps> = ({
     onMpShoot,
     onStealItem,
     onBootComplete,
-    isRecovering = false
+    isRecovering = false,
+    matchData
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
     const [chatMsg, setChatMsg] = useState('');
@@ -173,15 +177,18 @@ export const GameUI: React.FC<GameUIProps> = ({
 
     return (
         <>
-            {/* Falling Shells Background - Persistent across Boot and Intro */}
-            {(gameState.phase === 'BOOT' || gameState.phase === 'INTRO') && (
-                <ShellBackground />
-            )}
+            {/* Falling Shells Background - Always mounted for persistence, paused when not needed */}
+            <div className={`absolute inset-0 transition-opacity duration-500 ${gameState.phase === 'BOOT' || gameState.phase === 'INTRO' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <ShellBackground active={gameState.phase === 'BOOT' || gameState.phase === 'INTRO'} />
+            </div>
 
             {gameState.phase === 'BOOT' && <BootScreen onContinue={onBootComplete} />}
 
             {/* FX Layers */}
             <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 z-10 ${overlayColor === 'red' ? 'bg-red-900/40' : overlayColor === 'green' ? 'bg-green-900/20' : overlayColor === 'scan' ? 'bg-fuchsia-900/30 mix-blend-overlay' : ''}`} />
+            {/* Cinematic Vignette */}
+            <div className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.6)_100%)] mix-blend-multiply" />
+
             {showFlash && <div className="absolute inset-0 z-50 flash-screen" />}
             {smokeActive && <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]" />}
             {drinkActive && <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px]" />}
@@ -292,12 +299,17 @@ export const GameUI: React.FC<GameUIProps> = ({
                         onStartMultiplayer={handleStartMP}
                         onOpenSettings={onOpenSettings}
                         onOpenGuide={onOpenGuide}
+                        onOpenScoreboard={onOpenScoreboard}
                     />
                 )}
 
                 {/* Game Over - Singleplayer only */}
                 {gameState.phase === 'GAME_OVER' && !isMultiplayer && (
-                    <GameOverScreen winner={gameState.winner} onResetGame={onResetGame} />
+                    <GameOverScreen
+                        winner={gameState.winner}
+                        onResetGame={onResetGame}
+                        matchData={matchData}
+                    />
                 )}
 
                 {/* Main HUD */}
@@ -322,7 +334,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         {/* Controls - Bottom */}
                         <div className="flex-1 w-full flex items-end justify-center pointer-events-none mb-4 md:mb-8">
                             {/* Only show controls if not stealing phase */}
-                            {gameState.phase !== 'STEALING' && gameState.phase !== 'GAME_OVER' && isMyTurn && !showLootOverlay && (
+                            {gameState.phase !== 'STEALING' && isMyTurn && !showLootOverlay && (
                                 <Controls
                                     isGunHeld={isGunHeld}
                                     isProcessing={isProcessing}
@@ -410,6 +422,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                         onUseItem(idx);
                                     }}
                                     disabled={isMultiplayer && !isMyTurn}
+                                    isGunHeld={isGunHeld}
                                 />
                             )}
                         </div>

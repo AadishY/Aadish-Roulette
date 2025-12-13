@@ -36,21 +36,13 @@ const ControlsComponent: React.FC<ControlsProps> = ({
         : [];
 
     const handleShootOpponent = (opponentId?: string) => {
-        // 2-Step Aiming Logic for Mobile (and clearer interaction on desktop)
-        if (currentAimTarget !== 'OPPONENT') {
-            onHoverTarget('OPPONENT');
-        } else {
-            onFireShot('DEALER', opponentId);
-        }
+        // Direct Fire - Snappier response
+        onFireShot('DEALER', opponentId);
     };
 
     const handleShootSelf = () => {
-        // 2-Step Aiming Logic
-        if (currentAimTarget !== 'SELF') {
-            onHoverTarget('SELF');
-        } else {
-            onFireShot('PLAYER');
-        }
+        // Direct Fire
+        onFireShot('PLAYER');
     };
 
     return (
