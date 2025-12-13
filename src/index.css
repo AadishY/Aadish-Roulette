@@ -61,8 +61,16 @@
 }
 
 /* Disable on very low-power mobile */
-@media (max-width: 480px) {
     .shell-fall {
         animation-duration: 30s !important;
     }
+}
+
+@keyframes controls-pop {
+    0% { transform: translateY(20px) scale(0.95); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.controls-enter {
+    animation: controls-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
