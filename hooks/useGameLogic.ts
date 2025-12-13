@@ -183,14 +183,19 @@ export const useGameLogic = () => {
     const total = randomInt(2, 8);
     // Ensure we don't have 0 blanks or 0 lives
     // Randomize lives count between 1 and total - 1
-    // Bias slightly towards even split but allow variance
-    let lives = Math.floor(total / 2);
-    if (total > 2 && Math.random() > 0.5) {
-      // 50% chance to skew slightly (+/- 1)
-      lives += Math.random() > 0.5 ? 1 : -1;
+    // Constraint: Live shells must be <= Blank shells
+    // lives <= total - lives  =>  2*lives <= total  =>  lives <= total/2
+    const maxLives = Math.floor(total / 2);
+
+    // Randomize lives between 1 and maxLives
+    // We want a good mix, but strictly adhering to the constraint
+    let lives = randomInt(1, maxLives);
+
+    // Bias towards maxLives to keep it exciting (don't want too few lives often)
+    if (lives < maxLives && Math.random() > 0.4) {
+      lives = maxLives;
     }
-    // Clamp to ensure valid game state (at least 1 live, at least 1 blank)
-    lives = Math.max(1, Math.min(lives, total - 1));
+
     const blanks = total - lives;
 
     let chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
@@ -260,18 +265,35 @@ export const useGameLogic = () => {
 
   const fireShot = async (shooter: TurnOwner, target: TurnOwner) => {
     if (isProcessing) return;
+    // setIsProcessing(true); // Lock input immediately to prevent mobile touch interference - moved below
 
-    // Trigger Gun Animation NOW
     // Trigger Gun Animation for BOTH Player and Dealer
     if (shooter === 'PLAYER') {
       setCameraView('GUN');
     }
 
-    // Set Target Pointing (triggers animation)
-    setAimTarget(target === (shooter === 'PLAYER' ? 'PLAYER' : 'DEALER') ? 'SELF' : 'OPPONENT');
+    // Determine intended aim target
+    const intendedAim = target === (shooter === 'PLAYER' ? 'PLAYER' : 'DEALER') ? 'SELF' : 'OPPONENT';
 
-    // Wait for Aim Animation (Reduced for responsiveness)
-    await wait(300);
+    // --- DOUBLE TAP / SAFETY CHECK ---
+    // If gun is not already pointing at the intended target, JUST AIM first.
+    // This solves mobile tap issues (Tap 1 = Aim, Tap 2 = Shoot).
+    // On Desktop, hover events handle the "Aim" part, so click immediately shoots.
+    // NOTE: Only applies to PLAYER. Dealer AI should not be blocked.
+    if (shooter === 'PLAYER' && aimTarget !== intendedAim) {
+      setAimTarget(intendedAim);
+      // No need to setIsProcessing(true) if we're just aiming and returning
+      return;
+    }
+
+    // If we reach here, it means aimTarget === intendedAim OR shooter is DEALER
+    // Lock input now that we're committing to the shot.
+    setIsProcessing(true);
+
+    // Proceed to Fire
+    setAimTarget(intendedAim); // Ensure it's set, though it should already be
+    // Tiny delay to ensure visual sync if repeating shots rapidly
+    await wait(100);
 
     // Update Stats - Shots Fired
     matchStatsRef.current.shotsFired++;
@@ -397,8 +419,7 @@ export const useGameLogic = () => {
     const item = player.items[index];
     if (!item) return;
 
-    if (item === 'CUFFS' && dealer.isHandcuffed) return;
-
+    // Logic for ADRENALINE (Must have something to steal)
     if (item === 'ADRENALINE') {
       const stealableItems = dealer.items.filter(i => i !== 'ADRENALINE' && i !== null);
       if (stealableItems.length === 0) {
@@ -451,13 +472,13 @@ export const useGameLogic = () => {
     // Show steal message and wait for it to be visible
     addLog(`${playerName.toUpperCase()} STOLE ${itemToSteal}`, 'info');
     setOverlayText(`🎯 STOLE ${itemToSteal}!`);
-    await wait(1000); // Faster feedback (was 1800)
+    await wait(800); // Faster feedback (was 1800)
     setOverlayText(null);
 
     setGameState(p => ({ ...p, phase: 'PLAYER_TURN' }));
 
     // 2. Use it immediately - with clear gap for readability
-    await wait(400); // Quicker transition (was 800)
+    await wait(100); // Quicker transition (was 800)
     await processItemEffect('PLAYER', itemToSteal);
 
     // Final sync wait

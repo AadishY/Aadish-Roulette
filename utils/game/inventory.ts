@@ -85,16 +85,21 @@ export const distributeItems = async (
     const pNew = generateLoot();
     const dNew = generateLoot();
 
-    // SAFETY: Clear any previous overlay state
+    // SAFETY: Clear any previous overlay state explicitely before showing new
     setShowLootOverlay(false);
     setReceivedItems([]);
-    await wait(100); // Wait for UI to clear
+    await wait(200); // Increased wait to ensure UI unmounts completely
 
     // Show NEW items in overlay
     setGameState(prev => ({ ...prev, phase: 'LOOTING' }));
     setReceivedItems([...pNew]); // Use spread to ensure new array reference
+
+    // Tiny delay to allow React to render the items in state before showing overlay
+    // preventing "empty" or "old" flash
+    await wait(50);
+
     setShowLootOverlay(true);
-    await wait(3500); // Allow time to see items
+    await wait(2500); // Allow time to see items (reduced for pacing)
 
     // Apply items to inventories - player gets pNew, dealer gets dNew
     setPlayer(p => {

@@ -172,9 +172,9 @@ export const useDealerAI = ({
                     // Skip if current is likely BLANK and we don't want to risk shooting self
                     // OR if current is UNKNOWN and we want to cycle to find a better shell
                     else if (dealer.items.includes('BEER') && !itemToUse) {
-                        // If we are confused (40-60%) or think it's blank, just skip.
-                        // Dealer prefers confirmed shots.
-                        if (!currentKnown && totalRemaining > 2) {
+                        // If current is bad (BLANK) OR if it's unknown but we have many beers
+                        // Don't waste beer if we think it's LIVE (unless we have Inverter combo? Too complex for this AI level)
+                        if (currentKnown === 'BLANK' || (!currentKnown && unknownTotal > 2)) {
                             itemToUse = 'BEER';
                         }
                     }

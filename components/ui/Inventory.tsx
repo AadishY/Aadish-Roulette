@@ -28,7 +28,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                             <button
                                 onClick={() => onUseItem(idx)}
                                 disabled={isUsageDisabled}
-                                className={`w-10 h-12 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 relative`}
+                                className={`w-12 h-14 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 relative`}
                             >
                                 {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}

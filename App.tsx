@@ -50,7 +50,6 @@ export default function App() {
     return () => window.removeEventListener('resize', checkOrientation);
   }, []);
 
-
   const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
 
   const handleConnect = useCallback(() => { }, []);
@@ -239,13 +238,12 @@ export default function App() {
       onClick={() => audioManager.initialize()}
       onKeyDown={() => audioManager.initialize()}
     >
-      {showRotateWarning && (
-        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center text-red-600 p-8 text-center font-mono">
-          <RotateCw size={64} className="mb-6 animate-spin" />
-          <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-wider">ROTATE DEVICE</h1>
-          <p className="text-stone-500 text-sm md:text-lg font-bold">LANDSCAPE ORIENTATION REQUIRED</p>
-        </div>
-      )}
+      {/* Mobile Orientation Warning - JS Based + CSS Fallback */}
+      <div className={`fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center text-red-600 p-8 text-center font-mono transition-opacity duration-300 ${showRotateWarning ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <RotateCw size={64} className="mb-6 animate-spin" />
+        <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-wider">ROTATE DEVICE</h1>
+        <p className="text-stone-500 text-sm md:text-lg font-bold">LANDSCAPE ORIENTATION REQUIRED</p>
+      </div>
 
       {/* 3D Scene */}
       <ThreeScene
