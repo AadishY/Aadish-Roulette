@@ -292,8 +292,8 @@ export const useGameLogic = () => {
 
     // Proceed to Fire
     setAimTarget(intendedAim); // Ensure it's set, though it should already be
-    // Tiny delay to ensure visual sync if repeating shots rapidly
-    await wait(100);
+    // Tiny delay to ensure visual sync - extended to match animation speed
+    await wait(300);
 
     // Update Stats - Shots Fired
     matchStatsRef.current.shotsFired++;

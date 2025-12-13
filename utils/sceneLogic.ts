@@ -238,8 +238,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     }
 
-    // Camera Lerp - Cinematic and Smooth (2.5 speed)
-    const camDamping = 1 - Math.exp(-2.5 * dt);
+    // Camera Lerp - Cinematic and Smooth (3.0 speed)
+    const camDamping = 1 - Math.exp(-3.0 * dt);
     camera.position.x += (targetCamPos.x - camera.position.x) * camDamping;
     camera.position.y += (targetCamPos.y - camera.position.y) * camDamping;
     camera.position.z += (targetCamPos.z - camera.position.z) * camDamping;
