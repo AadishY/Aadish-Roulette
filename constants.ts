@@ -18,7 +18,7 @@ export const ITEM_DESCRIPTIONS: Record<ItemType, string> = {
 
 export const DEFAULT_SETTINGS: GameSettings = {
   pixelScale: 3.5,
-  brightness: 1.1,
+  brightness: 1.2,
   uiScale: 0.8,
   fishEye: false,
   fov: 60,
