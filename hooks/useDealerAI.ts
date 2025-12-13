@@ -188,7 +188,7 @@ export const useDealerAI = ({
                         const idx = dealer.items.indexOf(itemToUse);
                         if (idx !== -1) {
                             await wait(500);
-                            setTargetAim('SELF');
+                            setTargetAim('IDLE');
                             await wait(500);
 
                             // Helper to trigger item use

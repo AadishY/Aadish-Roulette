@@ -191,8 +191,8 @@ export default function App() {
       if (socket.isConnected) setAppState('LOBBY');
     }
     if (appState === 'LOADING_SP') {
+      spGame.startGame(spGame.playerName, isHardModeSelected);
       setAppState('GAME');
-      setTimeout(() => spGame.startGame(spGame.playerName, isHardModeSelected), 100);
     }
     if (appState === 'LOADING_GAME') {
       setAppState('GAME');

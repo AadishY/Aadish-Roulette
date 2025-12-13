@@ -215,8 +215,8 @@ export const GameUI: React.FC<GameUIProps> = ({
 
                 {/* Overlay Text - Centered Announcements */}
                 {overlayText && !showLootOverlay && (
-                    <div className="absolute left-0 right-0 top-[60%] z-50 flex justify-center pointer-events-none px-4">
-                        <div className="text-lg md:text-4xl font-black tracking-tight text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center bg-black/60 px-4 py-2 md:px-8 md:py-4">
+                    <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none px-4">
+                        <div className="text-lg md:text-4xl font-black tracking-tight text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center bg-black/80 px-4 py-2 md:px-8 md:py-4 border-y-2 border-stone-100/20">
                             <RenderColoredText text={overlayText} />
                         </div>
                     </div>

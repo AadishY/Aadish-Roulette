@@ -23,7 +23,7 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                     ))}
                 </div>
                 {gameState.isHardMode && gameState.hardModeState && (
-                    <div className="text-xs md:text-sm text-red-500 font-black tracking-widest mt-1 drop-shadow-md">
+                    <div className="text-sm md:text-xl text-red-500 font-black tracking-widest mt-1 drop-shadow-md">
                         ROUND {gameState.hardModeState.round} <span className="text-red-900">/ 3</span>
                     </div>
                 )}
@@ -34,10 +34,8 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                 <div className={`text-xs md:text-3xl font-black tracking-widest transition-colors duration-500 whitespace-nowrap ${gameState.turnOwner === 'PLAYER' ? 'text-green-500/80 drop-shadow-[0_0_8px_rgba(34,197,94,0.3)]' : 'text-red-500/80 drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]'}`}>
                     {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : 'DEALER TURN'}
                 </div>
-                <div className="text-stone-600 text-[8px] md:text-xs mt-0.5 md:mt-2 font-mono tracking-widest flex justify-center gap-2">
-                    <span className="text-red-800 font-bold">{gameState.liveCount} LIVE</span>
-                    <span className="text-stone-700">|</span>
-                    <span className="text-stone-400 font-bold">{gameState.blankCount} BLANK</span>
+                <div className="text-stone-600 text-[10px] md:text-lg mt-0.5 md:mt-2 font-mono tracking-widest">
+                    {gameState.liveCount + gameState.blankCount} ROUNDS
                 </div>
             </div>
 
