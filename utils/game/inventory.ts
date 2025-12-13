@@ -9,16 +9,16 @@ type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 // Adjusted for Hard Mode support
 const getRandomItem = (isHardMode: boolean = false): ItemType => {
     if (isHardMode) {
-        // BEER: 20%, CIGS: 8%, GLASS: 12%, CUFFS: 10%, PHONE: 16%, SAW: 10%, INVERTER: 16%, ADRENALINE: 10%
-        // Total: 102
-        const r = Math.random() * 102;
+        // User Requested: BEER: 20%, CIGS: 8%, GLASS: 12%, CUFFS: 10%, PHONE: 18%, SAW: 10%, INVERTER: 9%, ADRENALINE: 10%
+        // Total Weight: 97
+        const r = Math.random() * 97;
         if (r < 20) return 'BEER';
         if (r < 28) return 'CIGS';
         if (r < 40) return 'GLASS';
         if (r < 50) return 'CUFFS';
-        if (r < 66) return 'PHONE';
-        if (r < 76) return 'SAW';
-        if (r < 92) return 'INVERTER';
+        if (r < 68) return 'PHONE';
+        if (r < 78) return 'SAW';
+        if (r < 87) return 'INVERTER';
         return 'ADRENALINE';
     } else {
         // Normal Mode
@@ -56,25 +56,16 @@ export const distributeItems = async (
 
     if (gameState.isHardMode) {
         // HARD MODE LOGIC
-        // Round 1 (Batch 1? No, Round 1 of match): 2 items
-        // Round 2: 3 items
-        // Round 3: Random 1-4
-        // Logic assumption: gameState.roundCount resets to 1 for each new Game Round in HM?
-        // OR we track match round in hardModeState.
-        // Let's assume gameState.hardModeState?.round is the source of truth for "Stage".
-
-        // However, distributeItems is called with gameState. 
-        // We need to know which STAGE we are in.
-        // If forceClear is true, we are starting a new Stage (or batch 1 of stage?).
-        // In Hard Mode, if we are in Stage 3, we always get 1-4 items per batch?
-        // Prompt says "Round 3- 4 health and random no. of items between 1 to 4".
-
+        // Round 1: 2 items
+        // Round 2: 2 items (per request)
+        // Round 3: 3 items (per request)
+        // Others: 4
         const currentStage = gameState.hardModeState?.round || 1;
 
         if (currentStage === 1) amount = 2;
-        else if (currentStage === 2) amount = 3;
+        else if (currentStage === 2) amount = 2;
         else if (currentStage === 3) amount = randomInt(1, 4);
-        else amount = 4; // Fallback
+        else amount = 4;
     } else {
         // NORMAL MODE LOGIC
         // Rounds 1-3: 2 items, Rounds 4-9: 3 items, Rounds 10+: 4 items

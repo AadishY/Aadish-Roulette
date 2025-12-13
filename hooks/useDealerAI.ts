@@ -143,7 +143,7 @@ export const useDealerAI = ({
                         }
 
                         // 5. GAMBLE / CYCLE (Priority 5)
-                        else if (unknownLiveProb < 0.4 && dealer.items.includes('BEER') && !itemToUse) itemToUse = 'BEER';
+                        else if (dealer.items.includes('BEER') && !itemToUse && (dealer.hp === 1 || unknownLiveProb < 0.45)) itemToUse = 'BEER';
                         else if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
                     }
                     else {
@@ -264,13 +264,31 @@ export const useDealerAI = ({
                             // Non-stealing items
                             else {
                                 await triggerItemUse(idx);
+
+                                // UPDATE MEMORY BASED ON ACTION
                                 if (itemToUse === 'GLASS') {
                                     aiMemory.current.set(currentIdx, chamber[currentIdx]);
                                 }
-                                if (itemToUse === 'INVERTER') {
+                                else if (itemToUse === 'INVERTER') {
                                     const actual = chamber[currentIdx];
                                     aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
                                 }
+                                else if (itemToUse === 'PHONE') {
+                                    // Dealer used phone: Memorize a random future shell
+                                    // (handlePhone handles the UI, we handle the Brain)
+                                    const available = [];
+                                    const limit = chamber.length;
+                                    // Phone can see any future shell (idx + 1 ... end) relative to current state
+                                    // Note: triggerItemUse calls handlePhone which waits. By the time we get here, state is same.
+                                    for (let i = currentIdx + 1; i < limit; i++) {
+                                        if (!aiMemory.current.has(i)) available.push(i);
+                                    }
+                                    if (available.length > 0) {
+                                        const r = available[Math.floor(Math.random() * available.length)];
+                                        aiMemory.current.set(r, chamber[r]);
+                                    }
+                                }
+
                                 await wait(500);
                                 setAiTick(t => t + 1);
                                 isAITurnInProgress.current = false;
@@ -300,9 +318,19 @@ export const useDealerAI = ({
                             // If sawed, almost always shoot player unless we are sure it's blank
                             target = finalLiveProb > 0.1 ? 'PLAYER' : 'DEALER'; // Risk it
                         } else {
-                            // Hard Mode is more aggressive with probabilities
-                            const threshold = gameState.isHardMode ? 0.35 : 0.40;
-                            target = finalLiveProb >= threshold ? 'PLAYER' : 'DEALER';
+                            if (gameState.isHardMode) {
+                                // Smart Logic:
+                                // 1. If HP is 1, NEVER risk shooting self unless we are 100% sure it's blank (Prob=0).
+                                // 2. Otherwise use 50% threshold for optimal turn retention.
+                                if (dealer.hp === 1 && finalLiveProb > 0) {
+                                    target = 'PLAYER';
+                                } else {
+                                    target = finalLiveProb >= 0.5 ? 'PLAYER' : 'DEALER';
+                                }
+                            } else {
+                                // Normal Mode: Aggressive/Loose
+                                target = finalLiveProb >= 0.4 ? 'PLAYER' : 'DEALER';
+                            }
                         }
 
                         // Normal Mode Personality override: Sometimes dumb

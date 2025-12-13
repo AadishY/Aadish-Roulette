@@ -100,15 +100,14 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
         } else {
             // Table rest
-            targets.targetPos.set(0, -0.9, 2);
+            targets.targetPos.set(0, -0.8, 2);
             targets.targetRot.set(0, Math.PI / 2, 0);
         }
     } else {
-        // DEALER TURN
         if (aimTarget === 'SELF') {
             // Dealer Goal: Shoot Self
-            // Fix: Move Z forward to -2.0 so barrel (length ~9) doesn't clip through head at -13
-            targets.targetPos.set(0, 3.8, -2.0);
+            // Fix: Move Z to 0.0 to ensure barrel clears head completely (no clipping)
+            targets.targetPos.set(0, 3.8, 0.0);
             targets.targetRot.set(-0.25, Math.PI, 0);
             targetGunLightIntensity = 5.0;
         } else if (aimTarget === 'OPPONENT') {
@@ -118,9 +117,9 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             targetGunLightIntensity = 5.0;
         } else {
             // Dealer Idle / Thinking / Table
-            // Fix: Centered (X=0), but moved forward (Z=-2.5) to clear Dealer visual
-            targets.targetPos.set(0, -0.9, -2.5);
-            targets.targetRot.set(0, Math.PI / 2, 0);
+            // Fix: Centered (X=0), Adjusted Y/Z and added Z-rotation (90deg) to lay flat sideways
+            targets.targetPos.set(0, -0.7, -2.5);
+            targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
         }
     }
 
@@ -249,9 +248,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     camera.position.y += (targetCamPos.y - camera.position.y) * camDamping;
     camera.position.z += (targetCamPos.z - camera.position.z) * camDamping;
 
-    // Breathing
+    // Breathing - Reduced on Mobile
     if (aimTarget !== 'SELF' && cameraView !== 'TABLE') {
-        const breathY = Math.sin(time * 0.5) * 0.05;
+        // Significantly reduced intensity for mobile (0.01 vs 0.05) to allow "some" life but avoid nausea
+        const breathAmp = isMobile ? 0.01 : 0.05;
+        const breathY = Math.sin(time * 0.5) * breathAmp;
         camera.position.y += breathY;
     }
 

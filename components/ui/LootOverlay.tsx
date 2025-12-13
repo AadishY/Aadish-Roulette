@@ -71,7 +71,7 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                             >
                                 <div className={`
                                     relative group
-                                    w-24 h-24 md:w-36 md:h-36 
+                                    w-24 md:w-36 aspect-square shrink-0
                                     flex items-center justify-center
                                     border-2 ${ITEM_COLORS[item]}
                                     shadow-[0_0_20px_rgba(0,0,0,0.5)]
