@@ -208,11 +208,25 @@ export const useGameLogic = () => {
       addLog('WAIT FOR RECOVERY...', 'info');
       return;
     }
-    setCameraView('GUN');
+    // New Logic: Don't move camera yet. Just show target choices.
+    setAimTarget('CHOOSING');
   };
 
   const fireShot = async (shooter: TurnOwner, target: TurnOwner) => {
     if (isProcessing) return;
+
+    // Trigger Gun Animation NOW
+    // Trigger Gun Animation for BOTH Player and Dealer
+    if (shooter === 'PLAYER') {
+      setCameraView('GUN');
+    }
+
+    // Set Target Pointing (triggers animation)
+    setAimTarget(target === (shooter === 'PLAYER' ? 'PLAYER' : 'DEALER') ? 'SELF' : 'OPPONENT');
+
+    // Wait for Aim Animation
+    await wait(600);
+
     await performShot(shooter, target, {
       gameState, setGameState, player, setPlayer, dealer, setDealer,
       setAnim, setKnownShell, setAimTarget, setCameraView, setOverlayText,
@@ -300,10 +314,9 @@ export const useGameLogic = () => {
       case 'ADRENALINE':
         await ItemActions.handleAdrenaline(user,
           (v) => setAnim(p => ({ ...p, triggerAdrenaline: typeof v === 'function' ? v(p.triggerAdrenaline) : v })),
-          setGameState, addLog, setOverlayText
+          setGameState, addLog, setOverlayText, setOverlayColor
         );
         await wait(500); // Pause before next action
-        setTimeout(() => setOverlayColor('none'), 1200);
         break;
     }
 
@@ -317,8 +330,10 @@ export const useGameLogic = () => {
     if (gameState.phase !== 'PLAYER_TURN') return;
     if (isProcessing) return;
 
-    if (cameraView === 'GUN') {
+    // Check if gun is held - blocking all item usage
+    if (cameraView === 'GUN' || aimTarget !== 'IDLE') {
       addLog("CAN'T USE ITEMS WHILE HOLDING GUN", 'info');
+      // Force UI update to ensure button text or blocked state is visible
       return;
     }
 

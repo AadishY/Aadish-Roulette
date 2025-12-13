@@ -48,12 +48,6 @@ export const performShot = async (
     }
 
     setGameState(prev => ({ ...prev, phase: 'RESOLVING' }));
-    setCameraView('GUN');
-
-    const isSelf = shooter === target;
-    setAimTarget(isSelf ? 'SELF' : 'OPPONENT');
-
-    await wait(800); // Allow gun to aim before firing
 
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';

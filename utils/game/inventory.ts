@@ -7,23 +7,24 @@ type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 
 // From useGameLogic
 const getRandomItem = (): ItemType => {
-    // BEER: 18% (Common - eject shell)
-    // CIGS: 16% (Common - heal 1 HP)
-    // GLASS: 14% (Useful - see current shell)
-    // CUFFS: 14% (Useful - skip opponent turn)
-    // PHONE: 10% (Strategic - see random shell)
-    // SAW: 10% (Powerful - double damage)
-    // INVERTER: 8% (Rare - flip shell type)
-    // ADRENALINE: 10% (Steal and use item)
+    // BEER: 20%
+    // CIGS: 14%
+    // GLASS: 12%
+    // CUFFS: 14%
+    // PHONE: 16%
+    // SAW: 10%
+    // INVERTER: 16%
+    // ADRENALINE: 10%
+    // Total Weight: 112
 
-    const r = Math.random() * 100;
-    if (r < 18) return 'BEER';
+    const r = Math.random() * 112;
+    if (r < 20) return 'BEER';
     if (r < 34) return 'CIGS';
-    if (r < 48) return 'GLASS';
-    if (r < 62) return 'CUFFS';
-    if (r < 72) return 'PHONE';
-    if (r < 82) return 'SAW';
-    if (r < 90) return 'INVERTER';
+    if (r < 46) return 'GLASS';
+    if (r < 60) return 'CUFFS';
+    if (r < 76) return 'PHONE';
+    if (r < 86) return 'SAW';
+    if (r < 102) return 'INVERTER';
     return 'ADRENALINE';
 };
 

@@ -56,8 +56,16 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/image/favicon/favicon-16x16.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/image/favicon/favicon-32x32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/image/favicon/apple-touch-icon.png" />
-  <link rel="manifest" href="/image/favicon/site.webmanifest" />
-
+  <link rel="manifest" href="/manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW registration failed', err));
+      });
+    }
+  </script>
   <!-- Preconnect for performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -8,22 +8,25 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, messages } = props;
 
-    const dt = delta || 0.016; // Fallback to ~60fps if undefined
+    const MAX_DT = 0.05;
+    const dt = Math.min(delta || 0.016, MAX_DT); // Clamp DT to prevent huge jumps/skips
 
-    // --- BRIGHTNESS & FOV ---
     // --- BRIGHTNESS & FOV ---
     const brightnessMult = settings.brightness || 1.0;
 
     // Smoothly update toneMapping exposure based on brightness setting
     renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 1.8 * brightnessMult, 0.1);
 
-    // Apply brightness to all static lights
-    for (const bl of baseLights) {
+    // Apply brightness to all static lights - Optimization: use cached array length
+    const lenLights = baseLights.length;
+    for (let i = 0; i < lenLights; i++) {
+        const bl = baseLights[i];
         if (bl.light && bl.baseIntensity !== undefined) {
-            // Directly scale the intensity
             bl.light.intensity = bl.baseIntensity * brightnessMult;
         }
     }
+
+
 
     // PERFORMANCE: Cache bulbBase lookup (only compute once)
     if (scene.userData.cachedBulbBase === undefined) {
@@ -87,6 +90,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             // GUN POINTED AT PLAYER - see barrel opening (the dark circle)
             targets.targetPos.set(0, 1, -2); // Far away, slightly raised
             targets.targetRot.set(-0.15, 0, 0); // Almost straight at camera
+        } else if (aimTarget === 'CHOOSING') {
+            // Holding Gun, waiting for choice
+            targets.targetPos.set(0.5, -1.0, 5.5); // Low, near body
+            targets.targetRot.set(0, Math.PI / 2.2, Math.PI / 2); // Sideways hold
         } else if (cameraView === 'GUN') {
             targets.targetPos.set(0, -0.75, 4);
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
@@ -118,7 +125,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     // Gun Animation Lerp (Time-based Damping)
     // Gun Animation Lerp (Time-based Damping)
-    const gunDamping = 1 - Math.exp(-7 * dt);
+    // Gun Animation Lerp (Time-based Damping) - Reduced to 4 for smoother, weightier feel
+    const gunDamping = 1 - Math.exp(-4 * dt);
     gunGroup.position.lerp(targets.targetPos, gunDamping);
     gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * gunDamping;
     gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * gunDamping;
@@ -151,7 +159,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     }
 
     // --- CAMERA LOGIC ---
-    const targetCamPos = new THREE.Vector3(0, 4, 14); // Default Table View
+    if (!scene.userData._targetCamPos) scene.userData._targetCamPos = new THREE.Vector3();
+    const targetCamPos = scene.userData._targetCamPos;
+    targetCamPos.set(0, 4, 14); // Default Table View
+
 
     if (cameraView === 'TABLE') {
         targetCamPos.set(0, 10, 4);
@@ -242,13 +253,22 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     }
 
     // Shake
+    // Camera Shake Logic - Dampen for mobile
     let shake = scene.userData.cameraShake || 0;
-    if (shake > 0) {
-        camera.position.x += (Math.random() - 0.5) * shake;
-        camera.position.y += (Math.random() - 0.5) * shake;
-        camera.position.z += (Math.random() - 0.5) * shake * 0.5;
+    const isMobile = scene.userData.isMobile;
+    const shakeCap = isMobile ? 0.4 : 1.5;
+    if (shake > shakeCap) shake = shakeCap;
 
-        shake *= 0.9;
+    if (shake > 0) {
+        // Reduced frequency multiplier for mobile
+        const jitter = isMobile ? 0.6 : 1.0;
+        camera.position.x += (Math.random() - 0.5) * shake * jitter;
+        camera.position.y += (Math.random() - 0.5) * shake * jitter;
+        camera.position.z += (Math.random() - 0.5) * shake * 0.5 * jitter;
+
+        // Time-based decay 
+        const decay = Math.pow(0.1, dt);
+        shake *= decay;
         if (shake < 0.01) shake = 0;
         scene.userData.cameraShake = shake;
     }
@@ -277,7 +297,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const dealerDamping = 1 - Math.exp(-dealerSpeed * dt);
     dealerGroup.position.y += (dealerTargetY - dealerGroup.position.y) * dealerDamping;
 
-    const headGroup = dealerGroup.getObjectByName("HEAD");
+    if (!scene.userData.cachedHeadGroup) scene.userData.cachedHeadGroup = dealerGroup.getObjectByName("HEAD");
+    const headGroup = scene.userData.cachedHeadGroup;
     if (headGroup) {
         headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.2, 0.05);
         headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.1, 0.05);
@@ -299,7 +320,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         });
     }
 
-    const faceLight = dealerGroup.getObjectByName("FACE_LIGHT") as THREE.PointLight;
+    if (!scene.userData.cachedFaceLight) scene.userData.cachedFaceLight = dealerGroup.getObjectByName("FACE_LIGHT");
+    const faceLight = scene.userData.cachedFaceLight as THREE.PointLight;
     if (faceLight) {
         const pulse = 2.0 + Math.sin(time * 1.2) * 0.6;
         const flicker = Math.random() > 0.90 ? Math.random() * 1.5 : 0;
@@ -314,23 +336,46 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // --- SPAWN PARTICLES ---
 
     // Blood Spawn (Dealer Hit)
-    if (animState.dealerHit) {
+    // Blood Spawn (Dealer Hit or Player Hit)
+    const isDealerHit = animState.dealerHit;
+    const isPlayerHit = animState.playerHit;
+
+    if ((isDealerHit || isPlayerHit) && (!scene.userData.isLowEndDevice || Math.random() > 0.5)) {
         const bPos = bloodParticles.geometry.attributes.position.array as Float32Array;
         const bVel = bloodParticles.geometry.attributes.velocity.array as Float32Array;
-        const spawnRate = 5;
-        for (let k = 0; k < spawnRate; k++) {
-            for (let i = 0; i < bPos.length / 3; i++) {
-                if (bPos[i * 3 + 1] > 100) {
+        // Increase spawn rate for more "splash"
+        const spawnRate = scene.userData.isMobile ? 4 : 15;
+        const len = bPos.length / 3;
 
-                    bPos[i * 3] = (Math.random() - 0.5) * 1.0;
-                    bPos[i * 3 + 1] = 5.0 + (Math.random() - 0.5) * 1.0;
-                    bPos[i * 3 + 2] = -13.0 + (Math.random() - 0.5) * 0.5;
+        let spawnCount = 0;
+        const startIdx = Math.floor(Math.random() * len);
 
-                    bVel[i * 3] = (Math.random() - 0.5) * 4.0;
-                    bVel[i * 3 + 1] = (Math.random() * 3.0);
-                    bVel[i * 3 + 2] = (Math.random() * 5.0) + 2.0;
-                    break;
+        for (let k = 0; k < len; k++) {
+            const i = (startIdx + k) % len;
+            if (bPos[i * 3 + 1] > 100) {
+                if (isDealerHit) {
+                    // Dealer Head (-13z)
+                    bPos[i * 3] = (Math.random() - 0.5) * 1.5;
+                    bPos[i * 3 + 1] = 5.0 + (Math.random() - 0.5) * 1.5;
+                    bPos[i * 3 + 2] = -13.0 + (Math.random() - 0.5) * 1.0;
+
+                    // Explode OUTWARDS from head
+                    bVel[i * 3] = (Math.random() - 0.5) * 8.0;
+                    bVel[i * 3 + 1] = Math.random() * 5.0 + 2.0;
+                    bVel[i * 3 + 2] = Math.random() * 8.0 + 2.0; // Towards player
+                } else {
+                    // Player Hit (near camera)
+                    bPos[i * 3] = (Math.random() - 0.5) * 2.0;
+                    bPos[i * 3 + 1] = 2.0 + (Math.random() - 0.5) * 1.0;
+                    bPos[i * 3 + 2] = 8.0;
+
+                    bVel[i * 3] = (Math.random() - 0.5) * 5.0;
+                    bVel[i * 3 + 1] = Math.random() * 4.0;
+                    bVel[i * 3 + 2] = -Math.random() * 5.0; // Away from camera? Or towards? Mostly just down/messy
                 }
+
+                spawnCount++;
+                if (spawnCount >= spawnRate) break;
             }
         }
         bloodParticles.geometry.attributes.position.needsUpdate = true;

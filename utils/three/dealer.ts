@@ -260,35 +260,40 @@ export const createDealerModel = (scene: THREE.Scene) => {
 
     const lForearm = new THREE.Mesh(forearmGeo, suitMat);
     // Adjusted to reach from shoulder to table (WIDER STANCE)
-    lForearm.position.set(-3.8, -4.0, 2.5);
-    lForearm.rotation.x = -Math.PI / 2 + 0.4; // Tilted down towards table
+    // Pulling back: Z 2.5 -> 1.5. Raising: Y -4.0 -> -3.6
+    lForearm.position.set(-3.8, -3.6, 1.5);
+    lForearm.rotation.x = -Math.PI / 2 + 0.6; // Steeper angle
     lForearm.rotation.z = -0.2; // Angled outward
     lForearm.castShadow = true;
     lForearm.name = 'LEFT_FOREARM';
     dealerGroup.add(lForearm);
 
     const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(3.8, -4.0, 2.5);
-    rForearm.rotation.x = -Math.PI / 2 + 0.4;
+    rForearm.position.set(3.8, -3.6, 1.5);
+    rForearm.rotation.x = -Math.PI / 2 + 0.6;
     rForearm.rotation.z = 0.2; // Angled outward
     rForearm.castShadow = true;
     rForearm.name = 'RIGHT_FOREARM';
     dealerGroup.add(rForearm);
 
     // Hands - Resting on table in front of dealer
+    // Target Absolute Y: -0.7 (Table Surface)
+    // Calculation: 3.0 + (localY * 0.9) = -0.7 => localY = -4.1
+    // Target Absolute Z: -5.5 (Closer to dealer)
+    // Calculation: -8.0 + (localZ * 0.9) = -5.5 => localZ = 2.7
     const handGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
 
     const lHand = new THREE.Mesh(handGeo, skullMat);
-    lHand.position.set(-3.5, -4.8, 4.2); // Wider
-    lHand.rotation.x = 0.1;
+    lHand.position.set(-3.5, -4.15, 2.7);
+    lHand.rotation.x = 0.0; // Flat on table
     lHand.rotation.z = 0.2;
     lHand.castShadow = true;
     lHand.name = 'LEFT_HAND';
     dealerGroup.add(lHand);
 
     const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(3.5, -4.8, 4.2); // Wider
-    rHand.rotation.x = 0.1;
+    rHand.position.set(3.5, -4.15, 2.7);
+    rHand.rotation.x = 0.0;
     rHand.rotation.z = -0.2;
     rHand.castShadow = true;
     rHand.name = 'RIGHT_HAND';
@@ -299,14 +304,15 @@ export const createDealerModel = (scene: THREE.Scene) => {
     for (let i = 0; i < 4; i++) {
         // Left fingers
         const lFinger = new THREE.Mesh(fingerGeo, skullMat);
-        lFinger.position.set(-3.9 + i * 0.25, -5.0, 5.1); // Adjusted for new hand pos
+        // Z offset relative to hand Z (2.7) + length
+        lFinger.position.set(-3.9 + i * 0.25, -4.35, 3.6);
         lFinger.rotation.x = Math.PI / 2;
         lFinger.rotation.y = 0.2;
         dealerGroup.add(lFinger);
 
         // Right fingers
         const rFinger = new THREE.Mesh(fingerGeo, skullMat);
-        rFinger.position.set(3.1 + i * 0.25, -5.0, 5.1);
+        rFinger.position.set(3.1 + i * 0.25, -4.35, 3.6);
         rFinger.rotation.x = Math.PI / 2;
         rFinger.rotation.y = -0.2; // splay
         dealerGroup.add(rFinger);

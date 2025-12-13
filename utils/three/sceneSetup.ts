@@ -32,36 +32,46 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const camera = new THREE.PerspectiveCamera(props.settings.fov || defaultFov, width / height, 0.1, 100);
     camera.position.set(0, 4, 14);
 
-    // Device Detection
+    // Device Detection & Optimization Profiles
     const userAgent = navigator.userAgent.toLowerCase();
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || width < 900;
     const isAndroid = userAgent.includes('android');
-    const isLowEndDevice = isMobile && (width < 600 || (window.devicePixelRatio || 1) < 2);
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    // Aggressive Low-End Check
+    // If it's Android, or low res, or has less than 4GB RAM (approx check via hardwareConcurrency < 8 usually means older CPU), consider low end
+    const isLowEndDevice = isMobile && (isAndroid || width < 600 || pixelRatio < 2 || navigator.hardwareConcurrency < 6);
 
     const renderer = new THREE.WebGLRenderer({
         antialias: false,
-        powerPreference: 'default',
+        powerPreference: 'high-performance', // Try high perf first
         alpha: false,
         stencil: false,
-        depth: true,
-        precision: isLowEndDevice ? 'lowp' : 'mediump'
+        depth: true, // Keep depth
+        precision: isMobile ? 'lowp' : 'mediump' // Force lowp on all mobile for speed
     });
 
-    // Reduced pixel scale for better background visibility while keeping pixelation
-    const mobilePixelScale = isAndroid ? 2 : 2;
-    const pixelScale = isMobile ? mobilePixelScale : (props.settings.pixelScale || 2); // 2 instead of 3
-    const maxPixelRatio = isMobile ? 1.5 : window.devicePixelRatio;
-    renderer.setPixelRatio(Math.min(maxPixelRatio, window.devicePixelRatio));
+    // Mobile Optimization: Aggressive resolution scaling
+    let mobilePixelScale = 2; // Default mobile
+    if (isLowEndDevice) mobilePixelScale = 3.5; // Even lower res for low-end (simulates ~270p-360p)
+
+    // Desktop: default to 3 or user setting. Mobile: strictly optimized.
+    const pixelScale = isMobile ? mobilePixelScale : (props.settings.pixelScale || 3);
+
+    const maxPixelRatio = isMobile ? 1.5 : Math.min(window.devicePixelRatio, 2); // Cap at 2x for desktop
+    renderer.setPixelRatio(maxPixelRatio);
     renderer.setSize(width / pixelScale, height / pixelScale, false);
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    renderer.domElement.style.imageRendering = 'pixelated';
+    renderer.domElement.style.imageRendering = 'pixelated'; // Essential for the look
 
-    renderer.shadowMap.enabled = !isLowEndDevice;
-    renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-    // Maximum exposure for visibility
+    // Disable shadows completely on ALL mobile devices for max FPS
+    renderer.shadowMap.enabled = !isMobile;
+    renderer.shadowMap.type = THREE.BasicShadowMap; // Always use fast shadows for style & perf
+
+    // Tone mapping
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.8; // Maximum brightness
+    renderer.toneMappingExposure = 1.8;
 
     scene.userData.isMobile = isMobile;
     scene.userData.isAndroid = isAndroid;
@@ -73,6 +83,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const mouse = new THREE.Vector2();
 
     const lights = setupLighting(scene);
+    // ... lights setup array ...
     const baseLights = [
         { light: lights.bulbLight, baseIntensity: lights.bulbLight.intensity },
         { light: lights.gunSpot, baseIntensity: lights.gunSpot.intensity },
@@ -153,21 +164,33 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
         c.userData.type = 'GUN';
     });
 
-    // Particles
-    const particleCount = isLowEndDevice ? 15 : (isMobile ? 30 : 150);
+    // Particles - HEAVILY REDUCED for Mobile
+    // Mobile: 20 particles max. Low-end: 10. PC: 100
+    const particleCount = isLowEndDevice ? 10 : (isMobile ? 25 : 100);
     const particles = new THREE.BufferGeometry();
     const pPositions = new Float32Array(particleCount * 3);
     const pVelocities = new Float32Array(particleCount * 3);
+    // Initialize off-screen
     for (let i = 0; i < particleCount * 3; i++) pPositions[i] = 9999;
+
     particles.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
     particles.setAttribute('velocity', new THREE.BufferAttribute(pVelocities, 3));
+
     const pMat = new THREE.PointsMaterial({
-        color: 0xcc0000, size: 1.5, transparent: true, opacity: 0.9, sizeAttenuation: true, depthWrite: false, blending: THREE.NormalBlending
+        color: 0xcc0000,
+        size: 1.5,
+        transparent: true,
+        opacity: 0.9,
+        sizeAttenuation: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending
     });
     const bloodParticles = new THREE.Points(particles, pMat);
+    // Don't frustrate culling
+    bloodParticles.frustumCulled = false;
     scene.add(bloodParticles);
 
-    const sparkCount = isLowEndDevice ? 10 : (isMobile ? 25 : 100);
+    const sparkCount = isLowEndDevice ? 8 : (isMobile ? 20 : 80);
     const sparkGeo = new THREE.BufferGeometry();
     const sPos = new Float32Array(sparkCount * 3);
     const sVel = new Float32Array(sparkCount * 3);
@@ -176,6 +199,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     sparkGeo.setAttribute('velocity', new THREE.BufferAttribute(sVel, 3));
     const sMat = new THREE.PointsMaterial({ color: 0xffffcc, size: 0.3, transparent: true, opacity: 1, blending: THREE.AdditiveBlending });
     const sparkParticles = new THREE.Points(sparkGeo, sMat);
+    sparkParticles.frustumCulled = false;
     scene.add(sparkParticles);
 
     return {

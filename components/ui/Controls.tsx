@@ -67,8 +67,8 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                         }}
                         disabled={isProcessing || isRecovering}
                         className={`bg-black/90 border px-4 py-3 md:px-8 md:py-5 font-black text-xs md:text-xl transition-all active:scale-95 shadow-lg tracking-wider flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isRecovering
-                                ? 'border-red-800 text-red-500 disabled:animate-none'
-                                : 'border-stone-500 text-stone-200 hover:bg-stone-800 hover:text-white hover:border-white animate-pulse'
+                            ? 'border-red-800 text-red-500 disabled:animate-none'
+                            : 'border-stone-500 text-stone-200 hover:bg-stone-800 hover:text-white hover:border-white animate-pulse'
                             }`}
                     >
                         <Hand size={16} className="md:w-6 md:h-6" />
@@ -93,7 +93,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                     }}
                                     disabled={isProcessing}
                                     onMouseEnter={() => onHoverTarget('OPPONENT')}
-                                    onMouseLeave={() => onHoverTarget('IDLE')}
+                                    onMouseLeave={() => onHoverTarget('CHOOSING')}
                                     className="bg-black/90 border border-red-800 px-3 py-2 md:px-6 md:py-4 text-red-500 font-black text-xs md:text-lg hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-1 md:gap-2 disabled:opacity-50"
                                 >
                                     <Target size={14} className="md:w-5 md:h-5" />
@@ -108,7 +108,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                 }}
                                 disabled={isProcessing}
                                 onMouseEnter={() => onHoverTarget('OPPONENT')}
-                                onMouseLeave={() => onHoverTarget('IDLE')}
+                                onMouseLeave={() => onHoverTarget('CHOOSING')}
                                 className="bg-black/90 border border-red-800 px-4 py-3 md:px-8 md:py-5 text-red-500 font-black text-xs md:text-xl hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
                             >
                                 <Target size={16} className="md:w-6 md:h-6" />
@@ -123,7 +123,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                             }}
                             disabled={isProcessing}
                             onMouseEnter={() => onHoverTarget('SELF')}
-                            onMouseLeave={() => onHoverTarget('IDLE')}
+                            onMouseLeave={() => onHoverTarget('CHOOSING')}
                             className="bg-black/90 border border-stone-700 px-4 py-3 md:px-8 md:py-5 text-stone-400 font-black text-xs md:text-xl hover:bg-stone-800 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
                         >
                             <User size={16} className="md:w-6 md:h-6" />

@@ -130,46 +130,25 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             updateScene(sceneRef.current, propsRef.current, time, delta);
         };
 
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!containerRef.current || !sceneRef.current) return;
-            // Cheap update, no heavy calcs
-            sceneRef.current.mouse.x = ((e.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
-            sceneRef.current.mouse.y = -((e.clientY - containerRef.current.offsetTop) / containerRef.current.clientHeight) * 2 + 1;
-        };
-
-        const handleClick = () => {
-            if (!sceneRef.current) return;
-            sceneRef.current.raycaster.setFromCamera(sceneRef.current.mouse, sceneRef.current.camera);
-            const intersects = sceneRef.current.raycaster.intersectObjects(sceneRef.current.gunGroup.children);
-            if (intersects.find(i => i.object.userData.type === 'GUN')) onGunClick();
-        };
-
-        const handleTouchStart = (e: TouchEvent) => {
-            if (!containerRef.current || !sceneRef.current || e.changedTouches.length === 0) return;
-            const touch = e.changedTouches[0];
-            sceneRef.current.mouse.x = ((touch.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
-            sceneRef.current.mouse.y = -((touch.clientY - containerRef.current.offsetTop) / containerRef.current.clientHeight) * 2 + 1;
-        };
-
-        const handleTouchEnd = (e: TouchEvent) => {
-            handleClick();
-        };
-
         const updateCameraResponsive = () => {
             if (!containerRef.current || !sceneRef.current) return;
             const width = containerRef.current.clientWidth;
             const height = containerRef.current.clientHeight;
             if (width === 0 || height === 0) return;
 
-            // Re-calc scale
+            // Device-aware scaling
             const isMob = window.innerWidth < 900;
             const isAnd = navigator.userAgent.toLowerCase().includes('android');
-            const mobScale = isAnd ? 3 : 2;
-            // Default to 4 for stronger pixelation on desktop
-            const pxScale = isMob ? mobScale : (propsRef.current.settings.pixelScale || 4);
+            const pixelRatio = window.devicePixelRatio || 1;
+            const isLowEnd = isMob && (width < 600 || pixelRatio < 2);
+
+            // Re-calc scale logic consistent with setup
+            let mobilePixelScale = 2;
+            if (isLowEnd) mobilePixelScale = 3.0;
+
+            const pxScale = isMob ? mobilePixelScale : (propsRef.current.settings.pixelScale || 3);
 
             sceneRef.current.renderer.setSize(width / pxScale, height / pxScale, false);
-
             const aspect = width / height;
             sceneRef.current.camera.aspect = aspect;
             sceneRef.current.camera.updateProjectionMatrix();
@@ -183,22 +162,57 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         }, 100);
 
         const resizeObserver = new ResizeObserver(() => {
-            if (!sceneRef.current) {
-                if (containerRef.current && containerRef.current.clientWidth > 0) {
-                    initThree(); animate();
-                }
-            } else {
-                updateCameraResponsive();
+            // DEBOUNCE RESIZE: Don't rebuild, just resize
+            if (sceneRef.current) {
+                requestAnimationFrame(updateCameraResponsive);
+            } else if (containerRef.current && containerRef.current.clientWidth > 0) {
+                initThree(); animate();
             }
         });
 
         if (containerRef.current) resizeObserver.observe(containerRef.current);
 
+        // INPUT HANDLING - Prevent Double Firing
+        let isTouchInteraction = false;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!containerRef.current || !sceneRef.current || isTouchInteraction) return;
+            sceneRef.current.mouse.x = ((e.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
+            sceneRef.current.mouse.y = -((e.clientY - containerRef.current.offsetTop) / containerRef.current.clientHeight) * 2 + 1;
+        };
+
+        const handleClick = (e?: MouseEvent | TouchEvent) => {
+            if (!sceneRef.current) return;
+            // Raycast from current mouse pos
+            sceneRef.current.raycaster.setFromCamera(sceneRef.current.mouse, sceneRef.current.camera);
+            const intersects = sceneRef.current.raycaster.intersectObjects(sceneRef.current.gunGroup.children);
+            if (intersects.find(i => i.object.userData.type === 'GUN')) onGunClick();
+        };
+
+        const handleTouchStart = (e: TouchEvent) => {
+            isTouchInteraction = true; // Flag to ignore mouse events for a bit
+            if (!containerRef.current || !sceneRef.current || e.changedTouches.length === 0) return;
+            const touch = e.changedTouches[0];
+            sceneRef.current.mouse.x = ((touch.clientX - containerRef.current.offsetLeft) / containerRef.current.clientWidth) * 2 - 1;
+            sceneRef.current.mouse.y = -((touch.clientY - containerRef.current.offsetTop) / containerRef.current.clientHeight) * 2 + 1;
+        };
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            // Prevent default browser click generation if we handle it here
+            if (e.cancelable) e.preventDefault();
+            handleClick(e);
+
+            // Reset flag after a delay to allow mouse usage again later if needed (hybrid devices)
+            setTimeout(() => isTouchInteraction = false, 500);
+        };
+
         window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('click', handleClick);
-        // Add touch listeners for low-latency firing
-        window.addEventListener('touchstart', handleTouchStart, { passive: true });
-        window.addEventListener('touchend', handleTouchEnd);
+        window.addEventListener('click', handleClick); // For desktop clicks
+
+        // Passive false so we can preventDefault
+        const touchOpt = { passive: false };
+        window.addEventListener('touchstart', handleTouchStart, touchOpt);
+        window.addEventListener('touchend', handleTouchEnd, touchOpt);
 
         return () => {
             clearTimeout(timeout);
@@ -213,7 +227,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 cleanScene(sceneRef.current.scene);
                 sceneRef.current.renderer.dispose();
             }
-            if (containerRef.current) containerRef.current.innerHTML = '';
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
     }, [players?.map(p => p.id).join(',')]); // Removed settings.pixelScale to prevent full rebuild

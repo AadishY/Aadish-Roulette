@@ -135,12 +135,12 @@ export const createMagnifyingGlass = (): THREE.Group => {
     group.add(rim);
 
     // Glass
-    const glassMat = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff,
-        metalness: 0,
-        roughness: 0,
-        transmission: 0.9,
-        transparent: true
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: 0xaaddff, // Slight blue tint
+        metalness: 0.1,
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.3
     });
     const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.05, 32), glassMat);
     glass.rotation.x = Math.PI / 2;

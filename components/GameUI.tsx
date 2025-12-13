@@ -149,7 +149,7 @@ export const GameUI: React.FC<GameUIProps> = ({
         }
     }, [triggerDrink]);
 
-    const isGunHeld = cameraView === 'GUN';
+    const isGunHeld = cameraView === 'GUN' || aimTarget === 'CHOOSING' || aimTarget === 'OPPONENT' || aimTarget === 'SELF';
     const isMyTurn = isMultiplayer
         ? (mpGameState?.currentTurnPlayerId === mpMyPlayerId)
         : (gameState.phase === 'PLAYER_TURN');
@@ -181,7 +181,7 @@ export const GameUI: React.FC<GameUIProps> = ({
             {gameState.phase === 'BOOT' && <BootScreen onContinue={onBootComplete} />}
 
             {/* FX Layers */}
-            <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 z-10 ${overlayColor === 'red' ? 'bg-red-900/40' : overlayColor === 'green' ? 'bg-green-900/20' : overlayColor === 'scan' ? 'bg-cyan-900/20' : ''}`} />
+            <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 z-10 ${overlayColor === 'red' ? 'bg-red-900/40' : overlayColor === 'green' ? 'bg-green-900/20' : overlayColor === 'scan' ? 'bg-fuchsia-900/30 mix-blend-overlay' : ''}`} />
             {showFlash && <div className="absolute inset-0 z-50 flash-screen" />}
             {smokeActive && <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]" />}
             {drinkActive && <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px]" />}
@@ -319,9 +319,10 @@ export const GameUI: React.FC<GameUIProps> = ({
                             </button>
                         </div>
 
-                        {/* Center - Controls (Positioned at Bottom) */}
-                        {isMyTurn && !isProcessing && !showLootOverlay && (
-                            <div className="absolute bottom-16 md:bottom-24 left-0 right-0 flex justify-center pointer-events-none z-50">
+                        {/* Controls - Bottom */}
+                        <div className="flex-1 w-full flex items-end justify-center pointer-events-none mb-4 md:mb-8">
+                            {/* Only show controls if not stealing phase */}
+                            {gameState.phase !== 'STEALING' && gameState.phase !== 'GAME_OVER' && isMyTurn && !showLootOverlay && (
                                 <Controls
                                     isGunHeld={isGunHeld}
                                     isProcessing={isProcessing}
@@ -335,8 +336,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     mpMyPlayerId={mpMyPlayerId}
                                     onMpShoot={onMpShoot}
                                 />
-                            </div>
-                        )}
+                            )}
+                        </div>
 
                         {/* Waiting Message */}
                         {isMultiplayer && !isMyTurn && mpGameState && !showLootOverlay && !isProcessing && (

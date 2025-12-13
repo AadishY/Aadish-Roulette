@@ -3,7 +3,7 @@ export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | '
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
 export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI'; // Added STEAL_UI for Adrenaline
-export type AimTarget = 'OPPONENT' | 'SELF' | 'IDLE';
+export type AimTarget = 'OPPONENT' | 'SELF' | 'IDLE' | 'CHOOSING';
 
 export interface GameState {
   phase: 'BOOT' | 'INTRO' | 'LOAD' | 'PLAYER_TURN' | 'DEALER_TURN' | 'RESOLVING' | 'GAME_OVER' | 'LOOTING' | 'STEALING'; // Added STEALING

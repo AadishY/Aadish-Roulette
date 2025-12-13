@@ -234,26 +234,34 @@ export const handleAdrenaline = async (
     setTriggerAdrenaline: StateSetter<number>,
     setGameState: StateSetter<GameState>,
     addLog: (text: string, type: LogEntry['type']) => void,
-    setOverlayText?: StateSetter<string | null>
+    setOverlayText?: StateSetter<string | null>,
+    setOverlayColor?: StateSetter<'none' | 'red' | 'green' | 'scan'>
 ) => {
     setTriggerAdrenaline(p => p + 1);
     // audioManager.playSound('grab', { playbackRate: 1.0 }); // Normal grab
 
-    await wait(1800); // Wait for injection animation
+    await wait(500);
+    // Heartbeat / Rush effect
+    if (setOverlayColor) setOverlayColor('red');
+
+    await wait(1300); // Wait for injection animation completion
+
+    if (setOverlayColor) setOverlayColor('none');
 
     // Show message AFTER animation plays
     if (setOverlayText) {
-        setOverlayText(user === 'PLAYER' ? '💉 ADRENALINE RUSH!' : '💉 DEALER USING ADRENALINE');
-        setTimeout(() => setOverlayText?.(null), 1500);
+        setOverlayText(user === 'PLAYER' ? '⚡ ADRENALINE RUSH ⚡' : '💉 DEALER SURGE');
+        setTimeout(() => setOverlayText?.(null), 2000);
     }
 
     await wait(500); // Pause before phase change
 
     if (user === 'PLAYER') {
-        addLog("ADRENALINE RUSH! STEAL AN ITEM", 'info');
+        addLog("TIME SLOWS DOWN... PICK AN ITEM TO STEAL", 'danger');
         setGameState(prev => ({ ...prev, phase: 'STEALING' }));
     } else {
-        addLog("DEALER USING ADRENALINE", 'dealer');
+        addLog("DEALER MOVING WITH UNNATURAL SPEED", 'dealer');
+        // Dealer logic handles its own stealing flow in useDealerAI
     }
     await wait(300); // Final sync
 };

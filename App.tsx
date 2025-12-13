@@ -49,15 +49,7 @@ export default function App() {
     return () => window.removeEventListener('resize', checkOrientation);
   }, []);
 
-  if (showRotateWarning) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center text-red-600 p-8 text-center font-mono">
-        <RotateCw size={64} className="mb-6 animate-spin" />
-        <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-wider">ROTATE DEVICE</h1>
-        <p className="text-stone-500 text-sm md:text-lg font-bold">LANDSCAPE ORIENTATION REQUIRED</p>
-      </div>
-    );
-  }
+
   const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
 
   const handleConnect = useCallback(() => { }, []);
@@ -245,6 +237,13 @@ export default function App() {
       onClick={() => audioManager.initialize()}
       onKeyDown={() => audioManager.initialize()}
     >
+      {showRotateWarning && (
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center text-red-600 p-8 text-center font-mono">
+          <RotateCw size={64} className="mb-6 animate-spin" />
+          <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-wider">ROTATE DEVICE</h1>
+          <p className="text-stone-500 text-sm md:text-lg font-bold">LANDSCAPE ORIENTATION REQUIRED</p>
+        </div>
+      )}
 
       {/* 3D Scene */}
       <ThreeScene
@@ -331,7 +330,7 @@ export default function App() {
           <LoadingScreen
             onComplete={onLoadingComplete}
             text={appState === 'LOADING_GAME' ? "INITIALIZING TABLE..." : (appState === 'LOADING_SP' ? "LOADING..." : "CONNECTING...")}
-            duration={appState === 'LOADING_GAME' ? 4000 : 2500}
+            duration={appState === 'LOADING_GAME' ? 10 : 10} // Reduced for instant feel (logic handles real loading)
             serverCheck={appState === 'LOADING_MP'}
             onBack={handleBackToMenu}
           />

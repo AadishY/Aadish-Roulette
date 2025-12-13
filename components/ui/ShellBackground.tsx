@@ -62,21 +62,21 @@ const ShellBackground: React.FC = () => {
         container.appendChild(renderer.domElement);
 
         // Lighting
-        const ambientLight = new THREE.AmbientLight(0x222222, 1.5);
+        const ambientLight = new THREE.AmbientLight(0x222222, 3.5);
         scene.add(ambientLight);
 
         // Main Red Fill
-        const redLight = new THREE.PointLight(0xff3333, 2.0, 60);
+        const redLight = new THREE.PointLight(0xff3333, 8.0, 60);
         redLight.position.set(0, 5, 15);
         scene.add(redLight);
 
         // Top White Key
-        const topLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        const topLight = new THREE.DirectionalLight(0xffffff, 2.0);
         topLight.position.set(0, 10, 5);
         scene.add(topLight);
 
         // Blue Rim Light for contrast
-        const rimLight = new THREE.SpotLight(0x4488ff, 5.0);
+        const rimLight = new THREE.SpotLight(0x4488ff, 8.0);
         rimLight.position.set(0, 10, -10);
         rimLight.lookAt(0, 0, 0);
         scene.add(rimLight);
