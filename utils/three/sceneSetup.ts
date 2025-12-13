@@ -85,16 +85,16 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const lights = setupLighting(scene);
     // ... lights setup array ...
     const baseLights = [
-        { light: lights.bulbLight, baseIntensity: lights.bulbLight.intensity },
-        { light: lights.gunSpot, baseIntensity: lights.gunSpot.intensity },
-        { light: lights.tableGlow, baseIntensity: lights.tableGlow.intensity },
-        { light: lights.rimLight, baseIntensity: lights.rimLight.intensity },
-        { light: lights.fillLight, baseIntensity: lights.fillLight.intensity },
-        { light: lights.ambient, baseIntensity: lights.ambient.intensity },
-        { light: lights.bgRim, baseIntensity: lights.bgRim.intensity },
-        { light: lights.dealerRim, baseIntensity: lights.dealerRim.intensity },
-        { light: lights.underLight, baseIntensity: lights.underLight.intensity }
-    ];
+        { light: lights.bulbLight, baseIntensity: lights.bulbLight?.intensity },
+        { light: lights.gunSpot, baseIntensity: lights.gunSpot?.intensity },
+        { light: lights.tableGlow, baseIntensity: lights.tableGlow?.intensity },
+        { light: lights.rimLight, baseIntensity: lights.rimLight?.intensity },
+        { light: lights.fillLight, baseIntensity: lights.fillLight?.intensity },
+        { light: lights.ambient, baseIntensity: lights.ambient?.intensity },
+        { light: lights.bgRim, baseIntensity: lights.bgRim?.intensity },
+        { light: lights.dealerRim, baseIntensity: lights.dealerRim?.intensity },
+        { light: lights.underLight, baseIntensity: lights.underLight?.intensity }
+    ].filter(bl => bl.light) as { light: THREE.Light, baseIntensity: number }[];
 
     createEnvironment(scene, isMobile);
     const dustParticles = createDust(scene, isMobile);

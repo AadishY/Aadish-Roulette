@@ -424,7 +424,6 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     if (animState.playerHit || animState.dealerHit) {
         bloodParticles.visible = true;
-        updateBlood(bloodParticles, 0.016);
     }
 
     updateSparks(sparkParticles, dt);

@@ -88,7 +88,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         let frameId = 0;
         let time = 0;
         let lastTime = performance.now();
-        const targetFPS = isAndroid ? 30 : (isMobile ? 30 : 60); // Bumped Android target to 30 for smoothness
+        const isLowEndMobile = isMobile && (isAndroid || window.devicePixelRatio < 2);
+        const targetFPS = isLowEndMobile ? 30 : 60; // Unlock 60FPS for high-end mobile
         const frameInterval = 1000 / targetFPS;
         let lastFrameTime = 0;
         let isTabVisible = true;
@@ -111,19 +112,19 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                 lastTime = currentTime; lastFrameTime = currentTime; return;
             }
 
-            const rawDelta = (currentTime - lastTime) / 1000;
-            // Cap delta to prevent huge jumps
-            const delta = Math.min(rawDelta, 0.1);
-            lastTime = currentTime;
-
-            // Frame Limiting Logic
-            if (isMobile) {
+            // Frame Limiting Logic (Only strictly enforce on low-end to save battery/thermal)
+            if (isLowEndMobile) {
                 const elapsed = currentTime - lastFrameTime;
                 if (elapsed < frameInterval) return;
                 lastFrameTime = currentTime - (elapsed % frameInterval);
             } else {
                 lastFrameTime = currentTime;
             }
+
+            const rawDelta = (currentTime - lastTime) / 1000;
+            // Cap delta to prevent huge jumps
+            const delta = Math.min(rawDelta, 0.1);
+            lastTime = currentTime;
 
             time += delta;
 
