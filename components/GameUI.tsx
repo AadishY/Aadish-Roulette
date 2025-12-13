@@ -331,8 +331,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                             </button>
                         </div>
 
-                        {/* Controls - Bottom */}
-                        <div className="flex-1 w-full flex items-end justify-center pointer-events-none mb-4 md:mb-8">
+                        {/* Controls - Positioned Absolute to prevent floating high on mobile */}
+                        <div className="absolute bottom-24 md:bottom-40 left-0 right-0 flex justify-center pointer-events-none z-30 pb-2 md:pb-0">
                             {/* Only show controls if not stealing phase */}
                             {gameState.phase !== 'STEALING' && isMyTurn && !showLootOverlay && (
                                 <Controls

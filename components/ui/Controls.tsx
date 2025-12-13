@@ -84,8 +84,8 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                         handleShootOpponent(opp.id);
                                     }}
                                     disabled={isProcessing}
-                                    onMouseEnter={() => !isProcessing && onHoverTarget('OPPONENT')}
-                                    onMouseLeave={() => !isProcessing && onHoverTarget('CHOOSING')}
+                                    onMouseEnter={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('OPPONENT')}
+                                    onMouseLeave={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('CHOOSING')}
                                     className="bg-black/90 border border-red-800 px-3 py-2 md:px-6 md:py-4 text-red-500 font-black text-xs md:text-lg hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-1 md:gap-2 disabled:opacity-50"
                                 >
                                     <Target size={14} className="md:w-5 md:h-5" />
@@ -99,8 +99,8 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                     handleShootOpponent();
                                 }}
                                 disabled={isProcessing}
-                                onMouseEnter={() => !isProcessing && onHoverTarget('OPPONENT')}
-                                onMouseLeave={() => !isProcessing && onHoverTarget('CHOOSING')}
+                                onMouseEnter={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('OPPONENT')}
+                                onMouseLeave={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('CHOOSING')}
                                 className="bg-black/90 border border-red-800 px-4 py-3 md:px-8 md:py-5 text-red-500 font-black text-xs md:text-xl hover:bg-red-900 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
                             >
                                 <Target size={16} className="md:w-6 md:h-6" />
@@ -114,8 +114,9 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                 handleShootSelf();
                             }}
                             disabled={isProcessing}
-                            onMouseEnter={() => !isProcessing && onHoverTarget('SELF')}
-                            onMouseLeave={() => !isProcessing && onHoverTarget('CHOOSING')}
+                            // Prevent hover events on touch devices to avoid ghost inputs (auto-aiming at self)
+                            onMouseEnter={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('SELF')}
+                            onMouseLeave={() => window.matchMedia('(hover: hover)').matches && !isProcessing && onHoverTarget('CHOOSING')}
                             className="bg-black/90 border border-stone-700 px-4 py-3 md:px-8 md:py-5 text-stone-400 font-black text-xs md:text-xl hover:bg-stone-800 hover:text-white transition-all active:scale-95 shadow-lg tracking-wide flex items-center gap-2 disabled:opacity-50"
                         >
                             <User size={16} className="md:w-6 md:h-6" />
