@@ -150,8 +150,8 @@ export const handlePhone = async (
 
     if (available.length === 0) {
         if (user === 'PLAYER') {
-            const msg = "📞 NO INTEL AVAILABLE";
-            addLog("YOU ARE ON YOUR OWN BUD", 'neutral');
+            const msg = "YOU ARE ON YOUR OWN BUD";
+            addLog("📞 NO INTEL AVAILABLE", 'neutral');
             if (setOverlayText) {
                 setOverlayText(msg);
                 setTimeout(() => setOverlayText?.(null), 2500);
