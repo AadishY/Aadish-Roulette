@@ -202,7 +202,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                     <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center px-4">
                         <div className="text-2xl md:text-7xl font-black tracking-widest bg-black/80 px-3 py-2 md:px-8 md:py-4 border-y-2 md:border-y-4 border-stone-100 animate-[text-pop_0.3s_ease-out] text-center">
                             CHAMBER: <RenderColoredText text={knownShell} />
-                        </div>  
+                        </div>
                     </div>
                 )}
 
@@ -392,7 +392,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     </form>
                                 </div>
                             ) : (
-                                <LogsDisplay logs={logs} />
+                                null
                             )}
 
                             {/* Inventory */}
