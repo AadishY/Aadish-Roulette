@@ -46,7 +46,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
     };
 
     return (
-        <div className="flex-1 flex items-end justify-center pointer-events-none pb-1 md:pb-4">
+        <div className="flex-1 flex items-end justify-center pointer-events-none pb-1 md:pb-4 controls-enter">
             <div className="flex gap-2 md:gap-6 pointer-events-auto flex-wrap justify-center px-2">
                 {/* Grab Gun */}
                 {!isGunHeld && (
