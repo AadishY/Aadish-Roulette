@@ -332,7 +332,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         </div>
 
                         {/* Controls - Positioned Absolute to prevent floating high on mobile */}
-                        <div className="absolute bottom-8 lg:bottom-40 left-0 right-0 flex justify-center pointer-events-none z-30 pb-2 lg:pb-0">
+                        <div className="absolute bottom-16 lg:bottom-40 left-0 right-0 flex justify-center pointer-events-none z-30 pb-2 lg:pb-0">
                             {/* Only show controls if not stealing phase */}
                             {gameState.phase !== 'STEALING' && isMyTurn && !showLootOverlay && (
                                 <Controls
@@ -363,7 +363,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         )}
 
                         {/* Bottom - Chat/Logs + Inventory */}
-                        <div className="flex justify-between items-end gap-2 w-full h-24 lg:h-40 pointer-events-none">
+                        <div className="flex justify-between items-end gap-2 w-full h-16 lg:h-40 pointer-events-none">
                             {/* Chat (MP) or Logs (SP) */}
                             {isMultiplayer ? (
                                 <div className="pointer-events-auto flex-1 max-w-[280px] md:max-w-[350px] bg-black/70 border border-stone-800 flex flex-col h-full text-[10px] md:text-xs font-mono">
