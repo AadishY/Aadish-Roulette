@@ -2,18 +2,20 @@ import * as THREE from 'three';
 
 export const createGunModel = (scene: THREE.Scene) => {
     const gunGroup = new THREE.Group();
+    const isMobile = scene.userData.isMobile || false;
+    const shouldCastShadow = !isMobile;
 
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.6 });
     const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.6, roughness: 0.5 });
 
-    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 2.8), metalMat); receiver.castShadow = true;
-    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 3.8), woodMat); stock.position.z = -3.2; stock.position.y = -0.15; stock.castShadow = true;
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 2.8), metalMat); receiver.castShadow = shouldCastShadow;
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.9, 3.8), woodMat); stock.position.z = -3.2; stock.position.y = -0.15; stock.castShadow = shouldCastShadow;
 
     // 12-Gauge Barrel
     const barrelGeo = new THREE.CylinderGeometry(0.24, 0.24, 9, 24);
     const barrelMesh = new THREE.Mesh(barrelGeo, metalMat);
-    barrelMesh.rotation.x = Math.PI / 2; barrelMesh.position.set(0, 0.35, 5.0); barrelMesh.castShadow = true;
+    barrelMesh.rotation.x = Math.PI / 2; barrelMesh.position.set(0, 0.35, 5.0); barrelMesh.castShadow = shouldCastShadow;
     barrelMesh.name = 'BARREL';
 
     // Barrel Hole (Black Void Cap)
@@ -27,12 +29,12 @@ export const createGunModel = (scene: THREE.Scene) => {
     // Pump mechanism (the wooden foregrip - gets cut too)
     const pumpGeo = new THREE.CylinderGeometry(0.35, 0.4, 3.5, 16);
     const pump = new THREE.Mesh(pumpGeo, woodMat);
-    pump.rotation.x = Math.PI / 2; pump.position.set(0, -0.3, 4.5); pump.castShadow = true;
+    pump.rotation.x = Math.PI / 2; pump.position.set(0, -0.3, 4.5); pump.castShadow = shouldCastShadow;
     pump.name = 'PUMP';
 
     // Mag Tube (also gets cut with saw)
     const magTube = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 8, 16), darkMetalMat);
-    magTube.rotation.x = Math.PI / 2; magTube.position.set(0, -0.3, 4.0); magTube.castShadow = true;
+    magTube.rotation.x = Math.PI / 2; magTube.position.set(0, -0.3, 4.0); magTube.castShadow = shouldCastShadow;
     magTube.name = 'MAG_TUBE';
 
     const guardGeo = new THREE.TorusGeometry(0.25, 0.05, 8, 16, Math.PI);

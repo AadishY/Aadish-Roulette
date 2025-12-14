@@ -154,7 +154,7 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
             shell.rotation.y = Math.random() * Math.PI * 2;
             shell.rotation.z = Math.random() * Math.PI * 2;
 
-            const scale = 2 + Math.random() * 2;
+            const scale = (isMobile ? 4 : 2) + Math.random() * 2;
             shell.scale.setScalar(scale);
 
             scene.add(shell);

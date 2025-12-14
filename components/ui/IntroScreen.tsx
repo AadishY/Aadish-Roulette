@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Globe, Settings as SettingsIcon, HelpCircle, Trophy } from 'lucide-react';
+import { Globe, Settings as SettingsIcon, HelpCircle, Trophy, ShieldAlert } from 'lucide-react';
 import { audioManager } from '../../utils/audioManager';
 
 
@@ -55,29 +55,40 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden pointer-events-auto bg-black/60 backdrop-blur-sm">
             {showHardModeWarning && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 animate-in fade-in duration-300">
-                    <div className="bg-stone-900 border-4 border-red-900 p-8 max-w-md text-center shadow-[0_0_50px_rgba(255,0,0,0.3)]">
-                        <h2 className="text-4xl font-black text-red-600 mb-6 tracking-widest text-glitch">WARNING</h2>
-                        <p className="text-stone-300 text-xl font-bold mb-2">You have to pay with your soul!</p>
-                        <p className="text-red-500/50 text-sm font-mono mb-8">DOUBLLE OR NOTHING</p>
-                        <p className="text-red-500/50 text-sm font-mono mb-8">DEALER IS MORE SMARTER | 3 ROUNDS</p>
+                <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/95 animate-in fade-in duration-300 p-4">
+                    <div className="relative bg-stone-900 border-y-4 md:border-4 border-red-600 p-6 md:p-10 max-w-lg text-center shadow-[0_0_80px_rgba(255,0,0,0.4)] overflow-hidden group">
+                        {/* Background Glitch Elements */}
+                        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ff0000_10px,#ff0000_20px)]" />
 
-                        <div className="flex flex-col gap-4">
-                            <button
-                                onClick={() => {
-                                    audioManager.playSound('click');
-                                    onStartGame(true);
-                                }}
-                                className="w-full py-4 bg-red-900 hover:bg-red-700 text-white font-black text-xl tracking-widest border-2 border-red-600 transition-all hover:scale-105"
-                            >
-                                I ACCEPT
-                            </button>
-                            <button
-                                onClick={() => setShowHardModeWarning(false)}
-                                className="w-full py-3 bg-transparent text-stone-500 font-bold hover:text-white transition-colors"
-                            >
-                                TURN BACK
-                            </button>
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="text-red-500 animate-pulse mb-4"><ShieldAlert size={64} /></div>
+                            <h2 className="text-4xl md:text-6xl font-black text-red-600 mb-2 tracking-widest text-glitch skew-x-[-5deg] uppercase">WARNING</h2>
+                            <p className="text-stone-100 text-xl md:text-2xl font-black mb-6 tracking-wide">HIGH STAKES AHEAD</p>
+
+                            <div className="bg-black/60 p-4 border border-red-900/50 mb-8 w-full backdrop-blur-sm">
+                                <p className="text-red-500 font-mono text-sm md:text-base mb-2 font-bold tracking-widest">• DEALER IS RUTHLESS</p>
+                                <p className="text-red-500 font-mono text-sm md:text-base mb-2 font-bold tracking-widest">• DOUBLE OR NOTHING</p>
+                                <p className="text-red-500 font-mono text-sm md:text-base font-bold tracking-widest">• NO SECOND CHANCES</p>
+                            </div>
+
+                            <div className="flex flex-col gap-4 w-full">
+                                <button
+                                    onClick={() => {
+                                        audioManager.playSound('insert'); // Shell insert sound for accepting
+                                        onStartGame(true);
+                                    }}
+                                    className="w-full py-4 bg-red-700 hover:bg-red-600 text-white font-black text-xl tracking-[0.2em] border-2 border-red-500 transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(255,0,0,0.6)] active:scale-95 group relative overflow-hidden"
+                                >
+                                    <span className="relative z-10">ACCEPT FATE</span>
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                                </button>
+                                <button
+                                    onClick={() => setShowHardModeWarning(false)}
+                                    className="w-full py-3 bg-transparent text-stone-500 font-bold hover:text-stone-300 transition-colors tracking-widest text-sm"
+                                >
+                                    RETURN TO SAFETY
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

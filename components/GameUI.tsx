@@ -218,7 +218,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none px-4">
                         {gameState.isHardMode && overlayText.includes('ROUND') ? (
                             <div className="flex flex-col items-center animate-[glitch_0.2s_infinite]">
-                                <div className="text-4xl md:text-8xl font-black tracking-tighter text-red-600 drop-shadow-[0_0_25px_rgba(255,0,0,0.8)] pop-in text-center bg-black/90 px-8 py-6 border-y-4 border-red-600 flex items-center gap-4 md:gap-8 skew-x-[-12deg]">
+                                <div className="text-2xl md:text-6xl font-black tracking-tighter text-red-600 drop-shadow-[0_0_25px_rgba(255,0,0,0.8)] pop-in text-center bg-black/90 px-6 py-4 border-y-4 border-red-600 flex items-center gap-4 md:gap-8 skew-x-[-12deg]">
                                     <Skull size={48} className="text-red-500 animate-pulse hidden md:block" />
                                     <div className="flex flex-col items-center">
                                         <div className="text-sm md:text-2xl tracking-[1em] text-red-400 font-bold mb-2 uppercase animate-pulse">HARD MODE</div>
