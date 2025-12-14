@@ -112,6 +112,12 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose }) => {
                                             <span className={`font-black w-6 text-center ${match.result === 'WIN' ? 'text-green-500' : 'text-red-500'}`}>
                                                 {match.result === 'WIN' ? 'W' : 'L'}
                                             </span>
+                                            {match.isHardMode && (
+                                                <div className="flex items-center gap-1 bg-red-950/30 px-1.5 py-0.5 rounded border border-red-900/50" title="Hard Mode">
+                                                    <Skull size={10} className="text-red-500" />
+                                                    <span className="text-[8px] text-red-400 font-bold hidden sm:inline">HARD</span>
+                                                </div>
+                                            )}
                                             <span className="text-stone-700">|</span>
                                             <span className="text-stone-500 font-mono">{match.timestamp ? new Date(match.timestamp).getDate() + '/' + (new Date(match.timestamp).getMonth() + 1) : '-'}</span>
                                         </div>

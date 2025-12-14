@@ -61,43 +61,45 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
             alpha: false
         });
 
-        // Consistent resolution scaling - SHARPER
-        const pixelScale = isAndroid ? 2 : (isMobile ? 1.5 : 1);
+        // Consistent resolution scaling - SHARPER (Reduced blur)
+        const pixelScale = isAndroid ? 1.5 : 1; // Increased density for sharpness
         renderer.setSize(width / pixelScale, height / pixelScale, false);
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
         renderer.domElement.style.imageRendering = 'pixelated';
 
-        renderer.setPixelRatio(1); // Keep low for pixelated look
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Sharper on high DPI
         container.appendChild(renderer.domElement);
 
         // Lighting
         // Lighting - ENHANCED FOR VIBRANCY
-        const ambientLight = new THREE.AmbientLight(0x222222, 5.0);
+        // Lighting - ENHANCED VIBRANCY & DEPTH
+        const ambientLight = new THREE.AmbientLight(0x1a1a1a, 8.0); // Brighter base
         scene.add(ambientLight);
 
-        // Main Red Fill
-        const redLight = new THREE.PointLight(0xff3333, 20.0, 60);
+        // Main Red Fill - More intense
+        const redLight = new THREE.PointLight(0xff0000, 40.0, 80);
         redLight.position.set(0, 5, 15);
         scene.add(redLight);
 
-        // Top White Key
-        const topLight = new THREE.DirectionalLight(0xffffff, 6.0);
-        topLight.position.set(0, 10, 5);
+        // Top White Key - Sharp highlights
+        const topLight = new THREE.DirectionalLight(0xffffff, 8.0);
+        topLight.position.set(2, 10, 5);
         scene.add(topLight);
 
-        // Blue Rim Light for contrast
-        const rimLight = new THREE.SpotLight(0x4488ff, 15.0);
+        // Blue Rim Light - Stronger contrast
+        const rimLight = new THREE.SpotLight(0x0066ff, 25.0);
         rimLight.position.set(0, 10, -10);
         rimLight.lookAt(0, 0, 0);
         scene.add(rimLight);
 
-        const leftLight = new THREE.PointLight(0xff6666, 3.0, 40);
-        leftLight.position.set(-15, 5, 10);
+        // Side fills
+        const leftLight = new THREE.PointLight(0xff4444, 5.0, 50);
+        leftLight.position.set(-15, 2, 5);
         scene.add(leftLight);
 
-        const rightLight = new THREE.PointLight(0xff6666, 3.0, 40);
-        rightLight.position.set(15, 5, 10);
+        const rightLight = new THREE.PointLight(0xff4444, 5.0, 50);
+        rightLight.position.set(15, 2, 5);
         scene.add(rightLight);
 
         // --- SHARED RESOURCES - LOW POLY FOR PIXELATED LOOK ---
@@ -197,9 +199,10 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
 
             shells.forEach((shell) => {
                 shell.mesh.position.y -= shell.speed * timeScale;
-                shell.mesh.rotation.x += shell.rotationSpeed.x * timeScale;
+                // Add some chaotic wobble
+                shell.mesh.rotation.x += (shell.rotationSpeed.x + Math.sin(time * 0.001 + shell.mesh.position.y) * 0.02) * timeScale;
                 shell.mesh.rotation.y += shell.rotationSpeed.y * timeScale;
-                shell.mesh.rotation.z += shell.rotationSpeed.z * timeScale;
+                shell.mesh.rotation.z += (shell.rotationSpeed.z + Math.cos(time * 0.0015) * 0.01) * timeScale;
 
                 if (shell.mesh.position.y < -15) {
                     shell.mesh.position.y = 12 + Math.random() * 8;
@@ -226,7 +229,7 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
             sceneRef.current.camera.aspect = w / h;
             sceneRef.current.camera.updateProjectionMatrix();
             // Recalculate size with scale - SHARPER
-            const pxScale = isAndroid ? 2 : (isMobile ? 1.5 : 1);
+            const pxScale = isAndroid ? 1.5 : 1;
             sceneRef.current.renderer.setSize(w / pxScale, h / pxScale, false);
         };
         window.addEventListener('resize', handleResize);
