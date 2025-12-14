@@ -40,7 +40,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
             let newScale = Math.min(hScale, wScale);
 
             // Clamp scale for better readability on small mobiles
-            if (newScale < 0.6) newScale = 0.6;
+            if (newScale < 0.4) newScale = 0.4;
             if (newScale > 1.2) newScale = 1.2;
 
             setScale(newScale);
@@ -56,7 +56,10 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
         <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden pointer-events-auto bg-black/60 backdrop-blur-sm">
             {showHardModeWarning && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/95 animate-in fade-in duration-300 p-4">
-                    <div className="relative bg-stone-900 border-y-4 md:border-4 border-red-600 p-6 md:p-10 max-w-lg text-center shadow-[0_0_80px_rgba(255,0,0,0.4)] overflow-hidden group">
+                    <div
+                        className="relative bg-stone-900 border-y-4 md:border-4 border-red-600 p-6 md:p-10 max-w-lg text-center shadow-[0_0_80px_rgba(255,0,0,0.4)] overflow-hidden group origin-center transition-transform duration-100"
+                        style={{ transform: `scale(${scale})` }}
+                    >
                         {/* Background Glitch Elements */}
                         <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ff0000_10px,#ff0000_20px)]" />
 
