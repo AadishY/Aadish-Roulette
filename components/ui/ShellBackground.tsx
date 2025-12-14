@@ -5,7 +5,7 @@ import * as THREE from 'three';
 const isMobile = typeof window !== 'undefined' &&
     (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768);
 
-const SHELL_COUNT = isMobile ? 12 : 25;
+const SHELL_COUNT = isMobile ? 12 : 30;
 
 interface ShellData {
     mesh: THREE.Group;
@@ -68,7 +68,7 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
         renderer.domElement.style.height = '100%';
         renderer.domElement.style.imageRendering = 'pixelated';
 
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Sharper on high DPI
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Sharper on high DPI, capped for perf
         container.appendChild(renderer.domElement);
 
         // Lighting

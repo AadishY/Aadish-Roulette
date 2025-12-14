@@ -35,7 +35,7 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                     {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : 'DEALER TURN'}
                 </div>
                 <div className="text-stone-600 text-[10px] md:text-lg mt-0.5 md:mt-2 font-mono tracking-widest">
-                    {gameState.liveCount + gameState.blankCount} ROUNDS
+                    {gameState.liveCount + gameState.blankCount} SHELLS
                 </div>
             </div>
 

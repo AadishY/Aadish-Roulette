@@ -148,7 +148,7 @@ export const handlePhone = async (
         available.push(i);
     }
 
-    if (available.length === 0) {
+    if (available.length === 0 || gameState.chamber.length === 3) {
         if (user === 'PLAYER') {
             const msg = "YOU ARE ON YOUR OWN BUD";
             addLog("📞 NO INTEL AVAILABLE", 'neutral');

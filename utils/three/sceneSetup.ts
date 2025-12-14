@@ -48,7 +48,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
         alpha: false,
         stencil: false,
         depth: true, // Keep depth
-        precision: isMobile ? 'lowp' : 'mediump' // Force lowp on all mobile for speed
+        precision: 'mediump' // Standardize across devices for consistency
     });
 
     // Mobile Optimization: Aggressive resolution scaling
@@ -67,11 +67,11 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
 
     // Disable shadows completely on ALL mobile devices for max FPS
     renderer.shadowMap.enabled = !isMobile;
-    renderer.shadowMap.type = THREE.BasicShadowMap; // Always use fast shadows for style & perf
+    renderer.shadowMap.type = isMobile ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
 
     // Tone mapping
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.8;
+    renderer.toneMappingExposure = 1.9;
 
     scene.userData.isMobile = isMobile;
     scene.userData.isAndroid = isAndroid;
