@@ -135,10 +135,11 @@ export const useDealerAI = ({
                         else if (dealer.items.includes('PHONE') && totalRemaining > 1 && !itemToUse) itemToUse = 'PHONE';
 
                         // 4. THEFT & DEFENSE (Priority 4)
-                        else if (dealer.hp <= 2 && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
+                        else if (dealer.hp < dealer.maxHp && dealer.hp <= 2 && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
                         // Adrenaline: Steal critical items
                         else if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
                             const targets = ['INVERTER', 'SAW', 'CIGS', 'GLASS'];
+                            // Only use adrenaline if player ACTUALLY has something good
                             if (player.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
                         }
 
