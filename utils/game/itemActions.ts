@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState, PlayerState, TurnOwner, ShellType, ItemType, LogEntry } from '../../types';
+import { GameState, PlayerState, TurnOwner, ShellType, ItemType, LogEntry, AnimationState } from '../../types';
 import { wait } from '../gameUtils';
 import { audioManager } from '../audioManager';
 
@@ -10,7 +10,7 @@ export const handleBeer = async (
     gameState: GameState,
     setGameState: StateSetter<GameState>,
     setTriggerRack: StateSetter<number>,
-    setEjectedShellColor: StateSetter<'red' | 'blue'>,
+    setEjectedShellColor: StateSetter<AnimationState['ejectedShellColor']>,
     setTriggerDrink: StateSetter<number>,
     setOverlayText: StateSetter<string | null>,
     addLog: (text: string, type: LogEntry['type']) => void,
@@ -23,6 +23,9 @@ export const handleBeer = async (
     setEjectedShellColor(shell === 'LIVE' ? 'red' : 'blue');
     setTriggerRack(p => p + 1);
     addLog(`RACKED: ${shell}`, shell === 'LIVE' ? 'danger' : 'safe');
+
+    // Note: Beer does NOT consume Choke status (it remains active for the actual shot)
+    // This is intended behavior.
 
     // Show overlay text for Beer result
     setOverlayText(`WAS ${shell}`);
@@ -229,6 +232,52 @@ export const handleInverter = async (
     await wait(800); // Final sync
 };
 
+export const handleBigInverter = async (
+    user: TurnOwner,
+    gameState: GameState,
+    setGameState: StateSetter<GameState>,
+    setTriggerBigInverter: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    setOverlayText?: StateSetter<string | null>
+) => {
+    setTriggerBigInverter(p => p + 1);
+    await wait(2800); // Wait for animation (longer for BIG effect)
+
+    setGameState(prev => {
+        const newChamber = [...prev.chamber];
+        let newLive = 0;
+        let newBlank = 0;
+
+        // Invert ALL remaining shells
+        for (let i = prev.currentShellIndex; i < newChamber.length; i++) {
+            newChamber[i] = newChamber[i] === 'LIVE' ? 'BLANK' : 'LIVE';
+        }
+
+        // Recalculate counts properly based on remaining shells and inverted status
+        // Note: liveCount/blankCount usually track remaining, so we recalculate from current index
+        for (let i = prev.currentShellIndex; i < newChamber.length; i++) {
+            if (newChamber[i] === 'LIVE') newLive++;
+            else newBlank++;
+        }
+
+        return {
+            ...prev,
+            chamber: newChamber,
+            liveCount: newLive,
+            blankCount: newBlank
+        };
+    });
+
+    addLog(`${user} INVERTED THE ENTIRE CHAMBER!`, 'danger');
+
+    if (setOverlayText) {
+        setOverlayText('⚡ TOTAL POLARITY REVERSAL ⚡');
+        setTimeout(() => setOverlayText(null), 2500);
+    }
+
+    await wait(800);
+};
+
 export const handleAdrenaline = async (
     user: TurnOwner,
     setTriggerAdrenaline: StateSetter<number>,
@@ -264,4 +313,57 @@ export const handleAdrenaline = async (
         // Dealer logic handles its own stealing flow in useDealerAI
     }
     await wait(300); // Final sync
+};
+
+export const handleChoke = async (
+    user: TurnOwner,
+    setPlayer: StateSetter<PlayerState>,
+    setDealer: StateSetter<PlayerState>,
+    setTriggerChoke: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void
+) => {
+    setTriggerChoke(p => p + 1);
+    // Audio handled in animations.ts
+    await wait(1800); // Wait for animation (sound is ~1.5s)
+
+    if (user === 'PLAYER') setPlayer(p => ({ ...p, isChokeActive: true }));
+    else setDealer(d => ({ ...d, isChokeActive: true }));
+
+    addLog(`${user === 'PLAYER' ? 'YOU' : 'DEALER'} ATTACHED CHOKE MOD`, 'danger');
+    await wait(500);
+};
+
+export const handleRemote = async (
+    user: TurnOwner,
+    gameState: GameState,
+    setGameState: StateSetter<GameState>,
+    setTriggerRemote: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    setOverlayText?: StateSetter<string | null>
+) => {
+    setTriggerRemote(p => p + 1);
+    await wait(2500); // Wait for animation
+
+    const currentIdx = gameState.currentShellIndex;
+    if (currentIdx + 1 < gameState.chamber.length) {
+        // Swap Current with Next
+        setGameState(prev => {
+            const newChamber = [...prev.chamber];
+            const s1 = newChamber[currentIdx];
+            const s2 = newChamber[currentIdx + 1];
+            newChamber[currentIdx] = s2;
+            newChamber[currentIdx + 1] = s1;
+            return { ...prev, chamber: newChamber };
+        });
+
+        addLog(`${user} SWAPPED SHELL ORDER`, 'info');
+        if (setOverlayText) {
+            setOverlayText('↻ CHAMBER CYCLED ↻');
+            setTimeout(() => setOverlayText(null), 2000);
+        }
+    } else {
+        addLog(`${user} TRIED REMOTE (FAILED)`, 'neutral');
+    }
+
+    await wait(800);
 };

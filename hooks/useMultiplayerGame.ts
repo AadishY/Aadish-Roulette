@@ -42,7 +42,8 @@ export const useMultiplayerGame = ({
         currentShellIndex: 0,
         liveCount: 0,
         blankCount: 0,
-        roundCount: 0
+        roundCount: 0,
+        isHardMode: false
     });
 
     const [player, setPlayer] = useState<PlayerState>({
@@ -86,6 +87,8 @@ export const useMultiplayerGame = ({
         triggerPhone: 0,
         triggerInverter: 0,
         triggerAdrenaline: 0,
+        triggerChoke: 0,
+        triggerRemote: 0,
         isSawing: false,
         ejectedShellColor: 'red',
         muzzleFlashIntensity: 0,
@@ -326,6 +329,10 @@ export const useMultiplayerGame = ({
                             setOverlayColor('scan');
                             setTimeout(() => setOverlayColor('none'), 1000);
                         }
+                        break;
+
+                    case 'REMOTE':
+                        setAnim(prev => ({ ...prev, triggerRemote: prev.triggerRemote + 1 }));
                         break;
                 }
 

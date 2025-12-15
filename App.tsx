@@ -271,6 +271,7 @@ export default function App() {
       {/* 3D Scene */}
       <ThreeScene
         isSawed={game.player.isSawedActive || game.dealer.isSawedActive}
+        isChokeActive={game.player.isChokeActive || game.dealer.isChokeActive}
         isPlayerCuffed={game.player.isHandcuffed}
         knownShell={game.knownShell}
         onGunClick={() => { }}

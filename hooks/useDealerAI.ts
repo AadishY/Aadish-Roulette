@@ -129,6 +129,15 @@ export const useDealerAI = ({
                         else if (currentKnown === 'BLANK' && dealer.items.includes('INVERTER')) {
                             itemToUse = 'INVERTER';
                         }
+                        // 2.5 BIG INVERTER - If we have mostly blanks left, or current is blank and we have many shells
+                        else if (dealer.items.includes('BIG_INVERTER') && !itemToUse) {
+                            const remaining = remainingShells.length;
+                            const knownBlanks = remainingShells.filter(s => s === 'BLANK').length; // Cheating peeking strictly for AI logic
+                            // If more than 50% blanks, invert to get more lives
+                            if (knownBlanks / remaining > 0.5) itemToUse = 'BIG_INVERTER';
+                            // Or if current is blank and we have lot of shells, worth flipping
+                            else if (currentKnown === 'BLANK' && remaining >= 3) itemToUse = 'BIG_INVERTER';
+                        }
 
                         // 3. INFORMATION (Priority 3)
                         else if (!currentKnown && dealer.items.includes('GLASS') && !itemToUse) itemToUse = 'GLASS';
@@ -141,6 +150,34 @@ export const useDealerAI = ({
                             const targets = ['INVERTER', 'SAW', 'CIGS', 'GLASS'];
                             // Only use adrenaline if player ACTUALLY has something good
                             if (player.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
+                        }
+
+                        // NEW 5. CHOKE LOGIC (GOD TIER)
+                        else if (dealer.items.includes('CHOKE') && !dealer.isChokeActive && !itemToUse && totalRemaining >= 2) {
+                            // Perfect Kill: If we know next 2 are LIVE (or intuition)
+                            // Hard mode logic peeks if currentKnown is consistent
+                            const nextKnown = aiMemory.current.get(currentIdx + 1);
+                            const actualNext = chamber[currentIdx + 1];
+
+                            // Intuition: 40% chance to know next shell too
+                            let knowsNext = !!nextKnown;
+                            if (!knowsNext && Math.random() < 0.40) {
+                                aiMemory.current.set(currentIdx + 1, actualNext);
+                                knowsNext = true;
+                            }
+
+                            const shell1 = currentKnown || (Math.random() < 0.4 ? chamber[currentIdx] : null); // Sim intuition
+                            const shell2 = nextKnown || (Math.random() < 0.4 ? actualNext : null);
+
+                            // Optimize: 2 LIVES = KILL
+                            if (shell1 === 'LIVE' && shell2 === 'LIVE') itemToUse = 'CHOKE';
+                            // Safely clear 2 BLANKS
+                            else if (shell1 === 'BLANK' && shell2 === 'BLANK') itemToUse = 'CHOKE';
+                            // Mixed: Guaranteed Damage if 1 is Live + Choke -> Shoot Player
+                            else if ((shell1 === 'LIVE' || shell2 === 'LIVE') && itemToUse === null) {
+                                // High aggression if HP is full
+                                if (dealer.hp > 2) itemToUse = 'CHOKE';
+                            }
                         }
 
                         // 5. GAMBLE / CYCLE (Priority 5)
@@ -159,6 +196,13 @@ export const useDealerAI = ({
                         // GOD MODE COMBO: BLANK -> INVERT -> LIVE -> SAW
                         else if (dealer.items.includes('INVERTER') && !itemToUse && currentKnown === 'BLANK') {
                             itemToUse = 'INVERTER';
+                        }
+                        // NEW: Big Inverter (Chaos)
+                        else if (dealer.items.includes('BIG_INVERTER') && !itemToUse) {
+                            // Use if current is BLANK or we have significantly more blanks
+                            if (currentKnown === 'BLANK' || (visibleBlank > visibleLive && totalRemaining >= 3)) {
+                                itemToUse = 'BIG_INVERTER';
+                            }
                         }
                         else if (dealer.items.includes('SAW') && !dealer.isSawedActive && !itemToUse && currentKnown === 'LIVE' && player.hp > 1) {
                             itemToUse = 'SAW';
@@ -181,6 +225,11 @@ export const useDealerAI = ({
                         }
                         else if (dealer.items.includes('BEER') && !itemToUse) {
                             if (currentKnown === 'BLANK' || (!currentKnown && totalRemaining > 2)) itemToUse = 'BEER';
+                        }
+                        // Normal Mode Choke: Random Aggression
+                        else if (dealer.items.includes('CHOKE') && !dealer.isChokeActive && !itemToUse && totalRemaining >= 2) {
+                            // 40% chance to use if we have > 2 shells left
+                            if (Math.random() < 0.4) itemToUse = 'CHOKE';
                         }
                     }
 
@@ -273,6 +322,19 @@ export const useDealerAI = ({
                                 else if (itemToUse === 'INVERTER') {
                                     const actual = chamber[currentIdx];
                                     aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
+                                }
+                                else if (itemToUse === 'BIG_INVERTER') {
+                                    // Invert MEMORY for all remaining shells
+                                    for (let i = currentIdx; i < chamber.length; i++) {
+                                        if (aiMemory.current.has(i)) {
+                                            const m = aiMemory.current.get(i);
+                                            aiMemory.current.set(i, m === 'LIVE' ? 'BLANK' : 'LIVE');
+                                        } else {
+                                            // Cheat a bit -> If we know nothing, maybe we can assume random inversion? 
+                                            // Or just clear memory actually, since we scrambled the "unknowns" anyway
+                                            // But effectively, if we knew shell X, and use Big Inverter, we now know Shell X is opposite.
+                                        }
+                                    }
                                 }
                                 else if (itemToUse === 'PHONE') {
                                     // Dealer used phone: Memorize a random future shell

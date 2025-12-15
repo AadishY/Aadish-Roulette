@@ -69,6 +69,9 @@ export const useGameLogic = () => {
     triggerPhone: 0,
     triggerInverter: 0,
     triggerAdrenaline: 0,
+    triggerChoke: 0,
+    triggerRemote: 0,
+    triggerBigInverter: 0,
     isSawing: false,
     ejectedShellColor: 'red',
     muzzleFlashIntensity: 0,
@@ -150,7 +153,8 @@ export const useGameLogic = () => {
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
-      dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false
+      dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -183,7 +187,8 @@ export const useGameLogic = () => {
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
-      dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false
+      dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -289,8 +294,8 @@ export const useGameLogic = () => {
       setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp }));
     } else {
       // Just reset status effects
-      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false }));
-      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false }));
+      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, isChokeActive: false }));
+      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, isChokeActive: false }));
     }
 
     // Show Batch/Round Message
@@ -323,7 +328,7 @@ export const useGameLogic = () => {
 
     await distributeItemsAction(
       resetItems, effectiveState, setPlayer, setDealer, setGameState,
-      setReceivedItems, setShowLootOverlay
+      setReceivedItems, setShowLootOverlay, dealer.hp
     );
 
     setGameState(prev => ({ ...prev, phase: 'PLAYER_TURN', turnOwner: 'PLAYER' }));
@@ -398,7 +403,7 @@ export const useGameLogic = () => {
   const distributeItems = async (forceClear: boolean = false) => {
     await distributeItemsAction(
       forceClear, gameState, setPlayer, setDealer, setGameState,
-      setReceivedItems, setShowLootOverlay
+      setReceivedItems, setShowLootOverlay, dealer.hp
     );
   };
 
@@ -542,12 +547,36 @@ export const useGameLogic = () => {
         );
         break;
 
+      case 'BIG_INVERTER':
+        await ItemActions.handleBigInverter(user, gameState, setGameState,
+          (v) => setAnim(p => ({ ...p, triggerBigInverter: typeof v === 'function' ? v(p.triggerBigInverter) : v })),
+          addLog,
+          setOverlayText
+        );
+        break;
+
       case 'ADRENALINE':
         await ItemActions.handleAdrenaline(user,
           (v) => setAnim(p => ({ ...p, triggerAdrenaline: typeof v === 'function' ? v(p.triggerAdrenaline) : v })),
           setGameState, addLog, setOverlayText, setOverlayColor
         );
         await wait(500); // Pause before next action
+        await wait(500); // Pause before next action
+        break;
+
+      case 'CHOKE':
+        await ItemActions.handleChoke(user, setPlayer, setDealer,
+          (v) => setAnim(p => ({ ...p, triggerChoke: typeof v === 'function' ? v(p.triggerChoke) : v })),
+          addLog
+        );
+        break;
+
+      case 'REMOTE':
+        await ItemActions.handleRemote(user, gameState, setGameState,
+          (v) => setAnim(p => ({ ...p, triggerRemote: typeof v === 'function' ? v(p.triggerRemote) : v })),
+          addLog,
+          setOverlayText
+        );
         break;
     }
 

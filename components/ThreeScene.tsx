@@ -8,6 +8,7 @@ import { initThreeScene, cleanScene } from '../utils/three/sceneSetup';
 
 interface ThreeSceneProps {
     isSawed: boolean;
+    isChokeActive?: boolean;
     isPlayerCuffed?: boolean;
     onGunClick: () => void;
     aimTarget: AimTarget;
@@ -23,6 +24,7 @@ interface ThreeSceneProps {
 
 export const ThreeScene: React.FC<ThreeSceneProps> = ({
     isSawed,
+    isChokeActive,
     isPlayerCuffed,
     onGunClick,
     aimTarget,
@@ -39,6 +41,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
     const propsRef = useRef({
         isSawed,
+        isChokeActive,
         isPlayerCuffed,
         aimTarget,
         cameraView,
@@ -52,8 +55,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     });
 
     useEffect(() => {
-        propsRef.current = { isSawed, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell };
-    }, [isSawed, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell]);
+        propsRef.current = { isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell };
+    }, [isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell]);
 
     const sceneRef = useRef<SceneContext | null>(null);
 
@@ -314,7 +317,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (!sceneRef.current) return;
         if (animState.triggerDrink > 0) sceneRef.current.scene.userData.cameraShake = 0.5;
         if (animState.triggerHeal > 0) sceneRef.current.scene.userData.cameraShake = 0.3;
-    }, [animState.triggerDrink, animState.triggerHeal]);
+        if (animState.triggerRemote > 0) sceneRef.current.scene.userData.cameraShake = 0.7; // Shake on remote use
+    }, [animState.triggerDrink, animState.triggerHeal, animState.triggerRemote]);
 
     useEffect(() => {
         if (!sceneRef.current) return;
@@ -339,6 +343,60 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             magTubeMesh.position.z = 4.0;
         }
     }, [isSawed, animState.isSawing]);
+
+    // CHOKE ATTACHMENT SYNC
+    useEffect(() => {
+        if (!sceneRef.current || !sceneRef.current.chokeMesh) return;
+        const { chokeMesh } = sceneRef.current;
+
+        // Show if active (Animation handles temporary visibility during attach)
+        const isVisible = propsRef.current.isChokeActive;
+        // Note: animations.ts forces visibility during the attach sequence (chokeTime < 2.2)
+        // This effect ensures it stays visible AFTER animation if active, and hides after shot.
+
+        // However, if we only rely on isChokeActive, there is a gap:
+        // 0.0s: Click -> Trigger++ -> isChokeActive=False. Effect sets Visible=False. Anim sets Visible=True. (OK)
+        // 1.5s: isChokeActive=True. Effect sets Visible=True. (OK)
+        // Shot: isChokeActive=False. Effect sets Visible=False. Anim skipped. (OK)
+
+        // Wait, does React Effect override Animation Loop?
+        // React Effect runs ONCE per change. Animation Loop runs 60 times/sec.
+        // Animation Loop WINS during animation.
+        // This Effect WINS when state changes (like shooting).
+        // Since Animation Loop stops touching it after 2.2s, the Effect's last state must be correct.
+        // When isChokeActive becomes True (at 1.5s), Effect sets True. It stays True.
+        // When Shot (at X s), isChokeActive becomes False. Effect sets False. It stays False.
+        // This logic is sound.
+
+        // One caveat: If Effect sets it to False at 0.0s, does it flicker?
+        // Anim loop sets it True immediately. Should be fine.
+
+        if (!animState.triggerChoke) {
+            // Initial load safety
+            chokeMesh.visible = !!isVisible;
+        } else {
+            // Let animation loop handle it if animating, but ensure state consistency
+            if (isVisible) chokeMesh.visible = true;
+            else if (animState.triggerChoke > 0 && !isVisible) {
+                // It's false. But is it animating?
+                // We don't know time here.
+                // But we know isChokeActive is false.
+                // If we set visible = false here, the anim loop will set it back to true next frame if animating.
+                // So "fighting" is okay because Anim Loop is per-frame.
+                // Just setting it here is fine.
+                chokeMesh.visible = false;
+            }
+        }
+
+        if (isVisible) {
+            // If sawed, move choke back
+            if (isSawed) {
+                chokeMesh.position.z = 8.4;
+            } else {
+                chokeMesh.position.z = 10.9;
+            }
+        }
+    }, [propsRef.current.isChokeActive, animState.triggerChoke, isSawed]);
 
     useEffect(() => {
         if (!sceneRef.current) return;
@@ -436,37 +494,55 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (animState.triggerRack === 0 || !sceneRef.current) return;
         const { shellCasings, shellVelocities, gunGroup } = sceneRef.current;
         if (!shellCasings || !shellVelocities) return;
-        const nextIdx = sceneRef.current.nextShellIndex ?? 0;
-        const shell = shellCasings[nextIdx];
-        const vel = shellVelocities[nextIdx];
-        sceneRef.current.nextShellIndex = (nextIdx + 1) % 3;
-        const mat = shell.material as THREE.MeshStandardMaterial;
 
-        if (animState.ejectedShellColor === 'blue') {
-            mat.color.setHex(0x3b82f6);
-            mat.emissive.setHex(0x1e40af);
-            mat.emissiveIntensity = 0.5;
-        } else {
-            mat.color.setHex(0xef4444);
-            mat.emissive.setHex(0x991b1b);
-            mat.emissiveIntensity = 0.4;
+        let colors = [animState.ejectedShellColor];
+        if (animState.ejectedShellColor.includes('+')) {
+            colors = animState.ejectedShellColor.split('+') as any; // 'red', 'red' etc.
         }
 
-        shell.scale.setScalar(2.0);
-        shell.visible = true;
-        const basePos = shell.userData.basePosition || { x: 0, z: 0 };
-        shell.position.set(
-            basePos.x + (Math.random() - 0.5) * 0.3,
-            3,
-            basePos.z + (Math.random() - 0.5) * 0.3
-        );
-        shell.userData.landedAt = null;
-        vel.set(
-            (Math.random() - 0.5) * 0.02,
-            0.05,
-            (Math.random() - 0.5) * 0.02
-        );
+        colors.forEach((color, i) => {
+            // Eject Shell Logic
+            const nextIdx = sceneRef.current!.nextShellIndex ?? 0;
+            const shell = shellCasings[nextIdx];
+            const vel = shellVelocities[nextIdx];
+            sceneRef.current!.nextShellIndex = (nextIdx + 1) % shellCasings.length;
+            const mat = shell.material as THREE.MeshStandardMaterial;
+
+            if (color === 'blue') {
+                mat.color.setHex(0x3b82f6);
+                mat.emissive.setHex(0x1e40af);
+                mat.emissiveIntensity = 0.5;
+            } else {
+                mat.color.setHex(0xef4444);
+                mat.emissive.setHex(0x991b1b);
+                mat.emissiveIntensity = 0.4;
+            }
+
+            shell.scale.setScalar(2.0);
+            shell.visible = true;
+            const basePos = shell.userData.basePosition || { x: 0, z: 0 };
+
+            // Offset second shell slightly if double drop
+            const offsetDelay = i * 0.2;
+
+            // Immediate position set? No, shells update in loop. 
+            // Just set initial pos.
+            shell.position.set(
+                basePos.x + (Math.random() - 0.5) * 0.3 + i * 0.1,
+                3 + i * 0.5, // Second one higher
+                basePos.z + (Math.random() - 0.5) * 0.3
+            );
+
+            shell.userData.landedAt = null;
+            vel.set(
+                (Math.random() - 0.5) * 0.04 + (i * 0.02), // Spread x
+                0.05 + Math.random() * 0.02,
+                (Math.random() - 0.5) * 0.03
+            );
+        });
+
         gunGroup.rotation.x -= 0.4;
+
     }, [animState.triggerRack, animState.ejectedShellColor]);
 
     return <div ref={containerRef} className="absolute inset-0 z-0 bg-neutral-950" />;

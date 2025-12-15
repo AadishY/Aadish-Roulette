@@ -1,5 +1,5 @@
 
-export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE';
+export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER';
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
 export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI'; // Added STEAL_UI for Adrenaline
@@ -30,6 +30,7 @@ export interface PlayerState {
   isHandcuffed: boolean;
   isSawedActive: boolean;
   isAdrenalineActive?: boolean; // Added
+  isChokeActive?: boolean; // Added for Choke
 }
 
 export interface LogEntry {
@@ -49,8 +50,11 @@ export interface AnimationState {
   triggerPhone: number; // Phone
   triggerInverter: number; // Inverter
   triggerAdrenaline: number; // Adrenaline
+  triggerChoke: number; // Choke
+  triggerRemote: number; // Remote
+  triggerBigInverter: number; // Big Inverter
   isSawing: boolean; // Continuous saw state
-  ejectedShellColor: 'red' | 'blue';
+  ejectedShellColor: 'red' | 'blue' | 'red+red' | 'red+blue' | 'blue+red' | 'blue+blue';
   muzzleFlashIntensity: number;
   isLiveShot: boolean;
   dealerHit: boolean;
@@ -91,6 +95,7 @@ export interface SceneContext {
   barrelMesh: THREE.Mesh;
   pumpMesh: THREE.Mesh;
   magTubeMesh: THREE.Mesh;
+  chokeMesh?: THREE.Mesh; // Added
   bloodParticles: THREE.Points;
   sparkParticles: THREE.Points;
   dustParticles: THREE.Points;
@@ -106,12 +111,15 @@ export interface SceneContext {
     itemPhone: THREE.Group;
     itemInverter: THREE.Group;
     itemAdrenaline: THREE.Group;
+    itemRemote: THREE.Group;
+    itemBigInverter: THREE.Group;
     itemLight: THREE.PointLight; // Light for illuminating items during animations
   };
 }
 
 export interface SceneProps {
   isSawed: boolean;
+  isChokeActive?: boolean; // Added
   aimTarget: AimTarget;
   cameraView: CameraView;
   animState: AnimationState;
@@ -137,4 +145,11 @@ export interface MPPlayer {
   isSawedActive?: boolean;
   position?: number;
   isAlive?: boolean;
+}
+
+export interface ChokeResult {
+  triggered: boolean;
+  shell1: ShellType;
+  shell2: ShellType;
+  damage: number;
 }

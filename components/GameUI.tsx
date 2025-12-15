@@ -274,7 +274,10 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                             item === 'CUFFS' ? 'text-stone-400' :
                                                                 item === 'SAW' ? 'text-orange-600' :
                                                                     item === 'PHONE' ? 'text-blue-300' :
-                                                                        item === 'INVERTER' ? 'text-green-400' : 'text-stone-300'
+                                                                        item === 'INVERTER' ? 'text-green-400' :
+                                                                            item === 'CHOKE' ? 'text-stone-300' :
+                                                                                item === 'REMOTE' ? 'text-red-500' :
+                                                                                    item === 'BIG_INVERTER' ? 'text-orange-500' : 'text-stone-300'
                                                 }`}>
                                                 {item === 'BEER' && <Icons.Beer size={36} />}
                                                 {item === 'CIGS' && <Icons.Cigs size={36} />}
@@ -284,9 +287,12 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                 {item === 'PHONE' && <Icons.Phone size={36} />}
                                                 {item === 'INVERTER' && <Icons.Inverter size={36} />}
                                                 {item === 'ADRENALINE' && <Icons.Adrenaline size={36} />}
+                                                {item === 'CHOKE' && <Icons.Choke size={36} />}
+                                                {item === 'REMOTE' && <Icons.Remote size={36} />}
+                                                {item === 'BIG_INVERTER' && <Icons.BigInverter size={36} />}
                                             </div>
                                             <span className={`text-xs md:text-sm font-bold tracking-wider ${isAdrenaline ? 'text-stone-600 line-through' : 'text-stone-200'}`}>
-                                                {item === 'INVERTER' ? 'INVERT' : item}
+                                                {item === 'INVERTER' ? 'INVERT' : item === 'BIG_INVERTER' ? 'BIG INV' : item}
                                             </span>
                                         </button>
                                     );

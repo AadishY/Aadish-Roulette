@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SceneContext } from '../../types';
-import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline } from '../threeHelpers';
+import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline, createRemote, createBigInverter } from '../threeHelpers';
 
 export const cleanScene = (scene: THREE.Scene) => {
     scene.traverse((object) => {
@@ -100,7 +100,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const dustParticles = createDust(scene, isMobile);
     createTable(scene);
 
-    const { gunGroup, barrelMesh, muzzleFlash, pump, magTube } = createGunModel(scene);
+    const { gunGroup, barrelMesh, muzzleFlash, pump, magTube, chokeMesh } = createGunModel(scene);
 
     // Gun Light
     const gunLight = new THREE.PointLight(0xffeebb, 0, 15);
@@ -116,12 +116,14 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const itemPhone = createPhone(); itemPhone.visible = false; scene.add(itemPhone);
     const itemInverter = createInverter(); itemInverter.visible = false; scene.add(itemInverter);
     const itemAdrenaline = createAdrenaline(); itemAdrenaline.visible = false; scene.add(itemAdrenaline);
+    const itemRemote = createRemote(); itemRemote.visible = false; scene.add(itemRemote);
+    const itemBigInverter = createBigInverter(); itemBigInverter.visible = false; scene.add(itemBigInverter);
 
     const itemLight = new THREE.PointLight(0xffffee, 0, 25);
     itemLight.position.set(0, 5, -12);
     scene.add(itemLight);
 
-    const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemLight };
+    const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemLight };
 
     // Multiplayer Logic
     let dealerGroup = new THREE.Group();
@@ -226,6 +228,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
         barrelMesh,
         pumpMesh: pump,
         magTubeMesh: magTube,
+        chokeMesh,
         muzzleLight: lights.muzzleLight,
         roomRedLight: lights.roomRedLight,
         nextShellIndex: 0

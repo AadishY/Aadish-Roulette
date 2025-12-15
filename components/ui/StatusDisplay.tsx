@@ -60,6 +60,9 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                             {item === 'PHONE' && <Icons.Phone size={8} className="md:w-3.5 md:h-3.5 text-blue-300" />}
                             {item === 'INVERTER' && <Icons.Inverter size={8} className="md:w-3.5 md:h-3.5 text-green-400" />}
                             {item === 'ADRENALINE' && <Icons.Adrenaline size={8} className="md:w-3.5 md:h-3.5 text-pink-500" />}
+                            {item === 'CHOKE' && <Icons.Choke size={8} className="md:w-3.5 md:h-3.5 text-stone-300" />}
+                            {item === 'REMOTE' && <Icons.Remote size={8} className="md:w-3.5 md:h-3.5 text-red-500" />}
+                            {item === 'BIG_INVERTER' && <Icons.BigInverter size={8} className="md:w-3.5 md:h-3.5 text-orange-500" />}
                         </div>
                     ))}
                 </div>

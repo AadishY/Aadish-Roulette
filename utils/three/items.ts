@@ -264,3 +264,70 @@ export const createAdrenaline = (): THREE.Group => {
     group.name = 'ITEM_ADRENALINE';
     return group;
 };
+
+export const createRemote = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Body
+    const bodyGeo = new THREE.BoxGeometry(0.5, 0.1, 1.0);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    group.add(body);
+
+    // Big Red Button
+    const btnGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 16);
+    const btnMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x550000 });
+    const btn = new THREE.Mesh(btnGeo, btnMat);
+    btn.position.set(0, 0.08, -0.2);
+    group.add(btn);
+
+    // Arrow markings (using simple planes or boxes)
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const arrow1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.01, 0.3), arrowMat);
+    arrow1.position.set(0, 0.06, 0.2);
+    arrow1.rotation.y = Math.PI / 4;
+    group.add(arrow1);
+
+    const arrow2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.01, 0.3), arrowMat);
+    arrow2.position.set(0, 0.06, 0.2);
+    arrow2.rotation.y = -Math.PI / 4;
+    group.add(arrow2);
+
+    group.name = 'ITEM_REMOTE';
+    return group;
+};
+
+export const createBigInverter = (): THREE.Group => {
+    const group = new THREE.Group();
+    // Compact Device - More Rectangular for BigInverter
+    const baseGeo = new THREE.BoxGeometry(0.8, 0.2, 0.5); // Wider X, shorter Z
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.9 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    group.add(base);
+
+    // Glowing core - ORANGE
+    const coreGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.23, 16);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 }); // Orange glow
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.y = 0.05;
+    // Rotate to lie flat? No, sticking up like a coil
+    group.add(core);
+
+    // Wires/Detail - Blue wires
+    const wire = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.03, 8, 16), new THREE.MeshStandardMaterial({ color: 0x0000ff }));
+    wire.rotation.x = Math.PI / 2;
+    wire.position.y = 0.11;
+    group.add(wire);
+
+    // Extra detail to distinguish
+    const sidePlate1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.25, 0.4), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+    sidePlate1.position.set(-0.3, 0, 0);
+    group.add(sidePlate1);
+
+    const sidePlate2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.25, 0.4), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+    sidePlate2.position.set(0.3, 0, 0);
+    group.add(sidePlate2);
+
+    group.name = 'ITEM_BIG_INVERTER';
+    return group;
+};

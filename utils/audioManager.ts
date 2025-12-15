@@ -32,8 +32,11 @@ class AudioManager {
             cig: '/sound/AnimationSounds/cig.mp3',
             glass: '/sound/AnimationSounds/glass.mp3',
             inverter: '/sound/AnimationSounds/inverter.mp3',
+            big_inverter: '/sound/AnimationSounds/BigInverter.mp3',
             phone: '/sound/AnimationSounds/phone.mp3',
             saw: '/sound/AnimationSounds/saw.mp3',
+            choke: '/sound/AnimationSounds/Choke.mp3',
+            remote: '/sound/AnimationSounds/remote.mp3',
         };
         const musicFiles = {
             menu: '/sound/menu.mp3',

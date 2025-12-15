@@ -35,25 +35,31 @@ let gameState = {
     playerOrder: [],
     roundNumber: 1,
     isRoundActive: false,
-    winner: null
+    isRoundActive: false,
+    winner: null,
+    turnDirection: 1 // 1: Clockwise, -1: Counter-Clockwise
 };
 
 // Helpers
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const getRandomItem = () => {
-    // Balanced Probabilities - ADRENALINE at 10%
-    // BEER: 18%, CIGS: 16%, GLASS: 14%, CUFFS: 14%, PHONE: 10%, SAW: 10%, INVERTER: 8%, ADRENALINE: 10%
-    const r = Math.random() * 100;
-    if (r < 18) return 'BEER';
-    if (r < 34) return 'CIGS';
-    if (r < 48) return 'GLASS';
-    if (r < 62) return 'CUFFS';
-    if (r < 72) return 'PHONE';
-    if (r < 82) return 'SAW';
-    if (r < 90) return 'INVERTER';
-    return 'ADRENALINE';
+    // TESTING MODE: 90% chance for new items
+    const r = Math.random();
+
+    if (r < 0.30) return 'CHOKE';
+    if (r < 0.60) return 'BIG_INVERTER';
+    if (r < 0.90) return 'REMOTE'; // Note: Remote logic usually requires multi-shell, but good for testing
+
+    // Remaining 10% for others
+    const sub = Math.random();
+    if (sub < 0.2) return 'ADRENALINE';
+    if (sub < 0.4) return 'SAW';
+    if (sub < 0.6) return 'BEER';
+    if (sub < 0.8) return 'CIGS';
+    return 'INVERTER';
 };
+
 
 const initializeGame = () => {
     const playerIds = Object.keys(players);
@@ -185,7 +191,8 @@ const getNextPlayer = (currentId, skipCuffed = true) => {
     if (aliveOrder.length <= 1) return aliveOrder[0] || null;
 
     const currentIndex = aliveOrder.indexOf(currentId);
-    let nextIndex = (currentIndex + 1) % aliveOrder.length;
+    let direction = gameState.turnDirection || 1;
+    let nextIndex = (currentIndex + direction + aliveOrder.length) % aliveOrder.length;
     const nextId = aliveOrder[nextIndex];
 
     if (skipCuffed && players[nextId]?.isHandcuffed) {
@@ -287,6 +294,7 @@ io.on('connection', (socket) => {
             items: [],
             isHandcuffed: false,
             isSawedActive: false,
+            isChokeActive: false,
             position: 0,
             isAlive: true
         };
@@ -358,13 +366,43 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const shell = gameState.chamber[gameState.currentShellIndex];
-        const isLive = shell === 'LIVE';
+        let damage = 0;
+        let shellsConsumed = 1;
 
-        let damage = isLive ? 1 : 0;
-        if (isLive && shooter.isSawedActive) {
-            damage = 2;
-            shooter.isSawedActive = false;
+        const isChoked = shooter.isChokeActive;
+        const currentShell = gameState.chamber[gameState.currentShellIndex];
+        const isLive = currentShell === 'LIVE';
+
+        // CHOKE LOGIC
+        if (isChoked && gameState.currentShellIndex + 1 < gameState.chamber.length) {
+            shellsConsumed = 2;
+            const shell1 = gameState.chamber[gameState.currentShellIndex];
+            const shell2 = gameState.chamber[gameState.currentShellIndex + 1];
+            const live1 = shell1 === 'LIVE';
+            const live2 = shell2 === 'LIVE';
+
+            let chokeDamage = 0;
+            if (live1 && live2) chokeDamage = 2; // 2 Live = 2 Dmg
+            else if (live1 || live2) chokeDamage = 1; // 1 Live = 1 Dmg
+            else chokeDamage = 0; // 0 Live = 0 Dmg
+
+            if (shooter.isSawedActive && chokeDamage > 0) {
+                chokeDamage *= 2; // Saw doubles the result
+            }
+            damage = chokeDamage;
+            shooter.isChokeActive = false; // Reset
+            shooter.isSawedActive = false; // Reset Saw too
+
+            console.log(`[CHOKE] ${shooter.name} fired 2 shells: ${shell1}+${shell2} -> ${damage} dmg`);
+        }
+        else {
+            // Normal Logic
+            damage = isLive ? 1 : 0;
+            if (isLive && shooter.isSawedActive) {
+                damage = 2;
+                shooter.isSawedActive = false;
+            }
+            if (isChoked) shooter.isChokeActive = false; // Consumed/Failed
         }
 
         if (damage > 0) {
@@ -374,9 +412,17 @@ io.on('connection', (socket) => {
             }
         }
 
-        gameState.currentShellIndex++;
-        if (isLive) gameState.liveCount--;
-        else gameState.blankCount--;
+        // Update Gamestate (consume shells)
+        let liveConsumed = 0;
+        let blankConsumed = 0;
+        for (let i = 0; i < shellsConsumed; i++) {
+            if (gameState.chamber[gameState.currentShellIndex + i] === 'LIVE') liveConsumed++;
+            else blankConsumed++;
+        }
+
+        gameState.currentShellIndex += shellsConsumed;
+        gameState.liveCount -= liveConsumed;
+        gameState.blankCount -= blankConsumed;
 
         console.log(`[SHOOT] ${shooter.name} -> ${target.name}: ${shell} (${damage}dmg)`);
 
@@ -409,8 +455,10 @@ io.on('connection', (socket) => {
 
         // Determine next turn
         let nextPlayerId;
-        if (!isLive && targetId === socket.id) {
-            nextPlayerId = socket.id; // Shot self with blank
+        const isSelfShotSuccess = targetId === socket.id && damage === 0; // 0 damage self shot = go again
+
+        if (isSelfShotSuccess) {
+            nextPlayerId = socket.id;
             io.to(DEFAULT_ROOM).emit('action_message', {
                 message: `${shooter.name} GOES AGAIN!`
             });
@@ -488,6 +536,38 @@ io.on('connection', (socket) => {
                     effectData.targetName = players[nextId].name;
                     effectData.message = `${player.name} CUFFED ${players[nextId].name}!`;
                 }
+                break;
+
+            case 'CHOKE':
+                player.isChokeActive = true;
+                effectData.message = `${player.name} ATTACHED CHOKE MOD`;
+                break;
+
+            case 'REMOTE':
+                gameState.turnDirection = (gameState.turnDirection || 1) * -1;
+                effectData.message = `${player.name} REVERSED TURN ORDER!`;
+                // Add direction to effectData so frontend knows?
+                // Actually broadcastGameState will send it if we add it there, but for animation, effect data is enough
+                break;
+
+            case 'BIG_INVERTER':
+                // Invert ALL shells in chamber (Live <-> Blank)
+                // BUT user said "changes polarity of entire gun", usually implies remaining shells.
+                // If we change past shells, it doesn't matter. So let's change all remaining.
+                for (let i = gameState.currentShellIndex; i < gameState.chamber.length; i++) {
+                    gameState.chamber[i] = gameState.chamber[i] === 'LIVE' ? 'BLANK' : 'LIVE';
+                }
+                // Recalculate counts
+                let lives = 0;
+                let blanks = 0;
+                for (let i = gameState.currentShellIndex; i < gameState.chamber.length; i++) {
+                    if (gameState.chamber[i] === 'LIVE') lives++;
+                    else blanks++;
+                }
+                gameState.liveCount = lives;
+                gameState.blankCount = blanks;
+
+                effectData.message = `${player.name} INVERTED THE ENTIRE CHAMBER!`;
                 break;
         }
 

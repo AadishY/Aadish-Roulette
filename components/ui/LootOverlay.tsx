@@ -14,7 +14,10 @@ const ITEM_NAMES: Record<ItemType, string> = {
     'SAW': 'HAND SAW',
     'PHONE': 'BURNER PHONE',
     'INVERTER': 'INVERTER',
-    'ADRENALINE': 'ADRENALINE'
+    'ADRENALINE': 'ADRENALINE',
+    'CHOKE': 'CHOKE MOD',
+    'REMOTE': 'REMOTE',
+    'BIG_INVERTER': 'BIG INVERTER'
 };
 
 const ITEM_COLORS: Record<ItemType, string> = {
@@ -25,7 +28,10 @@ const ITEM_COLORS: Record<ItemType, string> = {
     'SAW': 'text-orange-600 border-orange-600/50 bg-orange-950/30',
     'PHONE': 'text-blue-300 border-blue-300/50 bg-blue-950/30',
     'INVERTER': 'text-green-400 border-green-500/50 bg-green-950/30',
-    'ADRENALINE': 'text-pink-500 border-pink-500/50 bg-pink-950/30'
+    'ADRENALINE': 'text-pink-500 border-pink-500/50 bg-pink-950/30',
+    'CHOKE': 'text-yellow-700 border-yellow-700/50 bg-yellow-950/30',
+    'REMOTE': 'text-red-600 border-red-600/50 bg-red-950/30',
+    'BIG_INVERTER': 'text-orange-500 border-orange-500/50 bg-orange-950/30'
 };
 
 export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
@@ -91,6 +97,9 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                                         {item === 'PHONE' && <Icons.Phone size={40} className="md:w-16 md:h-16" />}
                                         {item === 'INVERTER' && <Icons.Inverter size={40} className="md:w-16 md:h-16" />}
                                         {item === 'ADRENALINE' && <Icons.Adrenaline size={40} className="md:w-16 md:h-16" />}
+                                        {item === 'CHOKE' && <Icons.Choke size={40} className="md:w-16 md:h-16" />}
+                                        {item === 'REMOTE' && <Icons.Remote size={40} className="md:w-16 md:h-16" />}
+                                        {item === 'BIG_INVERTER' && <Icons.BigInverter size={40} className="md:w-16 md:h-16" />}
                                     </div>
 
                                     {/* Corner Accents */}

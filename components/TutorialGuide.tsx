@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Target, Beer, Cigarette, Scale, Link, Scissors, Phone, RefreshCw, Zap, Settings, Users, Code, Github, Instagram, Gamepad2, HelpCircle, Shield, Heart, Crosshair, CircleDot, Smartphone, Monitor, Volume2, Maximize, Eye } from 'lucide-react';
 import { GAME_VERSION } from '../constants';
+import { Icons } from './ui/Icons';
 
 interface TutorialGuideProps {
     onClose: () => void;
@@ -191,6 +192,22 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             color="text-stone-400"
                             effect="→ SKIP ENEMY TURN"
                         />
+
+                        <ItemCard
+                            icon={<Scissors size={20} />}
+                            name="HAND SAW"
+                            description="Saws off the shotgun barrel, DOUBLING damage."
+                            color="text-orange-500"
+                            effect="→ 2X DAMAGE"
+                        />
+
+                        <ItemCard
+                            icon={<Smartphone size={20} />}
+                            name="BURNER PHONE"
+                            description="Mysterious caller reveals a random future shell position."
+                            color="text-blue-300"
+                            effect="→ REVEALS FUTURE SHELL"
+                        />
                     </div>
                 </div>
             )
@@ -208,27 +225,11 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <ItemCard
-                            icon={<Scissors size={20} />}
-                            name="HAND SAW"
-                            description="Saws off the shotgun barrel, DOUBLING damage."
-                            color="text-orange-500"
-                            effect="→ 2X DAMAGE"
-                        />
-
-                        <ItemCard
-                            icon={<Phone size={20} />}
-                            name="BURNER PHONE"
-                            description="Mysterious caller reveals a random future shell position."
-                            color="text-blue-300"
-                            effect="→ REVEALS FUTURE SHELL"
-                        />
-
-                        <ItemCard
                             icon={<RefreshCw size={20} />}
                             name="POLARITY INVERTER"
                             description="Swaps the current shell: LIVE becomes BLANK and vice-versa."
                             color="text-green-400"
-                            effect="→ INVERTS POLARITY"
+                            effect="→ INVERTS CURRENT"
                         />
 
                         <ItemCard
@@ -237,6 +238,30 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             description="Steals an item from your opponent's inventory and uses it immediately."
                             color="text-pink-500"
                             effect="→ STEAL & USE"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Choke size={20} />}
+                            name="CHOKE MOD"
+                            description="Fires 2 shots at once (current + next). Both LIVE = 2 DMG. One LIVE = 1 DMG. Both BLANK = 0 DMG."
+                            color="text-yellow-700"
+                            effect="→ DOUBLE FIRE"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.BigInverter size={20} />}
+                            name="BIG INVERTER"
+                            description="Inverts the polarity of ALL remaining shells in the magazine."
+                            color="text-orange-500"
+                            effect="→ INVERTS ALL"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Remote size={20} />}
+                            name="REMOTE"
+                            description="Reverses the turn order. The previous player takes the next turn! (Multiplayer Only)."
+                            color="text-red-600"
+                            effect="→ REVERSE TURN ORDER"
                         />
                     </div>
                 </div>

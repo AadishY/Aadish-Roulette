@@ -103,12 +103,65 @@ export const performShot = async (
 
     let damage = isLive ? 1 : 0;
     const isSawed = shooter === 'PLAYER' ? player.isSawedActive : dealer.isSawedActive;
-    if (isLive && isSawed) {
-        damage = 2;
-        addLog('CRITICAL HIT! (SAWED-OFF)', 'danger');
-    }
+    const isChoked = shooter === 'PLAYER' ? player.isChokeActive : dealer.isChokeActive;
 
-    addLog(isLive ? `BANG! ${damage} DMG` : 'CLICK.', isLive ? 'danger' : 'safe');
+    // --- CHOKE LOGIC ---
+    let processedShells = 1;
+
+    if (isChoked && currentShellIndex + 1 < chamber.length) {
+        // We have at least 2 shells to fire
+        processedShells = 2;
+        const shell1 = chamber[currentShellIndex];
+        const shell2 = chamber[currentShellIndex + 1];
+
+        let chokeDamage = 0;
+        const live1 = shell1 === 'LIVE';
+        const live2 = shell2 === 'LIVE';
+
+        // Calculate Damage
+        if (live1 && live2) {
+            chokeDamage = 2; // Double Base
+            addLog('DOUBLE BARREL HIT! (2 LIVE)', 'danger');
+        } else if (live1 || live2) {
+            chokeDamage = 1; // Normal Base
+            addLog('SPLIT SHOT (1 LIVE)', 'danger');
+        } else {
+            chokeDamage = 0;
+            addLog('DOUBLE CLICK (2 BLANK)', 'safe');
+        }
+
+        // Apply Saw Multiplier to the result
+        if (isSawed && chokeDamage > 0) {
+            chokeDamage *= 2; // Multiplies the result (so 2->4, 1->2)
+            addLog('CRITICAL MASS! (SAWED+CHOKE)', 'danger');
+        }
+
+        damage = chokeDamage;
+
+        // Sounds / Flash
+        if (live1 || live2) {
+            setAnim(prev => ({ ...prev, muzzleFlashIntensity: 150, triggerRecoil: prev.triggerRecoil + 1 })); // Bigger kick
+            if (live1 && live2) audioManager.playSound('liveshell', { playbackRate: 0.8 }); // Lower boom
+            else audioManager.playSound('liveshell');
+        } else {
+            audioManager.playSound('blankshell');
+            setTimeout(() => audioManager.playSound('blankshell'), 150);
+        }
+
+        setOverlayText(`${shell1} + ${shell2}`);
+
+    } else {
+        // --- NORMAL SHOT LOGIC ---
+        // (Includes Fallback if Choke active but only 1 shell left -> Acts normal)
+        if (isChoked) addLog("(CHOKE FAILED - 1 SHELL LEFT)", 'neutral');
+
+        damage = isLive ? 1 : 0;
+        if (isLive && isSawed) {
+            damage = 2;
+            addLog('CRITICAL HIT! (SAWED-OFF)', 'danger');
+        }
+        addLog(isLive ? `BANG! ${damage} DMG` : 'CLICK.', isLive ? 'danger' : 'safe');
+    }
 
     // Update Match Stats
     if (matchStats && matchStats.current) {
@@ -123,9 +176,18 @@ export const performShot = async (
 
     // Rack Sequence
     await wait(500);
+
+    let shellColorStr: 'red' | 'blue' | 'red+red' | 'red+blue' | 'blue+red' | 'blue+blue' = isLive ? 'red' : 'blue';
+
+    if (processedShells === 2) {
+        const s1 = chamber[currentShellIndex] === 'LIVE' ? 'red' : 'blue';
+        const s2 = chamber[currentShellIndex + 1] === 'LIVE' ? 'red' : 'blue';
+        shellColorStr = `${s1}+${s2}` as any;
+    }
+
     setAnim(prev => ({
         ...prev,
-        ejectedShellColor: isLive ? 'red' : 'blue',
+        ejectedShellColor: shellColorStr,
         triggerRack: prev.triggerRack + 1
     }));
 
@@ -133,9 +195,9 @@ export const performShot = async (
     setOverlayText(null);
     setAimTarget('IDLE');
 
-    // Reset Saw
-    if (shooter === 'PLAYER') setPlayer(p => ({ ...p, isSawedActive: false }));
-    else setDealer(d => ({ ...d, isSawedActive: false }));
+    // Reset Saw and Choke
+    if (shooter === 'PLAYER') setPlayer(p => ({ ...p, isSawedActive: false, isChokeActive: false }));
+    else setDealer(d => ({ ...d, isSawedActive: false, isChokeActive: false }));
 
     // Handle Damage & Win Check
     let gameOver = false;
@@ -194,14 +256,24 @@ export const performShot = async (
     await wait(1000);
 
     // Update Shell Counts & Check End of Round
-    const nextIndex = currentShellIndex + 1;
+    // Update Shell Counts & Check End of Round
+    // Calculate consumed
+    let consumedLives = 0;
+    let consumedBlanks = 0;
+
+    for (let i = 0; i < processedShells; i++) {
+        if (chamber[currentShellIndex + i] === 'LIVE') consumedLives++;
+        else consumedBlanks++;
+    }
+
+    const nextIndex = currentShellIndex + processedShells;
     const remaining = chamber.length - nextIndex;
 
     setGameState(prev => ({
         ...prev,
         currentShellIndex: nextIndex,
-        liveCount: isLive ? prev.liveCount - 1 : prev.liveCount,
-        blankCount: !isLive ? prev.blankCount - 1 : prev.blankCount
+        liveCount: prev.liveCount - consumedLives,
+        blankCount: prev.blankCount - consumedBlanks
     }));
 
     if (remaining === 0) {
@@ -213,7 +285,15 @@ export const performShot = async (
     // Pass Turn Logic
     // - Shoot self (Blank) -> Go again (Keep Turn).
     // - Any other case -> Pass Turn.
-    const keepTurn = target === shooter && !isLive;
+    // Pass Turn Logic
+    // - Shoot self (Blank) -> Go again (Keep Turn).
+    // - BUT Choke Special Rule: If you shoot 2 Blanks at self... do you go again? 
+    //   Usually "Blank allows go again". IF BOTH are blank, logic implies "Nothing happens" = Go again?
+    //   Prompt says "If both blank, nothing happens." -> Assume Turn Retained on full blank volley if target self.
+    //   Mixed (Live+Blank) deals damage -> Turn Lost.
+
+    const isSuccessSelf = target === shooter && damage === 0;
+    const keepTurn = isSuccessSelf;
     let nextOwner = keepTurn ? shooter : (shooter === 'PLAYER' ? 'DEALER' : 'PLAYER');
     let turnChanged = !keepTurn;
 

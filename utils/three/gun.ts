@@ -63,7 +63,29 @@ export const createGunModel = (scene: THREE.Scene) => {
     trigger.rotation.z = Math.PI; trigger.rotation.y = Math.PI / 2;
     trigger.position.set(0, -0.4, 3.2);
 
-    gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight, trigger);
+    // Choke Attachment (Silencer Style - "The Husher")
+    const chokeGeo = new THREE.CylinderGeometry(0.35, 0.35, 2.8, 24);
+    const chokeMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.9 }); // Matte black finish
+    const chokeMesh = new THREE.Mesh(chokeGeo, chokeMat);
+    chokeMesh.rotation.x = Math.PI / 2;
+    chokeMesh.position.set(0, 0.35, 10.9); // Extended further out
+    chokeMesh.visible = false;
+    chokeMesh.name = 'CHOKE';
+
+    // Base Connector (Tapered to fit barrel)
+    const cBase = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.35, 0.4, 24), chokeMat);
+    cBase.position.y = -1.6; // Positioned at the back end
+    chokeMesh.add(cBase);
+
+    // Detail Rings (Grooves)
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 });
+    const cRing1 = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.02, 4, 24), ringMat);
+    cRing1.rotation.x = Math.PI / 2; cRing1.position.y = -1.0;
+    const cRing2 = cRing1.clone(); cRing2.position.y = 0;
+    const cRing3 = cRing1.clone(); cRing3.position.y = 1.0;
+    chokeMesh.add(cRing1, cRing2, cRing3);
+
+    gunGroup.add(receiver, stock, barrelMesh, pump, magTube, guard, sight, trigger, chokeMesh);
 
     // Dynamic Muzzle Flash (Multi-plane Star)
     const flashGeo = new THREE.PlaneGeometry(3.5, 3.5);
@@ -81,7 +103,7 @@ export const createGunModel = (scene: THREE.Scene) => {
 
     scene.add(gunGroup);
 
-    return { gunGroup, barrelMesh, muzzleFlash, pump, magTube };
+    return { gunGroup, barrelMesh, muzzleFlash, pump, magTube, chokeMesh };
 };
 
 export const createProjectiles = (scene: THREE.Scene) => {

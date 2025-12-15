@@ -589,6 +589,16 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             items.itemInverter.visible = false;
         }
 
+        // CHOKE ANIMATION
+        if (animState.triggerChoke < (scene.userData.lastChoke || 0)) scene.userData.lastChoke = animState.triggerChoke;
+        if (animState.triggerChoke > (scene.userData.lastChoke || 0)) {
+            scene.userData.lastChoke = animState.triggerChoke;
+            scene.userData.chokeStart = time;
+            // No item model for Choke currently? Assuming generic notification or maybe gun movement?
+            // "Choke" is a mod. Maybe just sound and message.
+            audioManager.playSound('choke');
+        }
+
         // ADRENALINE ANIMATION
         if (animState.triggerAdrenaline < scene.userData.lastAdrenaline) scene.userData.lastAdrenaline = animState.triggerAdrenaline;
         if (animState.triggerAdrenaline > scene.userData.lastAdrenaline) {
@@ -640,7 +650,169 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             items.itemAdrenaline.visible = false;
         }
 
-        // SAFETY: Final cleanup
+        // REMOTE ANIMATION
+        if (animState.triggerRemote < (scene.userData.lastRemote || 0)) scene.userData.lastRemote = animState.triggerRemote;
+        if (animState.triggerRemote > (scene.userData.lastRemote || 0)) {
+            scene.userData.lastRemote = animState.triggerRemote;
+            scene.userData.remoteStart = time;
+            items.itemRemote.visible = true;
+            audioManager.playSound('remote');
+        }
+        const remTime = time - (scene.userData.remoteStart || -999);
+        if (remTime < 2.5) {
+            items.itemRemote.visible = true;
+            if (isPlayerTurn) {
+                if (remTime < 0.5) {
+                    const p = remTime / 0.5;
+                    const ease = easeOutBack(p);
+                    items.itemRemote.position.set(0.2 - ease * 0.1, -3 + ease * 4.5, 6); // Rise up
+                    items.itemRemote.rotation.set(-0.2 + ease * 0.1, 0, 0);
+                } else if (remTime < 1.5) {
+                    // Hover and Click effect
+                    items.itemRemote.position.set(0.1, 1.5 + Math.sin(time * 2) * 0.05, 6);
+                    if (remTime > 0.8 && remTime < 1.0) {
+                        // Click visual - button press (simulate by shake or slight depress)
+                        items.itemRemote.position.y -= 0.05;
+                    }
+                } else {
+                    items.itemRemote.visible = false;
+                }
+            } else {
+                items.itemRemote.scale.setScalar(2.0);
+                if (remTime < 0.6) {
+                    const p = remTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemRemote.position.set(2.0 * (1 - ease), -1 + ease * 3.6, -4.0);
+                    items.itemRemote.rotation.set(0.1, 0, 0);
+                } else if (remTime < 1.8) {
+                    items.itemRemote.position.set(0, 2.6 + Math.sin(remTime * 4) * 0.1, -4.0);
+                } else {
+                    const p = (remTime - 1.8) / 0.5;
+                    items.itemRemote.position.y = 2.6 - p * 6;
+                    items.itemRemote.position.x = -p * 3;
+                    if (remTime > 2.2) items.itemRemote.visible = false;
+                }
+            }
+        } else {
+            items.itemRemote.visible = false;
+        }
+
+        // BIG INVERTER ANIMATION
+        if (animState.triggerBigInverter < (scene.userData.lastBigInverter || 0)) scene.userData.lastBigInverter = animState.triggerBigInverter;
+        if (animState.triggerBigInverter > (scene.userData.lastBigInverter || 0)) {
+            scene.userData.lastBigInverter = animState.triggerBigInverter;
+            scene.userData.bigInverterStart = time;
+            items.itemBigInverter.visible = true;
+            // Stronger shake
+            scene.userData.cameraShake = 1.0;
+            audioManager.playSound('big_inverter');
+        }
+        const bigInvTime = time - (scene.userData.bigInverterStart || -999);
+        if (bigInvTime < 3.0) { // S Slightly longer
+            items.itemBigInverter.visible = true;
+            if (isPlayerTurn) {
+                if (bigInvTime < 0.6) {
+                    const p = bigInvTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemBigInverter.position.set(0, -3 + ease * 4.5, 6);
+                    items.itemBigInverter.rotation.y = bigInvTime * 20; // Faster spin
+                } else if (bigInvTime < 2.5) {
+                    const pulseY = 1.5 + Math.sin(bigInvTime * 25) * 0.15;
+                    items.itemBigInverter.position.set(0, pulseY, 6);
+                    items.itemBigInverter.rotation.y += 0.8;
+
+                    if (bigInvTime > 0.8 && bigInvTime < 2.0) {
+                        scene.userData.cameraShake = 0.4;
+                        camera.position.x += (Math.random() - 0.5) * 0.2;
+                        camera.position.y += (Math.random() - 0.5) * 0.2;
+                    }
+                } else {
+                    items.itemBigInverter.visible = false;
+                }
+            } else {
+                items.itemBigInverter.scale.setScalar(2.0);
+                if (bigInvTime < 0.6) {
+                    const p = bigInvTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemBigInverter.position.set(3 * (1 - ease), -1 + ease * 3.6, -4.0);
+                    items.itemBigInverter.rotation.y = bigInvTime * 15;
+                } else if (bigInvTime < 2.2) {
+                    const spinSpeed = 0.8;
+                    items.itemBigInverter.position.set(0, 2.6 + Math.sin(bigInvTime * 15) * 0.25, -4.0);
+                    items.itemBigInverter.rotation.y += spinSpeed;
+                    if (bigInvTime > 0.8 && bigInvTime < 2.0) {
+                        scene.userData.cameraShake = 0.3;
+                    }
+                } else {
+                    const p = (bigInvTime - 2.2) / 0.5;
+                    items.itemBigInverter.position.y = 2.6 - p * 6;
+                    items.itemBigInverter.position.x = -p * 3;
+                    if (bigInvTime > 2.8) items.itemBigInverter.visible = false;
+                }
+            }
+        } else {
+            items.itemBigInverter.visible = false;
+        }
+
+        // CHOKE ANIMATION (Attach Sequence)
+        if (animState.triggerChoke < (scene.userData.lastChoke || 0)) scene.userData.lastChoke = animState.triggerChoke;
+        if (animState.triggerChoke > (scene.userData.lastChoke || 0)) {
+            scene.userData.lastChoke = animState.triggerChoke;
+            scene.userData.chokeStart = time;
+            // audioManager.playSound('choke'); // Handled in game actions? No, moved here.
+            audioManager.playSound('choke');
+        }
+
+        const chokeTime = time - (scene.userData.chokeStart || -999);
+        if (chokeTime < 2.2) {
+            const gun = context.gunGroup;
+            if (gun && context.chokeMesh) {
+                context.chokeMesh.visible = true;
+
+                // Phase 1: Rotate Gun 90deg & Slide Choke In (0.0 - 0.5s)
+                if (chokeTime < 0.5) {
+                    const p = chokeTime / 0.5;
+                    const ease = (1 - Math.pow(1 - p, 3)); // Cubic ease out
+
+                    // Rotate Gun Sideways (Z-axis)
+                    gun.rotation.z = ease * (Math.PI / 2);
+
+                    // Slide Choke from front
+                    const targetZ = props.isSawed ? 8.4 : 10.9;
+                    const startZ = targetZ + 4.0;
+                    context.chokeMesh.position.z = startZ - (startZ - targetZ) * ease;
+                    context.chokeMesh.scale.setScalar(ease);
+                }
+                // Phase 2: Screw In (0.5 - 1.6s)
+                else if (chokeTime < 1.6) {
+                    gun.rotation.z = Math.PI / 2; // Hold horizontal
+                    const targetZ = props.isSawed ? 8.4 : 10.9;
+                    context.chokeMesh.position.z = targetZ;
+                    context.chokeMesh.scale.setScalar(1);
+
+                    // Rotation for screwing effect
+                    const screwP = (chokeTime - 0.5);
+                    context.chokeMesh.rotation.z = screwP * Math.PI * 6; // Fast spin
+                }
+                // Phase 3: Return Gun to Upright (1.6 - 2.0s)
+                else {
+                    const p = (chokeTime - 1.6) / 0.4; // 0.4s return
+                    const ease = (1 - Math.pow(1 - p, 2));
+
+                    gun.rotation.z = (1 - ease) * (Math.PI / 2);
+
+                    const targetZ = props.isSawed ? 8.4 : 10.9;
+                    context.chokeMesh.position.z = targetZ;
+                    context.chokeMesh.rotation.z = 0;
+                }
+            }
+        }
+        // Ensure gun rotation resets if animation interrupted or finished
+        else if (context.gunGroup && context.gunGroup.rotation.z !== 0) {
+            // Smoothly reset if lingering (or snap if time passed)
+            // Ideally snap to 0 to prevent drift
+            context.gunGroup.rotation.z = 0;
+        }
         const now = time;
         const cleanupThreshold = 5.0;
 
@@ -664,6 +836,12 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
         if (scene.userData.adrStart && (now - scene.userData.adrStart) > cleanupThreshold) {
             items.itemAdrenaline.visible = false;
+        }
+        if (scene.userData.remoteStart && (now - scene.userData.remoteStart) > cleanupThreshold) {
+            items.itemRemote.visible = false;
+        }
+        if (scene.userData.bigInverterStart && (now - scene.userData.bigInverterStart) > cleanupThreshold) {
+            items.itemBigInverter.visible = false;
         }
         if (!animState.isSawing && scene.userData.lastSaw === animState.triggerSparks) {
             items.itemSaw.visible = false;
