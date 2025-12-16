@@ -91,8 +91,10 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
         } else if (isIOS) {
             alert("📲 INSTALL ON iOS:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap 'Add to Home Screen'");
         } else {
-            // Android / Generic Fallback (If event didn't fire, e.g. HTTP dev)
-            alert("📲 INSTALLATION:\n\n1. Tap the Browser Menu (⋮)\n2. Select 'Add to Home Screen' or 'Install App'");
+            // For Android/Desktop if event hasn't fired yet, we cannot force it.
+            // User requested "directly lead to install", but we technically can't if browser didn't give us the event.
+            // However, we removed the instructional alert as requested.
+            console.log("Install prompt not available yet");
         }
     };
 
