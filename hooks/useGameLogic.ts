@@ -155,7 +155,7 @@ export const useGameLogic = () => {
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
       dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
-      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -189,7 +189,7 @@ export const useGameLogic = () => {
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
       dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
-      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0
     });
     setCameraView('PLAYER');
     setShowBlood(false);
