@@ -84,17 +84,15 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') {
                 setDeferredPrompt(null);
-                // Only hide if not on mobile (on mobile we want the option to remain or just stay as is, 
-                // but actually standard is to hide. Let's hide.)
                 setIsInstallable(false);
             }
-        } else if (isIOS) {
-            alert("📲 INSTALL ON iOS:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap 'Add to Home Screen'");
         } else {
-            // For Android/Desktop if event hasn't fired yet, we cannot force it.
-            // User requested "directly lead to install", but we technically can't if browser didn't give us the event.
-            // However, we removed the instructional alert as requested.
-            console.log("Install prompt not available yet");
+            // Fallback: Instructions if browser prompt isn't ready/supported
+            if (isIOS) {
+                alert("📲 INSTALL ON iOS:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap 'Add to Home Screen'");
+            } else {
+                alert("📲 INSTALL MANUALLY:\n\n1. Tap the Browser Menu (three dots ⋮ or arrow)\n2. Select 'Add to Home Screen' or 'Install App'");
+            }
         }
     };
 
