@@ -66,8 +66,9 @@ export const useDealerAI = ({
                     // Small human-like delay
                     await wait(800 + Math.random() * 800);
 
+                    if (document.hidden) return; // Pause AI if tab is hidden
                     // Re-check validity after delay
-                    if (gameState.phase !== 'DEALER_TURN' || gameState.winner) return;
+                    if (gameState.phase !== 'DEALER_TURN' || gameState.winner || document.hidden) return;
 
                     const chamber = gameState.chamber;
                     const currentIdx = gameState.currentShellIndex;
@@ -415,5 +416,5 @@ export const useDealerAI = ({
             };
             runAITurn();
         }
-    }, [gameState.phase, aiTick, gameState.turnOwner, isProcessing]);
+    }, [gameState.phase, aiTick, gameState.turnOwner, isProcessing, dealer]);
 };

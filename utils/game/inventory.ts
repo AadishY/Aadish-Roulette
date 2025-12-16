@@ -80,8 +80,8 @@ export const getContractLoot = (): ItemType[] => {
     // High Tier (Weight 5): CHOKE, CIGS, SAW, GLASS
     // Low Tier (Weight 1): BEER, CUFFS, PHONE, INVERTER, ADRENALINE, REMOTE, BIG_INVERTER
 
-    const highTier: ItemType[] = ['CHOKE', 'CIGS', 'SAW', 'GLASS', 'CUFFS', 'ADRENALINE'];
-    const lowTier: ItemType[] = ['BEER', 'PHONE', 'INVERTER', 'BIG_INVERTER'];
+    const highTier: ItemType[] = ['CHOKE', 'CIGS', 'SAW', 'GLASS', 'ADRENALINE'];
+    const lowTier: ItemType[] = ['BEER', 'PHONE', 'INVERTER', 'BIG_INVERTER', 'CUFFS'];
 
     const weightedPool: ItemType[] = [];
 

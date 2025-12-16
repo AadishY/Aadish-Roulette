@@ -23,11 +23,22 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
     const [isInstallable, setIsInstallable] = React.useState(false);
 
+    const [isIOS, setIsIOS] = React.useState(false);
+    const [isMobile, setIsMobile] = React.useState(false);
+
     useEffect(() => {
         // Prevent keyboard popup on mobile (touch devices or small screens)
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const isSmallScreen = window.innerWidth < 1024; // Increased threshold to cover tablets
+
+        // Detect Mobile & iOS
+        const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+        setIsIOS(ios);
+        setIsMobile(isMobileUA);
+
+        // ALWAYS Show Install Button on Mobile (Fallback instructions if event fails)
+        if (isMobileUA || ios) setIsInstallable(true);
 
         // Only autofocus if definitely on desktop
         if (nameInputRef.current && !isTouchDevice && !isMobileUA && !isSmallScreen) {
@@ -68,12 +79,20 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     }, []);
 
     const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setDeferredPrompt(null);
-            setIsInstallable(false);
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+                // Only hide if not on mobile (on mobile we want the option to remain or just stay as is, 
+                // but actually standard is to hide. Let's hide.)
+                setIsInstallable(false);
+            }
+        } else if (isIOS) {
+            alert("📲 INSTALL ON iOS:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap 'Add to Home Screen'");
+        } else {
+            // Android / Generic Fallback (If event didn't fire, e.g. HTTP dev)
+            alert("📲 INSTALLATION:\n\n1. Tap the Browser Menu (⋮)\n2. Select 'Add to Home Screen' or 'Install App'");
         }
     };
 
@@ -185,17 +204,15 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                         </button>
                     </div>
                 </div>
-                <div className="mt-8 text-stone-600 text-[10px] font-mono">
-                    {isInstallable ? (
-                        <button
-                            onClick={handleInstallClick}
-                            className="animate-pulse hover:text-red-500 transition-colors cursor-pointer underline decoration-dotted underline-offset-4"
-                        >
-                            INSTALL APP (ADD TO HOME SCREEN)
-                        </button>
-                    ) : (
-                        <span className="opacity-50">VER 1.0.6</span>
-                    )}
+                <div className="mt-8 text-stone-600 text-[10px] font-mono flex flex-col items-center gap-2">
+                    <span className="opacity-50">VER 1.0.6</span>
+
+                    <button
+                        onClick={handleInstallClick}
+                        className="text-blue-500 font-bold animate-pulse hover:text-blue-400 transition-colors cursor-pointer underline decoration-dotted underline-offset-4 tracking-widest"
+                    >
+                        INSTALL APP
+                    </button>
                 </div>
             </div>
         </div>
