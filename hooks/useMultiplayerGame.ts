@@ -89,6 +89,8 @@ export const useMultiplayerGame = ({
         triggerAdrenaline: 0,
         triggerChoke: 0,
         triggerRemote: 0,
+        triggerBigInverter: 0,
+        triggerContract: 0,
         isSawing: false,
         ejectedShellColor: 'red',
         muzzleFlashIntensity: 0,
