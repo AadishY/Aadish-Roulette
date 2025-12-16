@@ -41,6 +41,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                 {item === 'CHOKE' && <Icons.Choke className="text-stone-300 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'REMOTE' && <Icons.Remote className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'BIG_INVERTER' && <Icons.BigInverter className="text-orange-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
+                                {item === 'CONTRACT' && <Icons.Contract className="text-red-700 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 <span className="text-[6px] md:text-[8px] text-stone-300 font-bold tracking-widest block text-center px-1 truncate w-full">
                                     {{
                                         'BEER': 'BEER',
@@ -53,7 +54,8 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                         'ADRENALINE': 'ADRENALINE',
                                         'CHOKE': 'CHOKE',
                                         'REMOTE': 'REMOTE',
-                                        'BIG_INVERTER': 'BIG INV'
+                                        'BIG_INVERTER': 'BIG INV',
+                                        'CONTRACT': 'CONTRACT'
                                     }[item]}
                                 </span>
 
@@ -78,7 +80,8 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                         'ADRENALINE': 'ADRENALINE',
                                         'CHOKE': 'SHOTGUN CHOKE',
                                         'REMOTE': 'REMOTE CONTROL',
-                                        'BIG_INVERTER': 'BIG INVERTER'
+                                        'BIG_INVERTER': 'BIG INVERTER',
+                                        'CONTRACT': 'BLOOD CONTRACT'
                                     }[item]}
                                 </div>
                                 {ITEM_DESCRIPTIONS[item]}

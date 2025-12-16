@@ -754,6 +754,51 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             items.itemBigInverter.visible = false;
         }
 
+        // BLOOD CONTRACT ANIMATION
+        if (animState.triggerContract < (scene.userData.lastContract || 0)) scene.userData.lastContract = animState.triggerContract;
+        if (animState.triggerContract > (scene.userData.lastContract || 0)) {
+            scene.userData.lastContract = animState.triggerContract;
+            scene.userData.contractStart = time;
+            items.itemContract.visible = true;
+            audioManager.playSound('contract');
+        }
+        const conTime = time - (scene.userData.contractStart || -999);
+        if (conTime < 3.0) {
+            items.itemContract.visible = true;
+            if (isPlayerTurn) {
+                if (conTime < 0.8) {
+                    const p = conTime / 0.8;
+                    const ease = easeOutBack(p);
+                    items.itemContract.position.set(0.5, -3 + ease * 4.0, 5);
+                    items.itemContract.rotation.set(0.1, 0, 0);
+                } else if (conTime < 2.2) {
+                    items.itemContract.position.set(0.5, 1.0 + Math.sin(time) * 0.05, 5);
+                    // Signing effect? Or dissolving?
+                    // Let's make it burn / dissolve
+                    items.itemContract.rotation.y = Math.sin(time);
+                    items.itemContract.scale.setScalar(2.5 - (conTime - 0.8) * 0.5);
+                } else {
+                    items.itemContract.visible = false;
+                }
+            } else {
+                items.itemContract.scale.setScalar(3.5);
+                if (conTime < 0.6) {
+                    const p = conTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemContract.position.set(2 * (1 - ease), -1 + ease * 3.6, -4.0);
+                } else if (conTime < 2.0) {
+                    items.itemContract.position.set(0, 2.6, -4.0);
+                    items.itemContract.rotation.y += 0.05;
+                } else {
+                    const p = (conTime - 2.0) / 0.5;
+                    items.itemContract.position.y = 2.6 - p * 6;
+                    if (conTime > 2.5) items.itemContract.visible = false;
+                }
+            }
+        } else {
+            items.itemContract.visible = false;
+        }
+
         // CHOKE ANIMATION (Attach Sequence)
         if (animState.triggerChoke < (scene.userData.lastChoke || 0)) scene.userData.lastChoke = animState.triggerChoke;
         if (animState.triggerChoke > (scene.userData.lastChoke || 0)) {

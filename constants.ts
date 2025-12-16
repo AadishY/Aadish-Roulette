@@ -3,7 +3,7 @@ import { ItemType, GameSettings } from './types';
 export const MAX_HP = 4;
 export const MAX_ITEMS = 8;
 
-export const ITEMS: ItemType[] = ['GLASS', 'BEER', 'CIGS', 'CUFFS', 'SAW', 'PHONE', 'INVERTER', 'ADRENALINE', 'CHOKE', 'REMOTE', 'BIG_INVERTER'];
+export const ITEMS: ItemType[] = ['GLASS', 'BEER', 'CIGS', 'CUFFS', 'SAW', 'PHONE', 'INVERTER', 'ADRENALINE', 'CHOKE', 'REMOTE', 'BIG_INVERTER', 'CONTRACT'];
 
 export const ITEM_DESCRIPTIONS: Record<ItemType, string> = {
   'GLASS': 'BREAK TO REVEAL CURRENT SHELL',
@@ -16,7 +16,8 @@ export const ITEM_DESCRIPTIONS: Record<ItemType, string> = {
   'ADRENALINE': 'STEAL AND USE OPPONENT ITEM',
   'CHOKE': 'FIRE 2 SHELLS AT ONCE',
   'REMOTE': 'CYCLE CHAMBER (SWAP CURRENT & NEXT)',
-  'BIG_INVERTER': 'INVERT POLARITY OF ALL SHELLS'
+  'BIG_INVERTER': 'INVERT POLARITY OF ALL SHELLS',
+  'CONTRACT': 'SACRIFICE 1HP FOR 2 ITEMS'
 };
 
 export const DEFAULT_SETTINGS: GameSettings = {

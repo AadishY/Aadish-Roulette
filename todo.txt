@@ -1,4 +1,0 @@
-The Magnet- Reorder the shells in chamber
-Shotgun Choke- High risk. If both are live, it deals double damage (or 4 damage with the Saw). If one is blank and one is live, it deals normal damage. If both are blank, nothing happens.
-remote- uno reverse 
-unknown- item which would work as inverter that changes polarity but not of current shell instead it would change entire gun like if there 2 blank 1 live then it becomes 1 blank 2 live

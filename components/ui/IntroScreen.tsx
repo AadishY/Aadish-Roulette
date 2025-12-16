@@ -19,6 +19,10 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
     const [scale, setScale] = React.useState(1);
     const [showHardModeWarning, setShowHardModeWarning] = React.useState(false);
 
+    // PWA Install State
+    const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
+    const [isInstallable, setIsInstallable] = React.useState(false);
+
     useEffect(() => {
         // Prevent keyboard popup on mobile (touch devices or small screens)
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -49,8 +53,29 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
         window.addEventListener('resize', handleResize);
         handleResize();
 
-        return () => window.removeEventListener('resize', handleResize);
+        // PWA Install Handler
+        const pwaHandler = (e: any) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setIsInstallable(true);
+        };
+        window.addEventListener('beforeinstallprompt', pwaHandler);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('beforeinstallprompt', pwaHandler);
+        };
     }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+            setIsInstallable(false);
+        }
+    };
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden pointer-events-auto bg-black/60 backdrop-blur-sm">
@@ -160,7 +185,18 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                         </button>
                     </div>
                 </div>
-                <div className="mt-8 text-stone-600 text-[10px] font-mono animate-pulse">VER 1.0.6 // ADD TO HOME SCREEN</div>
+                <div className="mt-8 text-stone-600 text-[10px] font-mono">
+                    {isInstallable ? (
+                        <button
+                            onClick={handleInstallClick}
+                            className="animate-pulse hover:text-red-500 transition-colors cursor-pointer underline decoration-dotted underline-offset-4"
+                        >
+                            INSTALL APP (ADD TO HOME SCREEN)
+                        </button>
+                    ) : (
+                        <span className="opacity-50">VER 1.0.6</span>
+                    )}
+                </div>
             </div>
         </div>
     );

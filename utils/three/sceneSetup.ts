@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { SceneContext } from '../../types';
-import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline, createRemote, createBigInverter } from '../threeHelpers';
+import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline, createRemote, createBigInverter, createContract } from '../threeHelpers';
+
+
 
 export const cleanScene = (scene: THREE.Scene) => {
     scene.traverse((object) => {
@@ -118,12 +120,14 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const itemAdrenaline = createAdrenaline(); itemAdrenaline.visible = false; scene.add(itemAdrenaline);
     const itemRemote = createRemote(); itemRemote.visible = false; scene.add(itemRemote);
     const itemBigInverter = createBigInverter(); itemBigInverter.visible = false; scene.add(itemBigInverter);
+    const itemContract = createContract(); itemContract.visible = false; scene.add(itemContract);
 
     const itemLight = new THREE.PointLight(0xffffee, 0, 25);
     itemLight.position.set(0, 5, -12);
     scene.add(itemLight);
 
-    const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemLight };
+    const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemContract, itemLight };
+
 
     // Multiplayer Logic
     let dealerGroup = new THREE.Group();

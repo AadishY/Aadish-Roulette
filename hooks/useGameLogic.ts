@@ -72,6 +72,7 @@ export const useGameLogic = () => {
     triggerChoke: 0,
     triggerRemote: 0,
     triggerBigInverter: 0,
+    triggerContract: 0,
     isSawing: false,
     ejectedShellColor: 'red',
     muzzleFlashIntensity: 0,
@@ -576,6 +577,14 @@ export const useGameLogic = () => {
           (v) => setAnim(p => ({ ...p, triggerRemote: typeof v === 'function' ? v(p.triggerRemote) : v })),
           addLog,
           setOverlayText
+        );
+        break;
+
+      case 'CONTRACT':
+        await ItemActions.handleContract(
+          user, setPlayer, setDealer,
+          (v) => setAnim(p => ({ ...p, triggerContract: typeof v === 'function' ? v(p.triggerContract) : v })),
+          addLog, setOverlayText, setOverlayColor
         );
         break;
     }

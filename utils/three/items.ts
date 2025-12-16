@@ -331,3 +331,47 @@ export const createBigInverter = (): THREE.Group => {
     group.name = 'ITEM_BIG_INVERTER';
     return group;
 };
+
+export const createContract = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Clipboard
+    const boardGeo = new THREE.BoxGeometry(0.7, 0.05, 0.9);
+    const boardMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 }); // Dark wood
+    const board = new THREE.Mesh(boardGeo, boardMat);
+    group.add(board);
+
+    // Paper
+    const paperGeo = new THREE.PlaneGeometry(0.6, 0.8);
+    const paperMat = new THREE.MeshBasicMaterial({ color: 0xffffee, side: THREE.DoubleSide });
+    const paper = new THREE.Mesh(paperGeo, paperMat);
+    paper.rotation.x = -Math.PI / 2;
+    paper.position.y = 0.03;
+    group.add(paper);
+
+    // Clip
+    const clipGeo = new THREE.BoxGeometry(0.4, 0.05, 0.1);
+    const clipMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
+    const clip = new THREE.Mesh(clipGeo, clipMat);
+    clip.position.set(0, 0.05, -0.35);
+    group.add(clip);
+
+    // Blood Stains (Simple red planes)
+    const stain1 = new THREE.Mesh(new THREE.CircleGeometry(0.1, 8), new THREE.MeshBasicMaterial({ color: 0x880000 }));
+    stain1.rotation.x = -Math.PI / 2;
+    stain1.position.set(0.1, 0.04, 0.2);
+    group.add(stain1);
+
+    const stain2 = new THREE.Mesh(new THREE.CircleGeometry(0.05, 8), new THREE.MeshBasicMaterial({ color: 0xaa0000 }));
+    stain2.rotation.x = -Math.PI / 2;
+    stain2.position.set(-0.15, 0.04, 0);
+    group.add(stain2);
+
+    group.name = 'ITEM_CONTRACT';
+
+    // ADJUSTMENTS
+    group.scale.setScalar(2.5); // 2.5 times larger
+    group.rotation.x = Math.PI / 8; // Slight tilt towards camera
+
+    return group;
+};

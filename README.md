@@ -32,6 +32,7 @@
 | 🤖 **Smarter AI** | Dealer tracks shells, uses aggressive combos, and takes calculated risks |
 | 🌐 **Multiplayer** | Play against real opponents online |
 | 📱 **Mobile Optimized** | 30 FPS cap, reduced effects, touch-friendly UI for Android/iOS |
+| 📲 **PWA Supported** | Installable on Mobile/Desktop for native-like experience |
 | 🎬 **Smooth Animations** | Sequential item animations with proper timing and feedback |
 
 ---
@@ -50,6 +51,10 @@ Use items strategically to gain an advantage:
 | 📞 **Burner Phone** | Reveals a random future shell position (95% accuracy) |
 | 🔄 **Inverter** | Swaps current shell polarity (LIVE ↔ BLANK) |
 | 💉 **Adrenaline** | Steals an item from opponent and uses it immediately |
+| 📡 **Remote** | Reverses turn order (Multiplayer Only) |
+| ⚡ **Big Inverter** | Inverts the polarity of ALL remaining shells |
+| 🥋 **Choke** | Chokes the shotgun to fire 2 rounds at once |
+| 🩸 **Blood Contract** | Sacrifice 1 HP for 2 High-Tier Items (Player Exclusive) |
 
 ---
 

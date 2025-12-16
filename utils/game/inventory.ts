@@ -7,41 +7,53 @@ type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 
 // From useGameLogic
 // Adjusted for Hard Mode support
-const getRandomItem = (isHardMode: boolean = false): ItemType => {
+const getRandomItem = (isHardMode: boolean = false, isDealer: boolean = false): ItemType => {
+    // PLAYER SPECIFIC CONTRACT LOGIC
+    // Normal: 10%, Hard: 7%
+    if (!isDealer) {
+        if (isHardMode && Math.random() < 0.07) return 'CONTRACT';
+        if (!isHardMode && Math.random() < 0.10) return 'CONTRACT';
+    }
+
+    // Standard Items (Re-normalized probabilities excluding Contract)
+    const r = Math.random() * 100;
+
     if (isHardMode) {
-        // Hard Mode (Total: 108)
-        const r = Math.random() * 108;
-        if (r < 20) return 'BEER';
-        if (r < 26) return 'CIGS';
-        if (r < 38) return 'GLASS';
-        if (r < 50) return 'CUFFS';
-        if (r < 68) return 'PHONE';
-        if (r < 80) return 'SAW';
-        if (r < 90) return 'INVERTER';
-        if (r < 100) return 'ADRENALINE';
-        if (r < 104) return 'CHOKE';
-        return 'BIG_INVERTER';
+        // Hard Mode Distribution
+        if (r < 18) return 'BEER';
+        if (r < 23) return 'CIGS';
+        if (r < 33) return 'GLASS';
+        if (r < 43) return 'CUFFS';
+        if (r < 59) return 'PHONE';
+        if (r < 69) return 'SAW';
+        if (r < 78) return 'INVERTER';
+        if (r < 87) return 'ADRENALINE';
+        if (r < 91) return 'CHOKE';
+        if (r < 95) return 'BIG_INVERTER';
+        return 'ADRENALINE'; // Fallback
     } else {
-        // Normal Mode (Total: 145)
-        const r = Math.random() * 145;
-        if (r < 20) return 'BEER';
-        if (r < 38) return 'CIGS';
-        if (r < 52) return 'GLASS';
-        if (r < 67) return 'CUFFS';
-        if (r < 85) return 'PHONE';
-        if (r < 97) return 'SAW';
-        if (r < 111) return 'INVERTER';
-        if (r < 125) return 'ADRENALINE';
-        if (r < 135) return 'CHOKE';
+        // Normal Mode Distribution
+        if (r < 15) return 'BEER';
+        if (r < 28) return 'CIGS';
+        if (r < 38) return 'GLASS';
+        if (r < 48) return 'CUFFS';
+        if (r < 60) return 'PHONE';
+        if (r < 70) return 'SAW';
+        if (r < 80) return 'INVERTER';
+        if (r < 88) return 'ADRENALINE';
+        if (r < 94) return 'CHOKE';
         return 'BIG_INVERTER';
     }
 };
+
+// ... (getDealerCheatingItem kept same)
 
 const getDealerCheatingItem = (hp: number): ItemType => {
     const r = Math.random();
 
     // LOW HEALTH PANIC MODE (<= 2 HP)
     // He wants to SURVIVE.
+    // Contract is suicide here, avoid it.
     if (hp <= 2) {
         if (r < 0.40) return 'CIGS';        // 40% Heal
         if (r < 0.60) return 'BEER';        // 20% Skip current shell
@@ -59,8 +71,35 @@ const getDealerCheatingItem = (hp: number): ItemType => {
     if (r < 0.75) return 'CUFFS';       // 10% control
     if (r < 0.85) return 'INVERTER';    // 10% manipulation
     if (r < 0.90) return 'BIG_INVERTER';// 5% chaos
-    if (r < 0.95) return 'PHONE';       // 5% intel
-    return 'ADRENALINE';                // 5% steal
+    // CONTRACT REMOVED FOR DEALER
+    return 'ADRENALINE';                // 10% steal
+};
+
+export const getContractLoot = (): ItemType[] => {
+    // Weighted Pool based on Request: High Tier (50%) vs Others (10%)
+    // High Tier (Weight 5): CHOKE, CIGS, SAW, GLASS
+    // Low Tier (Weight 1): BEER, CUFFS, PHONE, INVERTER, ADRENALINE, REMOTE, BIG_INVERTER
+
+    const highTier: ItemType[] = ['CHOKE', 'CIGS', 'SAW', 'GLASS', 'CUFFS', 'ADRENALINE'];
+    const lowTier: ItemType[] = ['BEER', 'PHONE', 'INVERTER', 'BIG_INVERTER'];
+
+    const weightedPool: ItemType[] = [];
+
+    // Add High Tier (5x weight)
+    highTier.forEach(item => {
+        for (let i = 0; i < 5; i++) weightedPool.push(item);
+    });
+
+    // Add Low Tier (1x weight)
+    lowTier.forEach(item => {
+        weightedPool.push(item);
+    });
+
+    // Pick 2 random items from weighted pool
+    const item1 = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+    const item2 = weightedPool[Math.floor(Math.random() * weightedPool.length)];
+
+    return [item1, item2];
 };
 
 export const distributeItems = async (
@@ -115,7 +154,7 @@ export const distributeItems = async (
                     candidate = getDealerCheatingItem(dealerHp);
                 } else {
                     // Standard Logic
-                    candidate = getRandomItem(gameState.isHardMode);
+                    candidate = getRandomItem(gameState.isHardMode, forDealer);
                 }
 
                 const currentCount = counts[candidate] || 0;
@@ -129,7 +168,7 @@ export const distributeItems = async (
             // Fallback if random keeps giving same item
             if (!item) {
                 if (forDealer && gameState.isHardMode) item = getDealerCheatingItem(dealerHp);
-                else item = getRandomItem(gameState.isHardMode);
+                else item = getRandomItem(gameState.isHardMode, forDealer);
             }
 
             batch.push(item);

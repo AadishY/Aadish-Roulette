@@ -37,6 +37,7 @@ class AudioManager {
             saw: '/sound/AnimationSounds/saw.mp3',
             choke: '/sound/AnimationSounds/Choke.mp3',
             remote: '/sound/AnimationSounds/remote.mp3',
+            contract: '/sound/AnimationSounds/BloodContract.mp3',
         };
         const musicFiles = {
             menu: '/sound/menu.mp3',

@@ -1,5 +1,5 @@
 
-export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER';
+export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER' | 'CONTRACT';
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
 export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI'; // Added STEAL_UI for Adrenaline
@@ -53,6 +53,7 @@ export interface AnimationState {
   triggerChoke: number; // Choke
   triggerRemote: number; // Remote
   triggerBigInverter: number; // Big Inverter
+  triggerContract: number; // Blood Contract
   isSawing: boolean; // Continuous saw state
   ejectedShellColor: 'red' | 'blue' | 'red+red' | 'red+blue' | 'blue+red' | 'blue+blue';
   muzzleFlashIntensity: number;
@@ -113,6 +114,7 @@ export interface SceneContext {
     itemAdrenaline: THREE.Group;
     itemRemote: THREE.Group;
     itemBigInverter: THREE.Group;
+    itemContract: THREE.Group;
     itemLight: THREE.PointLight; // Light for illuminating items during animations
   };
 }

@@ -2,9 +2,68 @@ import React from 'react';
 import { GameState, PlayerState, TurnOwner, ShellType, ItemType, LogEntry, AnimationState } from '../../types';
 import { wait } from '../gameUtils';
 import { audioManager } from '../audioManager';
+import { getContractLoot } from './inventory';
+import { MAX_ITEMS } from '../../constants';
 
 // Helper to update state safely
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
+export const handleContract = async (
+    user: TurnOwner,
+    setPlayer: StateSetter<PlayerState>,
+    setDealer: StateSetter<PlayerState>,
+    setTriggerContract: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    setOverlayText?: StateSetter<string | null>,
+    setOverlayColor?: StateSetter<'none' | 'red' | 'green' | 'scan'>
+) => {
+    setTriggerContract(p => p + 1);
+    await wait(2500); // Wait for contract sign/burn animation
+
+    if (setOverlayColor) setOverlayColor('red'); // Blood effect
+
+    // 1. Pay Handling Cost (1 HP)
+    if (user === 'PLAYER') {
+        setPlayer(p => {
+            // Ensure we don't kill if at 1HP? Logic says sacrifice 1HP.
+            return { ...p, hp: Math.max(0, p.hp - 1) };
+        });
+    } else {
+        setDealer(d => ({ ...d, hp: Math.max(0, d.hp - 1) }));
+    }
+
+    await wait(800); // Wait for pain
+
+    if (setOverlayColor) setOverlayColor('none');
+
+    // 2. Grant Loot
+    const newItems = getContractLoot();
+    const itemNames = newItems.join(' & ');
+
+    if (user === 'PLAYER') {
+        setPlayer(p => {
+            const current = p.items;
+            const combined = [...current, ...newItems].slice(0, MAX_ITEMS);
+            return { ...p, items: combined };
+        });
+        if (setOverlayText) {
+            setOverlayText('🩸 BLOOD ACCEPTED 🩸');
+            setTimeout(() => {
+                if (setOverlayText) {
+                    setOverlayText('OFFERING RECEIVED...');
+                    setTimeout(() => setOverlayText?.(null), 2000);
+                }
+            }, 2500);
+        }
+    } else {
+        setDealer(d => {
+            const combined = [...d.items, ...newItems].slice(0, MAX_ITEMS);
+            return { ...d, items: combined };
+        });
+    }
+
+    addLog(`${user} SACRIFICED HP FOR: ${itemNames}`, 'danger');
+    await wait(1000);
+};
 
 export const handleBeer = async (
     gameState: GameState,

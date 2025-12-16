@@ -263,6 +263,14 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             color="text-red-600"
                             effect="→ REVERSE TURN ORDER"
                         />
+
+                        <ItemCard
+                            icon={<Icons.Contract size={20} />}
+                            name="BLOOD CONTRACT"
+                            description="Sacrifice 1 HP to obtain 2 random items from a unique high-tier pool. If used at 1 HP, you DIE. (Player Only)."
+                            color="text-red-700"
+                            effect="→ SACRIFICE HP FOR LOOT"
+                        />
                     </div>
                 </div>
             )

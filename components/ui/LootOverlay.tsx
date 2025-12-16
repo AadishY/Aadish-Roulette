@@ -17,7 +17,8 @@ const ITEM_NAMES: Record<ItemType, string> = {
     'ADRENALINE': 'ADRENALINE',
     'CHOKE': 'CHOKE MOD',
     'REMOTE': 'REMOTE',
-    'BIG_INVERTER': 'BIG INVERTER'
+    'BIG_INVERTER': 'BIG INVERTER',
+    'CONTRACT': 'BLOOD CONTRACT'
 };
 
 const ITEM_COLORS: Record<ItemType, string> = {
@@ -31,7 +32,8 @@ const ITEM_COLORS: Record<ItemType, string> = {
     'ADRENALINE': 'text-pink-500 border-pink-500/50 bg-pink-950/30',
     'CHOKE': 'text-yellow-700 border-yellow-700/50 bg-yellow-950/30',
     'REMOTE': 'text-red-600 border-red-600/50 bg-red-950/30',
-    'BIG_INVERTER': 'text-orange-500 border-orange-500/50 bg-orange-950/30'
+    'BIG_INVERTER': 'text-orange-500 border-orange-500/50 bg-orange-950/30',
+    'CONTRACT': 'text-red-700 border-red-700/50 bg-red-950/30'
 };
 
 export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
@@ -100,6 +102,7 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                                         {item === 'CHOKE' && <Icons.Choke size={40} className="md:w-16 md:h-16" />}
                                         {item === 'REMOTE' && <Icons.Remote size={40} className="md:w-16 md:h-16" />}
                                         {item === 'BIG_INVERTER' && <Icons.BigInverter size={40} className="md:w-16 md:h-16" />}
+                                        {item === 'CONTRACT' && <Icons.Contract size={40} className="md:w-16 md:h-16" />}
                                     </div>
 
                                     {/* Corner Accents */}
