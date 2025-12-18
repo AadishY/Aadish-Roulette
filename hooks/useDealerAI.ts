@@ -17,6 +17,7 @@ interface DealerAIProps {
     setOverlayText?: React.Dispatch<React.SetStateAction<string | null>>;
     isMultiplayer?: boolean;
     isProcessing: boolean;
+    setIsProcessing: (val: boolean) => void;
 }
 
 export const useDealerAI = ({
@@ -33,7 +34,8 @@ export const useDealerAI = ({
     setCameraView,
     setOverlayText,
     isMultiplayer = false,
-    isProcessing
+    isProcessing,
+    setIsProcessing
 }: DealerAIProps) => {
     const isAITurnInProgress = useRef(false);
     // AI Memory: Map<shellIndex, type> - Tracks specifically known shells
@@ -59,6 +61,7 @@ export const useDealerAI = ({
 
         if (gameState.phase === 'DEALER_TURN' && !isAITurnInProgress.current) {
             isAITurnInProgress.current = true;
+            setIsProcessing(true); // Lock input while dealer thinks
             setCameraView('PLAYER');
 
             const runAITurn = async () => {
@@ -68,7 +71,11 @@ export const useDealerAI = ({
 
                     if (document.hidden) return; // Pause AI if tab is hidden
                     // Re-check validity after delay
-                    if (gameState.phase !== 'DEALER_TURN' || gameState.winner || document.hidden) return;
+                    if (gameState.phase !== 'DEALER_TURN' || gameState.winner || document.hidden) {
+                        setIsProcessing(false);
+                        isAITurnInProgress.current = false;
+                        return;
+                    }
 
                     const chamber = gameState.chamber;
                     const currentIdx = gameState.currentShellIndex;
@@ -113,77 +120,73 @@ export const useDealerAI = ({
                     // --- HARD MODE LOGIC (GOD TIER) ---
                     if (gameState.isHardMode) {
                         // 0. SUPERNATURAL INTUITION (The Dealer can smell the gunpowder)
-                        // 40% chance to just KNOW update memory
-                        if (!currentKnown && Math.random() < 0.40) {
+                        // 50% chance to just KNOW update memory (Increased from 40%)
+                        if (!currentKnown && Math.random() < 0.50) {
                             const actual = chamber[currentIdx];
                             aiMemory.current.set(currentIdx, actual);
                             currentKnown = actual;
                         }
 
-                        // 1. KILL CONFIRMATION (Priority 1)
-                        if (currentKnown === 'LIVE') {
+                        // 1. SURVIVAL HEAL (Highest Priority)
+                        if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS')) {
+                            const shouldHeal = dealer.hp <= 2 || (dealer.hp < dealer.maxHp && Math.random() < 0.7);
+                            if (shouldHeal) itemToUse = 'CIGS';
+                        }
+
+                        // 2. KILL CONFIRMATION (Priority 2)
+                        if (currentKnown === 'LIVE' && !itemToUse) {
                             if (dealer.items.includes('SAW') && !dealer.isSawedActive) itemToUse = 'SAW';
                             else if (dealer.items.includes('CUFFS') && !player.isHandcuffed && totalRemaining > 1) itemToUse = 'CUFFS';
                         }
 
-                        // 2. CONVERSION (Priority 2) - "No U" Strat
-                        else if (currentKnown === 'BLANK' && dealer.items.includes('INVERTER')) {
+                        // 3. CONVERSION (Priority 3) - "No U" Strat
+                        else if (currentKnown === 'BLANK' && dealer.items.includes('INVERTER') && !itemToUse) {
                             itemToUse = 'INVERTER';
                         }
-                        // 2.5 BIG INVERTER - If we have mostly blanks left, or current is blank and we have many shells
+                        // 3.5 BIG INVERTER - If we have mostly blanks left
                         else if (dealer.items.includes('BIG_INVERTER') && !itemToUse) {
                             const remaining = remainingShells.length;
-                            const knownBlanks = remainingShells.filter(s => s === 'BLANK').length; // Cheating peeking strictly for AI logic
-                            // If more than 50% blanks, invert to get more lives
-                            if (knownBlanks / remaining > 0.5) itemToUse = 'BIG_INVERTER';
-                            // Or if current is blank and we have lot of shells, worth flipping
-                            else if (currentKnown === 'BLANK' && remaining >= 3) itemToUse = 'BIG_INVERTER';
+                            const knownBlanks = remainingShells.filter(s => s === 'BLANK').length;
+                            if (knownBlanks / remaining > 0.6 || (currentKnown === 'BLANK' && remaining >= 3)) {
+                                itemToUse = 'BIG_INVERTER';
+                            }
                         }
 
-                        // 3. INFORMATION (Priority 3)
+                        // 4. INFORMATION (Priority 4)
                         else if (!currentKnown && dealer.items.includes('GLASS') && !itemToUse) itemToUse = 'GLASS';
                         else if (dealer.items.includes('PHONE') && totalRemaining > 1 && !itemToUse) itemToUse = 'PHONE';
 
-                        // 4. THEFT & DEFENSE (Priority 4)
-                        else if (dealer.hp < dealer.maxHp && dealer.hp <= 2 && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
+                        // 5. THEFT & DEFENSE (Priority 5)
                         // Adrenaline: Steal critical items
                         else if (dealer.items.includes('ADRENALINE') && player.items.length > 0 && !itemToUse) {
-                            const targets = ['INVERTER', 'SAW', 'CIGS', 'GLASS'];
-                            // Only use adrenaline if player ACTUALLY has something good
+                            const targets = ['INVERTER', 'SAW', 'CIGS', 'CHOKE', 'CUFFS'];
                             if (player.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
                         }
 
-                        // NEW 5. CHOKE LOGIC (GOD TIER)
+                        // 6. CHOKE LOGIC (GOD TIER)
                         else if (dealer.items.includes('CHOKE') && !dealer.isChokeActive && !itemToUse && totalRemaining >= 2) {
-                            // Perfect Kill: If we know next 2 are LIVE (or intuition)
-                            // Hard mode logic peeks if currentKnown is consistent
                             const nextKnown = aiMemory.current.get(currentIdx + 1);
                             const actualNext = chamber[currentIdx + 1];
 
-                            // Intuition: 40% chance to know next shell too
-                            let knowsNext = !!nextKnown;
-                            if (!knowsNext && Math.random() < 0.40) {
+                            // Intuition: 50% chance to know next shell too
+                            let shell2 = nextKnown;
+                            if (!shell2 && Math.random() < 0.50) {
+                                shell2 = actualNext;
                                 aiMemory.current.set(currentIdx + 1, actualNext);
-                                knowsNext = true;
                             }
 
-                            const shell1 = currentKnown || (Math.random() < 0.4 ? chamber[currentIdx] : null); // Sim intuition
-                            const shell2 = nextKnown || (Math.random() < 0.4 ? actualNext : null);
+                            const shell1 = currentKnown;
 
-                            // Optimize: 2 LIVES = KILL
+                            // Optimize Choke Usage
                             if (shell1 === 'LIVE' && shell2 === 'LIVE') itemToUse = 'CHOKE';
-                            // Safely clear 2 BLANKS
                             else if (shell1 === 'BLANK' && shell2 === 'BLANK') itemToUse = 'CHOKE';
-                            // Mixed: Guaranteed Damage if 1 is Live + Choke -> Shoot Player
-                            else if ((shell1 === 'LIVE' || shell2 === 'LIVE') && itemToUse === null) {
-                                // High aggression if HP is full
-                                if (dealer.hp > 2) itemToUse = 'CHOKE';
-                            }
+                            else if ((shell1 === 'LIVE' || shell2 === 'LIVE') && dealer.hp > 1) itemToUse = 'CHOKE';
                         }
 
-                        // 5. GAMBLE / CYCLE (Priority 5)
-                        else if (dealer.items.includes('BEER') && !itemToUse && (dealer.hp === 1 || unknownLiveProb < 0.45)) itemToUse = 'BEER';
-                        else if (dealer.hp < dealer.maxHp && dealer.items.includes('CIGS')) itemToUse = 'CIGS';
+                        // 7. BEER / CYCLE
+                        else if (dealer.items.includes('BEER') && !itemToUse) {
+                            if (currentKnown === 'BLANK' || unknownLiveProb < 0.4) itemToUse = 'BEER';
+                        }
                     }
                     else {
                         // --- NORMAL LOGIC ---
@@ -385,11 +388,14 @@ export const useDealerAI = ({
                             if (gameState.isHardMode) {
                                 // Smart Logic:
                                 // 1. If HP is 1, NEVER risk shooting self unless we are 100% sure it's blank (Prob=0).
-                                // 2. Otherwise use 50% threshold for optimal turn retention.
-                                if (dealer.hp === 1 && finalLiveProb > 0) {
+                                // 2. If we know next is blank (peeked), shoot self to keep turn.
+                                // 3. Otherwise use threshold.
+                                if (dealer.hp === 1) {
                                     target = 'PLAYER';
                                 } else {
-                                    target = finalLiveProb >= 0.5 ? 'PLAYER' : 'DEALER';
+                                    // In Hard Mode, be more likely to shoot self if blank count is high
+                                    const threshold = 0.5 - (visibleBlank * 0.05); // More lenient if many blanks
+                                    target = finalLiveProb >= Math.max(0.3, threshold) ? 'PLAYER' : 'DEALER';
                                 }
                             } else {
                                 // Normal Mode: Aggressive/Loose
@@ -412,6 +418,7 @@ export const useDealerAI = ({
                     console.error("Dealer AI Error:", e);
                 } finally {
                     isAITurnInProgress.current = false;
+                    setIsProcessing(false); // Always unlock after turn logic finishes
                 }
             };
             runAITurn();

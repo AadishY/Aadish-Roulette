@@ -7,130 +7,125 @@ export const setupLighting = (scene: THREE.Scene) => {
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 900;
 
-    // Slight fog for depth, lighter density as requested
-    scene.fog = new THREE.FogExp2(0x121212, 0.015); // Reduced density
+    // Slight fog for depth - bit thicker for atmosphere
+    scene.fog = new THREE.FogExp2(0x0a0a0a, 0.025);
 
-    // Strong ambient but slightly reduced to allow hemisphere light to work better
-    // On mobile, we previously used 0.5 flux, now we use 0.3 + Hemisphere for better quality
-    const ambient = new THREE.AmbientLight(0x444040, 0.3);
+    // Reduced ambient for high contrast
+    const ambient = new THREE.AmbientLight(0x221111, 0.15);
     scene.add(ambient);
 
     // ═══════════════════════════════════════════════════════════════
-    // MAIN SPOTLIGHT - Essential
+    // MAIN SPOTLIGHT - Essential (More Intense)
     // ═══════════════════════════════════════════════════════════════
-    const mainSpotlight = new THREE.SpotLight(0xffddaa, 4200);
+    const mainSpotlight = new THREE.SpotLight(0xffddaa, 5500);
     mainSpotlight.position.set(0, 18, -2);
     mainSpotlight.target.position.set(0, -1, 0);
-    mainSpotlight.angle = 0.35;
-    mainSpotlight.penumbra = 0.6;
-    mainSpotlight.decay = 2;
-    mainSpotlight.distance = 50;
+    mainSpotlight.angle = 0.38;
+    mainSpotlight.penumbra = 0.8;
+    mainSpotlight.decay = 2.5;
+    mainSpotlight.distance = 60;
     mainSpotlight.castShadow = true;
 
     // Shadow Optimization
-    mainSpotlight.shadow.mapSize.width = isMobile ? 1024 : 2048;
-    mainSpotlight.shadow.mapSize.height = isMobile ? 1024 : 2048;
-    mainSpotlight.shadow.bias = -0.0005; // FIX: Increased bias to remove artifact lines
-    mainSpotlight.shadow.radius = isMobile ? 1 : 3;
+    mainSpotlight.shadow.mapSize.width = isMobile ? 512 : 2048;
+    mainSpotlight.shadow.mapSize.height = isMobile ? 512 : 2048;
+    mainSpotlight.shadow.bias = -0.0004;
+    mainSpotlight.shadow.radius = isMobile ? 1 : 2.5;
 
     scene.add(mainSpotlight);
     scene.add(mainSpotlight.target);
 
-    // Gun Spot - Essential
-    const gunSpot = new THREE.SpotLight(0xffeedd, 800);
+    // Gun Spot - Essential (Brighter)
+    const gunSpot = new THREE.SpotLight(0xffeedd, 1200);
     gunSpot.position.set(0, 15, 2);
     gunSpot.target.position.set(0, 0, 2);
     gunSpot.angle = 0.45;
-    gunSpot.penumbra = 0.5;
+    gunSpot.penumbra = 0.6;
     gunSpot.castShadow = !isMobile;
-    if (!isMobile) gunSpot.shadow.bias = -0.00005;
     scene.add(gunSpot);
     scene.add(gunSpot.target);
 
-    // Bulb - Essential
-    const bulbLight = new THREE.PointLight(0xffaa44, 35.0, 45);
+    // Bulb - High Intensity Point
+    const bulbLight = new THREE.PointLight(0xffaa44, 45.0, 50);
     bulbLight.position.set(0, 8, 0);
     bulbLight.castShadow = !isMobile;
     if (!isMobile) {
         bulbLight.shadow.bias = -0.0001;
-        bulbLight.shadow.mapSize.width = 1024;
-        bulbLight.shadow.mapSize.height = 1024;
-        bulbLight.shadow.radius = 4;
+        bulbLight.shadow.radius = 6;
     }
     scene.add(bulbLight);
 
-    // Dealer Rim - Essential for look
-    const dealerRim = new THREE.SpotLight(0xffaa66, 30);
-    dealerRim.position.set(0, 12, -30);
+    // Dealer Rim - Essential for look (Stronger)
+    const dealerRim = new THREE.SpotLight(0xff7700, 60);
+    dealerRim.position.set(0, 14, -35);
     dealerRim.target.position.set(0, 4, -14);
-    dealerRim.angle = 0.5;
-    dealerRim.penumbra = 0.9;
+    dealerRim.angle = 0.6;
+    dealerRim.penumbra = 1.0;
     scene.add(dealerRim);
     scene.add(dealerRim.target);
 
     // Dynamic Game Lights - Essential
-    const muzzleLight = new THREE.PointLight(0xffaa00, 0, 25);
+    const muzzleLight = new THREE.PointLight(0xffaa00, 0, 30);
     scene.add(muzzleLight);
 
-    const roomRedLight = new THREE.PointLight(0xff0000, 0, 100);
+    const roomRedLight = new THREE.PointLight(0xff0000, 0, 120);
     roomRedLight.position.set(0, 10, 0);
     scene.add(roomRedLight);
 
-    const underLight = new THREE.PointLight(0xff1111, 4.0, 15);
+    const underLight = new THREE.PointLight(0xff1111, 6.0, 20);
     underLight.position.set(0, -2, -10);
     scene.add(underLight);
 
-    const tableGlow = new THREE.PointLight(0x445533, 2.0, 12);
+    const tableGlow = new THREE.PointLight(0x445533, 4.0, 15);
     tableGlow.position.set(0, 0, 0);
     scene.add(tableGlow);
 
-    // --- OPTIONAL LIGHTS (Aesthetics - Now enabled on Mobile but optimized) ---
-    // Rims
-    const bgRim = new THREE.SpotLight(0xff4422, 60);
-    bgRim.position.set(18, 8, -22);
+    // --- OPTIONAL LIGHTS ---
+    // Rims (More colorful)
+    const bgRim = new THREE.SpotLight(0xff2200, 80);
+    bgRim.position.set(20, 10, -25);
     bgRim.target.position.set(0, 2, -10);
-    bgRim.angle = 0.8;
-    bgRim.penumbra = 0.7;
-    bgRim.castShadow = false; // Never cast shadow on secondary lights
+    bgRim.angle = 1.0;
+    bgRim.penumbra = 0.8;
     scene.add(bgRim);
     scene.add(bgRim.target);
 
-    const coldRim = new THREE.SpotLight(0x223355, 10);
-    coldRim.position.set(-18, 8, -22);
+    const coldRim = new THREE.SpotLight(0x0044ff, 25);
+    coldRim.position.set(-20, 10, -25);
     coldRim.target.position.set(0, 2, -10);
-    coldRim.angle = 0.8;
-    coldRim.penumbra = 0.7;
+    coldRim.angle = 1.0;
+    coldRim.penumbra = 0.8;
     scene.add(coldRim);
     scene.add(coldRim.target);
 
     // Fills
-    const playerFill = new THREE.DirectionalLight(0x1a2233, 0.15);
-    playerFill.position.set(-5, 3, 12);
+    const playerFill = new THREE.DirectionalLight(0x1a2233, 0.25);
+    playerFill.position.set(-5, 4, 15);
     scene.add(playerFill);
 
-    const sideFill = new THREE.PointLight(0x332222, 3, 30);
-    sideFill.position.set(15, 2, 5);
+    const sideFill = new THREE.PointLight(0x332222, 5, 40);
+    sideFill.position.set(18, 2, 8);
     scene.add(sideFill);
 
-    const rimLight = new THREE.SpotLight(0x331111, 6);
-    rimLight.position.set(0, 10, -25);
+    const rimLight = new THREE.SpotLight(0x442222, 10);
+    rimLight.position.set(0, 12, -30);
     rimLight.lookAt(0, 5, -14);
     scene.add(rimLight);
 
-    // Environment Background Lights (Essential for atmosphere)
-    const hemiLight = new THREE.HemisphereLight(0x443333, 0x221111, 0.4);
+    // Environment Background Lights
+    const hemiLight = new THREE.HemisphereLight(0x332222, 0x0a0a0a, 0.25);
     scene.add(hemiLight);
 
-    const deepBgLight = new THREE.PointLight(0x445566, 40, 100);
-    deepBgLight.position.set(0, 12, -15);
+    const deepBgLight = new THREE.PointLight(0x334455, 60, 120);
+    deepBgLight.position.set(0, 12, -20);
     scene.add(deepBgLight);
 
-    const leftPropLight = new THREE.PointLight(0xaa8877, 8.0, 25);
-    leftPropLight.position.set(-10, 0, 5);
+    const leftPropLight = new THREE.PointLight(0xaa6644, 12.0, 30);
+    leftPropLight.position.set(-15, 2, 10);
     scene.add(leftPropLight);
 
-    const rightPropLight = new THREE.PointLight(0x7788aa, 8.0, 25);
-    rightPropLight.position.set(12, 2, 5);
+    const rightPropLight = new THREE.PointLight(0x4466aa, 12.0, 30);
+    rightPropLight.position.set(15, 2, 10);
     scene.add(rightPropLight);
 
     // --- HEAVY LIGHTS (Desktop Only) ---

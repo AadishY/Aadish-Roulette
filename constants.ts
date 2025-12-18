@@ -24,7 +24,6 @@ export const DEFAULT_SETTINGS: GameSettings = {
   pixelScale: 3.5,
   brightness: 1.2,
   uiScale: 0.8,
-  fishEye: false,
   fov: 60,
   musicVolume: 0.3,
   sfxVolume: 1.0

@@ -24,7 +24,7 @@ export const handleContract = async (
     // 1. Pay Handling Cost (1 HP)
     if (user === 'PLAYER') {
         setPlayer(p => {
-            // Ensure we don't kill if at 1HP? Logic says sacrifice 1HP.
+            // SACRIFICE 1HP - This can result in death
             return { ...p, hp: Math.max(0, p.hp - 1) };
         });
     } else {

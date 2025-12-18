@@ -448,6 +448,11 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     });
     scene.add(cartGroup);
 
+    // Cart light (Neutral/Low)
+    const cartLight = new THREE.PointLight(0x4a4540, 8.0, 20);
+    cartLight.position.set(-8, -2, 6);
+    scene.add(cartLight);
+
     // Right Foreground - Industrial Cabinet with LED display
     const cabinetGroup = new THREE.Group();
     cabinetGroup.position.set(11, -4.5, 5);
@@ -744,6 +749,11 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
 
     scene.add(leftShelfGroup);
 
+    // Light for left shelf
+    const shelfLight = new THREE.PointLight(0x5a4a3a, 10.0, 30);
+    shelfLight.position.set(-10, 0, 5);
+    scene.add(shelfLight);
+
     // === RIGHT SIDE - INDUSTRIAL RACK (Reference Image Style) ===
     const rightRackGroup = new THREE.Group();
     // Positioned higher up and larger
@@ -807,6 +817,11 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
 
     scene.add(rightRackGroup);
 
+    // Light for right rack (Greenish)
+    const rackLight = new THREE.PointLight(0x22ff22, 8.0, 25);
+    rackLight.position.set(10, 2, 5);
+    scene.add(rackLight);
+
     // Center Back - Metal Drum / Barrel - brighter
     const drumGeo = new THREE.CylinderGeometry(1.5, 1.5, 4, 16);
     const drumMat = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.65, metalness: 0.5 });
@@ -828,7 +843,7 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false)
     }
 
     // Background point lights for ominous depth - Increased intensity
-    const clutterLight = new THREE.PointLight(0x667788, 8, 50);
+    const clutterLight = new THREE.PointLight(0x778899, 20, 60);
     clutterLight.position.set(0, 10, -20);
     scene.add(clutterLight);
 

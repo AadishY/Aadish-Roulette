@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Target, Beer, Cigarette, Scale, Link, Scissors, Phone, RefreshCw, Zap, Settings, Users, Code, Github, Instagram, Gamepad2, HelpCircle, Shield, Heart, Crosshair, CircleDot, Smartphone, Monitor, Volume2, Maximize, Eye } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Target, Beer, Cigarette, Scale, Link, Scissors, Phone, RefreshCw, Zap, Settings, Code, Github, Instagram, Gamepad2, HelpCircle, Shield, Heart, Crosshair, CircleDot, Smartphone, Monitor, Volume2, Maximize, Eye } from 'lucide-react';
 import { GAME_VERSION } from '../constants';
 import { Icons } from './ui/Icons';
 
@@ -259,9 +259,9 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <ItemCard
                             icon={<Icons.Remote size={20} />}
                             name="REMOTE"
-                            description="Reverses the turn order. The previous player takes the next turn! (Multiplayer Only)."
+                            description="Swaps the current shell with the next shell in the chamber."
                             color="text-red-600"
-                            effect="→ REVERSE TURN ORDER"
+                            effect="→ SWAP NEXT SHELL"
                         />
 
                         <ItemCard
@@ -330,45 +330,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
             )
         },
 
-        // Page 5: Multiplayer
-        {
-            title: "MULTIPLAYER",
-            icon: <Users size={20} className="text-blue-500" />,
-            content: (
-                <div className="space-y-4">
-                    <div className="text-center mb-4">
-                        <div className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-3 bg-gradient-to-br from-blue-600 to-blue-900 rounded-full flex items-center justify-center shadow-lg shadow-blue-900/50">
-                            <Users size={24} className="text-white" />
-                        </div>
-                        <p className="text-sm md:text-base text-stone-300">Play against real opponents online!</p>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <InfoCard icon={<Users size={14} />} title="JOINING" color="border-blue-500">
-                            Enter name and click MULTIPLAYER to connect. Placed in a lobby with other players.
-                        </InfoCard>
-
-                        <InfoCard icon={<Settings size={14} />} title="LOBBY" color="border-green-500">
-                            See connected players, chat, and wait for ready. Host configures match settings.
-                        </InfoCard>
-
-                        <InfoCard icon={<Shield size={14} />} title="HOST CONTROLS" color="border-amber-500">
-                            First player = host. Set rounds to win, max items per player, and starting health.
-                        </InfoCard>
-
-                        <InfoCard icon={<Target size={14} />} title="READY UP" color="border-purple-500">
-                            All players must mark READY before host can start. Once ready, the game begins!
-                        </InfoCard>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-blue-950/30 to-transparent border border-blue-900/30 p-3 rounded-sm">
-                        <p className="text-blue-400 text-xs md:text-sm">
-                            💬 Use in-game chat to communicate with opponents!
-                        </p>
-                    </div>
-                </div>
-            )
-        },
 
         // Page 6: Developer Info
         {
@@ -466,87 +428,85 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
     }, [currentPage]);
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-md p-1 md:p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-2 md:p-4">
             <div
-                className="w-full max-w-6xl bg-gradient-to-b from-stone-900 to-stone-950 border border-stone-700/50 shadow-2xl shadow-black/50 relative flex flex-col h-[95vh] md:h-[90vh] md:max-h-[90vh] rounded-sm overflow-hidden origin-center transition-transform duration-100"
+                className="w-full max-w-5xl bg-stone-950/40 backdrop-blur-2xl border border-stone-800/50 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative flex flex-col h-[95vh] md:h-[85vh] rounded-2xl overflow-hidden origin-center transition-all duration-300 ring-1 ring-white/5"
                 style={{ transform: `scale(${scale})` }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
             >
+                {/* Decorative */}
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/10 to-transparent" />
 
                 {/* Header */}
-                <div className="flex justify-between items-center p-3 md:p-5 border-b border-stone-800 bg-stone-900/80 shrink-0">
-                    <div className="flex items-center gap-2 md:gap-3">
-                        {pages[currentPage].icon}
-                        <h2 className="text-base md:text-xl font-black text-stone-200 tracking-widest">
-                            {pages[currentPage].title}
-                        </h2>
+                <div className="flex justify-between items-center p-6 border-b border-stone-800/50 bg-stone-950/20 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-stone-900/60 rounded-xl border border-stone-800 flex items-center justify-center text-red-500">
+                            {pages[currentPage].icon}
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-white tracking-[0.2em] uppercase leading-tight">
+                                {pages[currentPage].title}
+                            </h2>
+                            <p className="text-[10px] text-stone-500 font-bold tracking-[0.4em] uppercase">Tactical Manual 1.0</p>
+                        </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-stone-500 hover:text-white hover:bg-red-600 transition-all p-1.5 md:p-2 rounded-sm"
+                        className="p-2 text-stone-500 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
                         aria-label="Close guide"
                     >
-                        <X size={20} />
+                        <X size={24} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-3 md:p-5 overscroll-contain">
-                    {pages[currentPage].content}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 overscroll-contain custom-scrollbar">
+                    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {pages[currentPage].content}
+                    </div>
                 </div>
 
                 {/* Footer - Navigation */}
-                {/* Footer - Navigation - Compacted */}
-                <div className="shrink-0 p-2 border-t border-stone-800 bg-stone-900/95">
-                    {/* Combined Navigation & Indicators */}
-                    <div className="flex flex-col gap-1.5">
-                        {/* Page Indicators */}
-                        <div className="flex justify-center gap-1">
-                            {pages.map((page, index) => (
+                <div className="shrink-0 p-4 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl">
+                    <div className="max-w-4xl mx-auto flex items-center justify-between">
+                        <button
+                            onClick={prevPage}
+                            disabled={currentPage === 0}
+                            className={`flex items-center gap-2 px-6 py-3 font-black tracking-[0.2em] transition-all text-[10px] rounded-xl border ${currentPage === 0
+                                ? 'border-transparent text-transparent pointer-events-none'
+                                : 'border-stone-800 text-stone-400 hover:text-white hover:bg-white/5 hover:border-stone-600'
+                                }`}
+                        >
+                            <ChevronLeft size={16} />
+                            BACK
+                        </button>
+
+                        <div className="flex items-center gap-3">
+                            {pages.map((_, index) => (
                                 <button
                                     key={index}
                                     onClick={() => goToPage(index)}
-                                    className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all ${index === currentPage
-                                        ? 'bg-red-500 scale-110 shadow-sm shadow-red-500/50'
-                                        : 'bg-stone-700 hover:bg-stone-500'
+                                    className={`h-1.5 rounded-full transition-all ${index === currentPage
+                                        ? 'w-8 bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]'
+                                        : 'w-2 bg-stone-800 hover:bg-stone-700'
                                         }`}
-                                    aria-label={`Go to page ${index + 1}`}
                                 />
                             ))}
                         </div>
 
-                        {/* Buttons & Counter */}
-                        <div className="flex justify-between items-center">
-                            <button
-                                onClick={prevPage}
-                                disabled={currentPage === 0}
-                                className={`flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 font-bold tracking-wider transition-all text-xs rounded-sm ${currentPage === 0
-                                    ? 'text-stone-700 cursor-not-allowed hidden' // Hide if disabled to save visual clutter? Or just dim. Let's keep dim but small.
-                                    : 'text-stone-400 hover:text-white hover:bg-stone-800'
-                                    } ${currentPage === 0 ? 'opacity-0' : 'opacity-100'}`} // Use opacity to scale checks layout
-                            >
-                                <ChevronLeft size={14} />
-                                <span>PREV</span>
-                            </button>
-
-                            <span className="text-stone-600 font-mono text-[10px]">
-                                {currentPage + 1} / {pages.length}
-                            </span>
-
-                            <button
-                                onClick={nextPage}
-                                disabled={currentPage === pages.length - 1}
-                                className={`flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 font-bold tracking-wider transition-all text-xs rounded-sm ${currentPage === pages.length - 1
-                                    ? 'text-stone-700 cursor-not-allowed opacity-0'
-                                    : 'text-stone-400 hover:text-white hover:bg-stone-800'
-                                    }`}
-                            >
-                                <span>NEXT</span>
-                                <ChevronRight size={14} />
-                            </button>
-                        </div>
+                        <button
+                            onClick={nextPage}
+                            disabled={currentPage === pages.length - 1}
+                            className={`flex items-center gap-2 px-6 py-3 font-black tracking-[0.2em] transition-all text-[10px] rounded-xl border ${currentPage === pages.length - 1
+                                ? 'border-transparent text-transparent pointer-events-none'
+                                : 'bg-white text-black hover:bg-stone-200 border-white'
+                                }`}
+                        >
+                            NEXT
+                            <ChevronRight size={16} />
+                        </button>
                     </div>
                 </div>
             </div>

@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { SceneContext, SceneProps } from '../types';
 import { audioManager } from './audioManager';
 import { updateItemAnimations, updateBlood, updateSparks, updateBullet, updateShell } from './scene/animations';
-import { updateChatBubbles, updatePlayerHealthBars } from './scene/ui';
 
 export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
-    const { turnOwner, aimTarget, cameraView, settings, animState, messages } = props;
+    const { turnOwner, aimTarget, cameraView, settings, animState, gameState, player, dealer } = props;
+    const { phase } = gameState;
     const isMobile = scene.userData.isMobile;
 
     const MAX_DT = 0.05;
@@ -14,6 +14,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     // --- BRIGHTNESS & FOV ---
     const brightnessMult = settings.brightness || 1.0;
+    const targetFov = settings.fov || 85;
+    if (camera.fov !== targetFov) {
+        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
+        camera.updateProjectionMatrix();
+    }
 
     // Smoothly update toneMapping exposure based on brightness setting
     renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 1.8 * brightnessMult, 0.1);
@@ -64,11 +69,19 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     }
 
     // FOV Handling
-    const baseFOV = settings.fov || 70; // Use 70 as defined in constants
-    // Aggressive Fish Eye Simulation (Wider FOV)
-    const targetFOV = settings.fishEye ? (baseFOV + 35) : baseFOV;
-    if (Math.abs(camera.fov - targetFOV) > 0.1) {
-        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 1 - Math.exp(-3 * dt));
+    let targetCameraFOV = settings.fov || 70;
+
+    // Zoom Logic
+    if (cameraView === 'TABLE') {
+        targetCameraFOV *= 0.8;
+    } else if (aimTarget === 'OPPONENT' && turnOwner === 'DEALER') {
+        targetCameraFOV *= 0.85;
+    } else if (aimTarget !== 'IDLE' && turnOwner === 'PLAYER') {
+        targetCameraFOV *= 0.9;
+    }
+
+    if (Math.abs(camera.fov - targetCameraFOV) > 0.1) {
+        camera.fov = THREE.MathUtils.lerp(camera.fov, targetCameraFOV, 1 - Math.exp(-3 * dt));
         camera.updateProjectionMatrix();
     }
 
@@ -106,7 +119,6 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     } else {
         if (aimTarget === 'SELF') {
             // Dealer Goal: Shoot Self
-            // Fix: Move Z to 0.0 to ensure barrel clears head completely (no clipping)
             targets.targetPos.set(0, 3.8, 0.0);
             targets.targetRot.set(-0.25, Math.PI, 0);
             targetGunLightIntensity = 5.0;
@@ -117,40 +129,130 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             targetGunLightIntensity = 5.0;
         } else {
             // Dealer Idle / Thinking / Table
-            // Fix: Centered (X=0), Adjusted Y/Z and added Z-rotation (90deg) to lay flat sideways
             targets.targetPos.set(0, -0.7, -2.5);
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
         }
     }
 
+    // --- LIGHTING STABILITY & PULSE ---
+    const isTransitionalPhase = ['STEALING', 'ROUND_END', 'RESOLVING', 'BOOT', 'INTRO'].includes(phase);
+    const isMenuPhase = phase === 'BOOT' || phase === 'INTRO';
+
+    if (isMenuPhase) {
+        if (bulbLight) bulbLight.intensity = 0;
+        if (context.roomRedLight) context.roomRedLight.intensity = 0;
+        gunLight.intensity = 0;
+    } else if (props.isHardMode && context.roomRedLight) {
+        // Rhythmic pulse - only if not in a UI/Cinematic phase to avoid flickering
+        const heartbeat = isTransitionalPhase ? 0 : Math.pow(Math.sin(time * 1.5), 12.0);
+        const baseRed = 0.02;
+        const targetIntensity = (baseRed + heartbeat * 0.45) * brightnessMult;
+        context.roomRedLight.intensity = THREE.MathUtils.lerp(context.roomRedLight.intensity, targetIntensity, 0.1);
+
+        if (bulbLight) {
+            const baseBulb = 45.0 * brightnessMult;
+            bulbLight.intensity = THREE.MathUtils.lerp(bulbLight.intensity, baseBulb * (1.0 - heartbeat * 0.2), 0.1);
+        }
+    } else if (context.roomRedLight) {
+        context.roomRedLight.intensity = THREE.MathUtils.lerp(context.roomRedLight.intensity, 0, 0.05);
+        if (bulbLight) {
+            const baseBulb = 45.0 * brightnessMult;
+            bulbLight.intensity = THREE.MathUtils.lerp(bulbLight.intensity, baseBulb, 0.05);
+        }
+    }
+
     gunLight.intensity = THREE.MathUtils.lerp(gunLight.intensity, targetGunLightIntensity * brightnessMult, 1 - Math.exp(-3 * dt));
 
-    // Gun Animation Lerp (Time-based Damping) - Snappier movement
-    // Gun Animation Lerp (Time-based Damping) - Snappier movement
-    const gunDampingCurve = isMobile ? 6.0 : 4.0; // Snappier on mobile for better touch feel
+    // --- VARIANT GUN MODELS (SAWED-OFF / CHOKE) ---
+    const isSawed = animState.isSawing || props.player.isSawedActive || props.dealer.isSawedActive;
+    const isChoke = props.player.isChokeActive || props.dealer.isChokeActive;
+
+    if (context.barrelMesh) context.barrelMesh.visible = !isSawed;
+    if (context.sight) context.sight.visible = !isSawed;
+    if (context.shortBarrelMesh) context.shortBarrelMesh.visible = isSawed;
+    if (context.sSight) context.sSight.visible = isSawed;
+    if (context.sawCut) context.sawCut.visible = animState.isSawing || isSawed;
+    if (context.shortMagTube) context.shortMagTube.visible = isSawed;
+    if (context.magTube) context.magTube.visible = !isSawed;
+
+    if (context.chokeMesh) {
+        context.chokeMesh.visible = isChoke;
+        if (isChoke) {
+            // Adjust choke position if sawed
+            context.chokeMesh.position.z = isSawed ? 4.5 : 12.2;
+        }
+    }
+
+    // --- MUZZLE LIGHT & FLASH LOGIC ---
+    if (context.muzzleLight) {
+        const flashIntensity = (animState.muzzleFlashIntensity || 0) * 0.1;
+        context.muzzleLight.intensity = THREE.MathUtils.lerp(context.muzzleLight.intensity, flashIntensity, 0.4);
+
+        // Position flash at the end of barrel
+        const flashZ = isSawed ? (isChoke ? 7.8 : 4.0) : (isChoke ? 15.5 : 10.5);
+        if (context.muzzleFlash) context.muzzleFlash.position.z = flashZ;
+        context.muzzleLight.position.set(0, 0.4, flashZ);
+
+        // Dynamic Room Dimming during flash (High Contrast)
+        if (bulbLight && flashIntensity > 5) {
+            bulbLight.intensity *= 0.2;
+        }
+    }
+
+    // Gun Animation Lerp (Time-based Damping)
+    const gunDampingCurve = isMobile ? 8.0 : 6.0; // Snappier
     const gunDamping = 1 - Math.exp(-gunDampingCurve * dt);
-    gunGroup.position.lerp(targets.targetPos, gunDamping);
-    gunGroup.rotation.x += (targets.targetRot.x - gunGroup.rotation.x) * gunDamping;
-    gunGroup.rotation.y += (targets.targetRot.y - gunGroup.rotation.y) * gunDamping;
-    gunGroup.rotation.z += (targets.targetRot.z - gunGroup.rotation.z) * gunDamping;
+
+    const targetPos = targets.targetPos.clone();
+    const targetRot = targets.targetRot.clone();
+
+    if (cameraView !== 'TABLE') {
+        const swayX = mouse.x * 0.15;
+        const swayY = mouse.y * 0.12;
+        targetRot.x += swayY * 0.8;
+        targetRot.y -= swayX;
+
+        // Weapon Bobbing (Breathing)
+        const bobFactor = Math.sin(time * 1.5) * 0.04;
+        targetPos.y += bobFactor;
+        targetRot.z += Math.cos(time * 0.8) * 0.015;
+    }
+
+    gunGroup.position.lerp(targetPos, gunDamping);
+    gunGroup.rotation.x = THREE.MathUtils.lerp(gunGroup.rotation.x, targetRot.x, gunDamping);
+    gunGroup.rotation.y = THREE.MathUtils.lerp(gunGroup.rotation.y, targetRot.y, gunDamping);
+    gunGroup.rotation.z = THREE.MathUtils.lerp(gunGroup.rotation.z, targetRot.z, gunDamping);
 
     // RECOIL LOGIC
     if (scene.userData.lastRecoil === undefined) scene.userData.lastRecoil = animState.triggerRecoil;
     if (animState.triggerRecoil > scene.userData.lastRecoil) {
         scene.userData.lastRecoil = animState.triggerRecoil;
-        // Apply Kick Impulse (fighting the lerp for a frame, creating a bounce)
-        // Backwards kick
-        const kickDir = new THREE.Vector3(0, 0, 1).applyEuler(gunGroup.rotation);
-        gunGroup.position.addScaledVector(kickDir, 0.6); // Reduced kick dist for smoothness
+        // Complex Kick Impulse (Visceral)
+        const kickDir = new THREE.Vector3(0, 0, 1.6).applyEuler(gunGroup.rotation);
+        gunGroup.position.add(kickDir);
+        gunGroup.rotation.x += 0.75;
+        gunGroup.rotation.z += (Math.random() - 0.5) * 0.4;
+        scene.userData.cameraShake = 0.8;
+    }
 
-        // Muzzle Rise
-        gunGroup.rotation.x += 0.4; // Reduced kick up
+    // PUMP RACK LOGIC
+    if (scene.userData.lastRack === undefined) scene.userData.lastRack = animState.triggerRack;
+    const pump = context.pumpMesh;
+    if (pump) {
+        if (animState.triggerRack > scene.userData.lastRack) {
+            scene.userData.lastRack = animState.triggerRack;
+            scene.userData.rackStartTime = time;
+        }
 
-        // Random shake
-        gunGroup.rotation.z += (Math.random() - 0.5) * 0.15;
-
-        // Camera shake impulse
-        scene.userData.cameraShake = 0.4;
+        const rackElapsed = time - (scene.userData.rackStartTime || 0);
+        const rackDuration = 0.6;
+        if (rackElapsed < rackDuration) {
+            const p = rackElapsed / rackDuration;
+            const curve = p < 0.3 ? (p / 0.3) : (1 - (p - 0.3) / 0.7);
+            pump.position.z = 4.5 - curve * 1.5;
+        } else {
+            pump.position.z = 4.5;
+        }
     }
 
     if (gunGroup.userData.isSawing) {
@@ -160,45 +262,56 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         gunGroup.rotation.z += Math.sin(time * 80) * 0.1 * timeScale;
     }
 
-    // --- CAMERA LOGIC ---
+    // --- CAMERA POSITIONING ---
     if (!scene.userData._targetCamPos) scene.userData._targetCamPos = new THREE.Vector3();
     const targetCamPos = scene.userData._targetCamPos;
-    targetCamPos.set(0, 4, 14); // Default Table View
 
+    const pSwayX = Math.sin(time * 0.5) * 0.8;
+    const pSwayY = Math.cos(time * 0.3) * 0.3;
 
     if (cameraView === 'TABLE') {
         targetCamPos.set(0, 10, 4);
-        camera.lookAt(0, 0, 0);
     } else if (turnOwner === 'DEALER') {
-        const swayX = Math.sin(time * 0.5) * 1.5;
-        const swayY = Math.cos(time * 0.3) * 0.5;
-
-        // DEALER CINEMATIC
         if (aimTarget === 'OPPONENT') {
-            // SCARY MODE: Zoom in on Gun/Dealer Face
-            targetCamPos.set(swayX * 0.1, 1.5 + swayY * 0.1, 5);
-            camera.lookAt(0, 2, -10);
-            scene.userData.cameraShake = 0.05;
+            targetCamPos.set(pSwayX * 0.1, 1.0 + pSwayY * 0.1, 3.5); // Closer & lower
         } else {
-            // Idle Dealer View
-            targetCamPos.set(swayX, 5 + swayY, 12);
-            camera.lookAt(0, 2 + swayY * 0.5, -14);
+            targetCamPos.set(pSwayX, 4 + pSwayY, 11);
         }
     } else if (turnOwner === 'PLAYER') {
         if (aimTarget === 'SELF') {
-            // FIRST PERSON - looking at gun barrel pointed at your face
-            const breathSway = Math.sin(time * 2) * 0.1;
-            const nervousShake = Math.sin(time * 8) * 0.02;
-            targetCamPos.set(breathSway + nervousShake, 2, 10);
-            camera.lookAt(0, 1.5, 6);
+            targetCamPos.set(pSwayX * 0.2 + 0.5, 2.8 + pSwayY * 0.2, 8.5); // Cinematic angle
         } else if (aimTarget === 'OPPONENT') {
-            targetCamPos.set(8, 3, 14);
-            camera.lookAt(0, 4, -14);
+            targetCamPos.set(4 + pSwayX * 0.1, 3.5 + pSwayY * 0.1, 12); // Higher shoulder view
         } else {
-            targetCamPos.set(0, 4, 14);
-            camera.lookAt(0, 1.5, -2);
+            targetCamPos.set(pSwayX, 4.5 + pSwayY, 14.5);
         }
     }
+
+    camera.position.lerp(targetCamPos, 0.08);
+    // Dynamic lookAt with sway
+    const lookAtPos = new THREE.Vector3(0, 2, -5);
+    if (cameraView === 'TABLE') {
+        lookAtPos.set(0, 0, 0);
+    } else if (turnOwner === 'DEALER') {
+        if (aimTarget === 'OPPONENT') {
+            lookAtPos.set(-0.5, 2.5, -8); // Look closer at dealer face
+        } else {
+            lookAtPos.set(0, 2, -14);
+        }
+    } else if (turnOwner === 'PLAYER') {
+        if (aimTarget === 'SELF') {
+            lookAtPos.set(-0.5, 1.8, 4); // Angle towards player face
+        } else if (aimTarget === 'OPPONENT') {
+            lookAtPos.set(0, 1.5, -14); // Look at dealer chest/barrel
+        } else {
+            lookAtPos.set(0, 1.5, -2);
+        }
+    }
+
+    // Smoothly interpolate where the camera is looking
+    if (!scene.userData._curLookAt) scene.userData._curLookAt = new THREE.Vector3(0, 2, 0);
+    scene.userData._curLookAt.lerp(lookAtPos, 0.06);
+    camera.lookAt(scene.userData._curLookAt);
 
 
     if (animState.playerHit) {
@@ -438,14 +551,6 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         for (let i = 0; i < shellCasings.length; i++) {
             updateShell(shellCasings[i], shellVelocities[i], time, dt);
         }
-    }
-
-    if (messages) {
-        updateChatBubbles(scene, messages);
-    }
-
-    if (scene.userData.isMultiplayer && props.players) {
-        updatePlayerHealthBars(scene, props.players);
     }
 
     renderer.render(scene, camera);

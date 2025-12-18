@@ -58,6 +58,13 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/image/favicon/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.json">
   <script>
+    window.deferredPWAPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      window.deferredPWAPrompt = e;
+      window.dispatchEvent(new CustomEvent('pwa-prompt-available', { detail: e }));
+    });
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
@@ -157,49 +164,73 @@
     }
 
     @keyframes flicker {
-      0% {
-        opacity: 0.97;
-      }
 
-      5% {
-        opacity: 0.9;
+      0%,
+      100% {
+        opacity: 0.99;
       }
 
       10% {
-        opacity: 0.94;
-      }
-
-      15% {
-        opacity: 0.8;
+        opacity: 0.95;
       }
 
       20% {
         opacity: 0.98;
       }
 
-      50% {
-        opacity: 0.95;
+      30% {
+        opacity: 0.94;
       }
 
-      100% {
-        opacity: 0.97;
+      40% {
+        opacity: 0.99;
+      }
+
+      50% {
+        opacity: 0.96;
       }
     }
 
     @keyframes text-pop {
       0% {
-        transform: scale(0.8);
+        transform: scale(0.85);
         opacity: 0;
       }
 
-      50% {
-        transform: scale(1.1);
-        opacity: 1;
+      70% {
+        transform: scale(1.05);
       }
 
       100% {
         transform: scale(1);
         opacity: 1;
+      }
+    }
+
+    @keyframes red-glitch {
+      0% {
+        transform: translate(0);
+        text-shadow: 1px 0 red, -1px 0 rgba(220, 0, 0, 0.3);
+      }
+
+      25% {
+        transform: translate(-1px, 0.5px);
+        text-shadow: -1px 0 red, 1px 0 rgba(220, 0, 0, 0.3);
+      }
+
+      50% {
+        transform: translate(1px, -0.5px);
+        text-shadow: 0.5px 0 red, -0.5px 0 rgba(150, 0, 0, 0.3);
+      }
+
+      75% {
+        transform: translate(-0.5px, -0.5px);
+        text-shadow: -1.5px 0 red, 1.5px 0 rgba(200, 0, 0, 0.3);
+      }
+
+      100% {
+        transform: translate(0);
+        text-shadow: 1px 0 red, -1px 0 rgba(220, 0, 0, 0.3);
       }
     }
 
@@ -209,19 +240,19 @@
       }
 
       20% {
-        transform: translate(-2px, 2px);
+        transform: translate(-3px, 1px) scaleX(1.05);
       }
 
       40% {
-        transform: translate(-2px, -2px);
+        transform: translate(3px, -1px) scaleX(0.95);
       }
 
       60% {
-        transform: translate(2px, 2px);
+        transform: translate(-1px, 3px) scaleY(1.05);
       }
 
       80% {
-        transform: translate(2px, -2px);
+        transform: translate(1px, -3px) scaleY(0.95);
       }
 
       100% {
@@ -255,19 +286,50 @@
 
     @keyframes blood-pulse {
       0% {
-        opacity: 0.4;
+        opacity: 0.3;
         transform: scale(1);
+        filter: blur(2px);
       }
 
       50% {
-        opacity: 0.7;
-        transform: scale(1.02);
+        opacity: 0.8;
+        transform: scale(1.05);
+        filter: blur(0px);
       }
 
       100% {
-        opacity: 0.4;
+        opacity: 0.3;
         transform: scale(1);
+        filter: blur(2px);
       }
+    }
+
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.2) 50%);
+      background-size: 100% 4px;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0.15;
+    }
+
+    .hardmode-scanline {
+      filter: contrast(1.2) saturate(1.1) brightness(0.9);
+    }
+
+    .hardmode-scanline::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent, rgba(255, 0, 0, 0.05), transparent);
+      background-size: 100% 100px;
+      animation: scanline 4s linear infinite;
+      pointer-events: none;
+      z-index: 65;
     }
 
     .flash-screen {
@@ -276,26 +338,25 @@
     }
 
     .text-glitch {
-      animation: glitch 0.2s infinite;
+      animation: glitch 0.15s infinite skew(1deg);
     }
 
     .pop-in {
-      animation: text-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      animation: text-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
 
     .blood-overlay {
-      background: radial-gradient(circle at center, transparent 10%, rgba(180, 0, 0, 0.3) 50%, rgba(130, 0, 0, 0.9) 100%);
-      mix-blend-mode: overlay;
-      box-shadow: inset 0 0 150px rgba(180, 0, 0, 0.8);
+      background: radial-gradient(circle at center, transparent 20%, rgba(150, 0, 0, 0.4) 60%, rgba(100, 0, 0, 0.95) 100%);
+      mix-blend-mode: multiply;
       pointer-events: none;
       z-index: 40;
     }
 
     .blood-active {
-      animation: blood-pulse 3s infinite;
+      animation: blood-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
-    /* CRT Effect Base - Reduced for mobile performance */
+    /* CRT Effect Base - Improved for Desktop */
     .crt::before {
       content: " ";
       display: block;
@@ -304,24 +365,46 @@
       left: 0;
       bottom: 0;
       right: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.01), rgba(150, 0, 0, 0.005), rgba(200, 0, 0, 0.01));
       z-index: 50;
-      background-size: 100% 2px, 3px 100%;
+      background-size: 100% 3px, 3px 100%;
       pointer-events: none;
-      animation: flicker 0.15s infinite;
+      animation: flicker 0.2s infinite;
       will-change: opacity;
+      opacity: 0.3;
     }
 
-    /* Disable CRT on low-power devices */
-    @media (prefers-reduced-motion: reduce) {
-      .crt::before {
-        animation: none;
-      }
+    /* Cinematic Framing */
+    .letterbox-top,
+    .letterbox-bottom {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      height: 8vh;
+      background: black;
+      z-index: 100;
+      transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
     }
 
-    /* VHS FILTER OVERRIDE - IMPROVED */
+    .letterbox-top {
+      top: 0;
+      transform: translateY(-100%);
+    }
+
+    .letterbox-bottom {
+      bottom: 0;
+      transform: translateY(100%);
+    }
+
+    .letterbox-active .letterbox-top,
+    .letterbox-active .letterbox-bottom {
+      transform: translateY(0);
+    }
+
+    /* VHS FILTER OVERRIDE - PREMIUM */
     .vhs-filter {
-      filter: contrast(1.1) brightness(1.05) sepia(0.1) saturate(1.1) hue-rotate(-5deg);
+      filter: contrast(1.15) brightness(1.05) saturate(1.2) sepia(0.05);
     }
 
     .vhs-filter::after {
@@ -331,24 +414,87 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 1px, #fff1 2px, transparent 3px);
-      background-size: 100% 100%;
+      background: rgba(18, 16, 16, 0.03);
       pointer-events: none;
       z-index: 51;
-      opacity: 0.08;
-      animation: scanline 10s linear infinite;
+      animation: scanline 8s linear infinite;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
     }
 
-    /* Chromatic Aberration Animation for VHS */
-    @keyframes chromatic {
+    @keyframes vhs-static {
       0% {
-        text-shadow: 2px 0 0 red, -2px 0 0 blue;
+        transform: translateY(0);
+        opacity: 0.05;
+      }
+
+      50% {
+        transform: translateY(-1%);
+        opacity: 0.1;
       }
 
       100% {
-        text-shadow: -2px 0 0 red, 2px 0 0 blue;
+        transform: translateY(1%);
+        opacity: 0.05;
       }
     }
+
+    .vhs-static {
+      position: fixed;
+      inset: 0;
+      background: url('https://www.transparenttextures.com/patterns/black-linen-2.png');
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.005;
+      animation: noise 0.25s steps(4) infinite;
+    }
+
+    @keyframes noise {
+      0% {
+        transform: translate(0.5px, 0.5px);
+      }
+
+      25% {
+        transform: translate(-0.5px, -0.5px);
+      }
+
+      50% {
+        transform: translate(-0.5px, 0.5px);
+      }
+
+      75% {
+        transform: translate(0.5px, -0.5px);
+      }
+
+      100% {
+        transform: translate(-0.5px, 0.5px);
+      }
+    }
+
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.03) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.01), rgba(200, 0, 0, 0.005), rgba(150, 0, 0, 0.01));
+      background-size: 100% 2px, 2px 100%;
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.3;
+      backdrop-filter: contrast(1.02) brightness(1.01);
+    }
+
+    @keyframes chromatic {
+      0% {
+        text-shadow: 2px 0 1px rgba(255, 0, 0, 0.8), -2px 0 1px rgba(150, 0, 0, 0.8);
+      }
+
+      50% {
+        text-shadow: -2px 0 1px rgba(255, 0, 0, 0.8), 2px 0 1px rgba(150, 0, 0, 0.8);
+      }
+
+      100% {
+        text-shadow: 2px 0 1px rgba(255, 0, 0, 0.8), -2px 0 1px rgba(150, 0, 0, 0.8);
+      }
+    }
+
 
     /* Custom Scrollbar for logs */
     ::-webkit-scrollbar {
@@ -375,20 +521,80 @@
 
     /* Orientation Warning */
     #rotate-warning {
-      display: none;
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: #000;
-      z-index: 9999;
+      background: radial-gradient(circle at center, #1a0505 0%, #000 100%);
+      z-index: 99999;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #fff;
       text-align: center;
-      padding: 20px;
+      padding: 2rem;
+      backdrop-filter: blur(20px);
+    }
+
+    #rotate-warning .warning-card {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      padding: 3rem;
+      border-radius: 2rem;
+      box-shadow: 0 0 100px rgba(220, 38, 38, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      max-width: 300px;
+    }
+
+    #rotate-warning h1 {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: 0.5em;
+      color: #ef4444;
+      margin: 0;
+    }
+
+    #rotate-warning p {
+      font-size: 0.75rem;
+      color: #78716c;
+      letter-spacing: 0.2em;
+      margin: 0;
+      font-weight: bold;
+    }
+
+    .hardmode-scanline {
+      position: relative;
+    }
+
+    .hardmode-scanline::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom,
+          transparent 50%,
+          rgba(220, 38, 38, 0.03) 50%);
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 100;
+      animation: scanline-flicker 0.1s infinite;
+    }
+
+    @keyframes scanline-flicker {
+      0% {
+        opacity: 0.5;
+      }
+
+      50% {
+        opacity: 0.8;
+      }
+
+      100% {
+        opacity: 0.5;
+      }
     }
 
 
@@ -583,6 +789,7 @@
 
   <!-- Main App Script -->
   <script type="module" src="/index.tsx"></script>
+
 </body>
 
 </html>

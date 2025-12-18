@@ -4,20 +4,16 @@ import { ThreeScene } from './components/ThreeScene';
 import { GameUI } from './components/GameUI';
 import { useGameLogic } from './hooks/useGameLogic';
 import { useDealerAI } from './hooks/useDealerAI';
-import { useSocket } from './hooks/useSocket';
-import { useMultiplayerGame } from './hooks/useMultiplayerGame';
 import { SettingsMenu } from './components/SettingsMenu';
-import { MultiplayerGameOver } from './components/MultiplayerGameOver';
 import { GameSettings } from './types';
 import { DEFAULT_SETTINGS } from './constants';
 
 import { LoadingScreen } from './components/LoadingScreen';
-import { MultiplayerLobby } from './components/MultiplayerLobby';
 import { TutorialGuide } from './components/TutorialGuide';
 import { Scoreboard } from './components/ui/Scoreboard';
 import { audioManager } from './utils/audioManager';
 
-type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOBBY' | 'LOADING_GAME' | 'GAME';
+type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_GAME' | 'GAME';
 
 export default function App() {
   const spGame = useGameLogic();
@@ -31,7 +27,6 @@ export default function App() {
     }).catch(() => { });
   }, []);
 
-  // --- ORIENTATION CHECK ---
   // --- ORIENTATION CHECK ---
   const [showRotateWarning, setShowRotateWarning] = useState(false);
 
@@ -47,12 +42,11 @@ export default function App() {
         } else {
           isPortrait = window.innerHeight > window.innerWidth;
         }
-        const isMobile = window.innerWidth < 950; // Use lenient threshold
+        const isMobile = window.innerWidth < 950;
         setShowRotateWarning(isPortrait && isMobile);
-      }, 200); // 200ms debounce to ignore transient resizing (keyboard/fullscreen)
+      }, 200);
     };
 
-    // Initial check (delay slightly to avoid boot flicker)
     setTimeout(checkOrientation, 100);
 
     window.addEventListener('resize', checkOrientation);
@@ -69,40 +63,9 @@ export default function App() {
     };
   }, []);
 
-  const [isMultiplayerMode, setIsMultiplayerMode] = useState(false);
-  const [isHardModeSelected, setIsHardModeSelected] = useState(false);
-
-  const handleConnect = useCallback(() => { }, []);
-  const [socketError, setSocketError] = useState<string | null>(null);
-  const handleError = useCallback((err: string) => setSocketError(err), []);
-
-  const handleGameStart = useCallback(() => {
-    setAppState('LOADING_GAME');
-  }, []);
-
-  const socket = useSocket(spGame.playerName || "PLAYER", handleConnect, handleError, handleGameStart);
-
-  // Multiplayer game logic
-  const mpGame = useMultiplayerGame({
-    mpGameState: socket.gameStateData,
-    myPlayerId: socket.myPlayerId,
-    lastAction: socket.lastAction,
-    knownShell: socket.knownShell,
-    onShoot: socket.shootPlayer,
-    onUseItem: socket.useItem,
-    onGrabGun: socket.grabGun,
-    socketReceivedLoot: socket.receivedLoot,
-    socketShowLootOverlay: socket.showLootOverlay,
-    socketAnnouncement: socket.announcement,
-    gameOverData: socket.gameOverData
-  });
-
-  // Switch between SP and MP - use mpGame once in multiplayer mode
-  const game = isMultiplayerMode ? mpGame : spGame;
-
-  // For loot overlay in MP, use socket directly since game state may not be ready yet
-  const effectiveShowLootOverlay = isMultiplayerMode ? socket.showLootOverlay : game.showLootOverlay;
-  const effectiveReceivedItems = (isMultiplayerMode ? socket.receivedLoot : game.receivedItems) as import('./types').ItemType[];
+  // For loot overlay
+  const effectiveShowLootOverlay = spGame.showLootOverlay;
+  const effectiveReceivedItems = spGame.receivedItems as import('./types').ItemType[];
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -121,14 +84,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('aadish_roulette_settings', JSON.stringify(settings));
     audioManager.updateVolumes(settings);
+
   }, [settings]);
 
   // Handle Music Logic
   useEffect(() => {
-    if (appState === 'MENU' || appState === 'LOBBY') {
+    if (appState === 'MENU') {
       audioManager.playMusic('menu');
     } else if (appState === 'GAME') {
-      const phase = game.gameState.phase;
+      const phase = spGame.gameState.phase;
       if (phase === 'GAME_OVER') {
         audioManager.playMusic('endscreen');
       } else if (phase === 'INTRO' || phase === 'BOOT') {
@@ -137,7 +101,9 @@ export default function App() {
         audioManager.playMusic('gameplay');
       }
     }
-  }, [appState, game.gameState.phase]);
+  }, [appState, spGame.gameState.phase]);
+
+  const [isHardModeSelected, setIsHardModeSelected] = useState(false);
 
   // Dealer AI only for singleplayer
   useDealerAI({
@@ -145,7 +111,7 @@ export default function App() {
     dealer: spGame.dealer,
     player: spGame.player,
     knownShell: spGame.knownShell,
-    animState: spGame.animState, // Added for recovery state checking
+    animState: spGame.animState,
     fireShot: spGame.fireShot,
     processItemEffect: spGame.processItemEffect,
     setDealer: spGame.setDealer,
@@ -153,43 +119,29 @@ export default function App() {
     setTargetAim: spGame.setAimTarget,
     setCameraView: spGame.setCameraView,
     setOverlayText: spGame.setOverlayText,
-    isMultiplayer: isMultiplayerMode,
-    isProcessing: spGame.isProcessing
+    isMultiplayer: false,
+    isProcessing: spGame.isProcessing,
+    setIsProcessing: spGame.setIsProcessing
   });
 
   const handleResetSettings = () => setSettings(DEFAULT_SETTINGS);
 
-  // Called when user clicks 'Continue' on the boot/title screen
   const handleBootComplete = useCallback(() => {
     spGame.setGamePhase('INTRO');
     audioManager.playMusic('menu');
   }, [spGame]);
 
   const handleStartSP = (name: string, hardMode: boolean = false) => {
-    setIsMultiplayerMode(false);
     setIsHardModeSelected(hardMode);
     if (name) spGame.setPlayerName(name);
 
-    audioManager.stopMusic(); // Stop menu music immediately
+    audioManager.stopMusic();
     setAppState('LOADING_SP');
   };
 
-  const handleStartMP = () => {
-    setSocketError(null);
-    setIsMultiplayerMode(true);
-    socket.connect();
-    audioManager.stopMusic();
-    setAppState('LOADING_MP');
-  };
 
-  const handleLobbyStart = () => {
-    socket.startGame();
-  };
 
   const onLoadingComplete = () => {
-    if (appState === 'LOADING_MP') {
-      if (socket.isConnected) setAppState('LOBBY');
-    }
     if (appState === 'LOADING_SP') {
       spGame.startGame(spGame.playerName, isHardModeSelected);
       setAppState('GAME');
@@ -200,49 +152,23 @@ export default function App() {
   };
 
   const handleBackToMenu = () => {
-    if (appState === 'LOBBY' || appState === 'LOADING_MP') {
-      socket.disconnect();
-    }
-    setIsMultiplayerMode(false);
     setAppState('GAME');
     spGame.resetGame(true);
   };
 
-  // Handlers for shooting and items
   const handleFireShot = (target: 'PLAYER' | 'DEALER') => {
-    if (isMultiplayerMode && socket.gameStateData && socket.myPlayerId) {
-      mpGame.fireShot('PLAYER', target);
-    } else {
-      spGame.fireShot('PLAYER', target);
-    }
+    spGame.fireShot('PLAYER', target);
   };
 
   const handleUseItem = (index: number) => {
-    if (isMultiplayerMode && socket.gameStateData) {
-      mpGame.usePlayerItem(index);
-    } else {
-      spGame.usePlayerItem(index);
-    }
+    spGame.usePlayerItem(index);
   };
 
   const handlePickupGun = () => {
-    if (isMultiplayerMode && socket.gameStateData) {
-      mpGame.pickupGun();
-    } else {
-      spGame.pickupGun();
-    }
-  };
-
-  // MP game over handlers
-  const handlePlayAgain = () => {
-    socket.requestRestart();
-    setAppState('LOBBY');
+    spGame.pickupGun();
   };
 
   const handleMainMenu = () => {
-    socket.disconnect();
-    setIsMultiplayerMode(false);
-    // Add loading?
     setAppState('GAME');
     spGame.resetGame(true);
   };
@@ -252,64 +178,72 @@ export default function App() {
     spGame.resetGame(false);
   };
 
-  // Check if MP game over
-  const showMpGameOver = isMultiplayerMode && socket.gameOverData;
-
   return (
     <div
-      className={`relative w-full h-screen bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair`}
+      className={`relative w-full h-screen bg-black overflow-hidden select-none crt text-stone-200 cursor-crosshair animate-in fade-in duration-1000 ${spGame.gameState.isHardMode ? 'hardmode-scanline' : ''}`}
       onClick={() => audioManager.initialize()}
       onKeyDown={() => audioManager.initialize()}
     >
-      {/* Mobile Orientation Warning - JS Based + CSS Fallback */}
-      <div className={`fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center text-red-600 p-8 text-center font-mono transition-opacity duration-300 ${showRotateWarning ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <RotateCw size={64} className="mb-6 animate-spin" />
-        <h1 className="text-3xl md:text-5xl font-black mb-4 tracking-wider">ROTATE DEVICE</h1>
-        <p className="text-stone-500 text-sm md:text-lg font-bold">LANDSCAPE ORIENTATION REQUIRED</p>
+      <div className="crt-overlay opacity-[0.15] pointer-events-none" />
+      <div className="vhs-static" />
+
+      {spGame.gameState.isHardMode && (
+        <div className="absolute inset-0 z-[60] pointer-events-none bg-red-900/[0.02] mix-blend-color-burn animate-pulse" />
+      )}
+
+      <div id="rotate-warning" className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center transition-opacity duration-500 ${showRotateWarning ? 'opacity-100 pointer-events-auto flex' : 'opacity-0 pointer-events-none'}`}>
+        <div className="warning-card">
+          <div className="relative">
+            <RotateCw size={48} className="text-red-500 animate-[spin_3s_linear_infinite]" />
+            <div className="absolute inset-0 blur-xl bg-red-500/20 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h1>ROTATE</h1>
+            <p>ORIENTATION ERROR</p>
+          </div>
+          <div className="w-16 h-1 bg-gradient-to-r from-transparent via-red-900/50 to-transparent" />
+        </div>
       </div>
 
-      {/* 3D Scene */}
       <ThreeScene
-        isSawed={game.player.isSawedActive || game.dealer.isSawedActive}
-        isChokeActive={game.player.isChokeActive || game.dealer.isChokeActive}
-        isPlayerCuffed={game.player.isHandcuffed}
-        knownShell={game.knownShell}
+        isSawed={spGame.player.isSawedActive || spGame.dealer.isSawedActive}
+        isChokeActive={spGame.player.isChokeActive || spGame.dealer.isChokeActive}
+        isPlayerCuffed={spGame.player.isHandcuffed}
+        knownShell={spGame.knownShell}
         onGunClick={() => { }}
-        aimTarget={game.aimTarget}
-        cameraView={game.cameraView}
-        animState={game.animState}
-        turnOwner={game.gameState.turnOwner}
+        aimTarget={spGame.aimTarget}
+        cameraView={spGame.cameraView}
+        animState={spGame.animState}
+        turnOwner={spGame.gameState.turnOwner}
         settings={settings}
-        players={isMultiplayerMode && socket.gameStateData
-          ? Object.values(socket.gameStateData.players)
-          : socket.players}
-        playerId={isMultiplayerMode ? socket.myPlayerId : spGame.playerName}
-        messages={socket.messages}
+        isHardMode={spGame.gameState.isHardMode}
+        player={spGame.player}
+        dealer={spGame.dealer}
+        gameState={spGame.gameState}
       />
 
-      {/* Game UI - Uses same components for SP and MP */}
       <GameUI
-        gameState={game.gameState}
-        player={game.player}
-        dealer={game.dealer}
-        logs={game.logs}
-        overlayText={game.overlayText}
-        overlayColor={game.overlayColor}
-        showBlood={game.showBlood}
-        showFlash={game.showFlash}
+        gameState={spGame.gameState}
+        player={spGame.player}
+        dealer={spGame.dealer}
+        logs={spGame.logs}
+        overlayText={spGame.overlayText}
+        overlayColor={spGame.overlayColor}
+        showBlood={spGame.showBlood}
+        showFlash={spGame.showFlash}
         showLootOverlay={effectiveShowLootOverlay}
         receivedItems={effectiveReceivedItems}
-        triggerHeal={game.animState.triggerHeal}
-        triggerDrink={game.animState.triggerDrink}
-        knownShell={game.knownShell}
+        triggerHeal={spGame.animState.triggerHeal}
+        triggerDrink={spGame.animState.triggerDrink}
+        knownShell={spGame.knownShell}
         playerName={spGame.playerName}
-        cameraView={game.cameraView}
-        aimTarget={game.aimTarget}
-        isProcessing={game.isProcessing}
-        isRecovering={game.animState.playerHit || game.animState.playerRecovering || game.animState.dealerDropping || game.animState.dealerRecovering}
+        cameraView={spGame.cameraView}
+        aimTarget={spGame.aimTarget}
+        isProcessing={spGame.isProcessing}
+        isRecovering={spGame.animState.playerHit || spGame.animState.playerRecovering || spGame.animState.dealerDropping || spGame.animState.dealerRecovering}
         settings={settings}
         onStartGame={handleStartSP}
-        onStartMultiplayer={handleStartMP}
+
         onResetGame={(toMenu) => {
           if (toMenu) {
             setAppState('LOADING_GAME');
@@ -317,73 +251,40 @@ export default function App() {
               handleMainMenu();
             }, 100);
           } else {
-            setAppState('LOADING_SP'); // Re-trigger loading
+            setAppState('LOADING_SP');
             spGame.resetGame(false);
           }
         }}
         onFireShot={handleFireShot}
         onUseItem={handleUseItem}
-        onHoverTarget={game.setAimTarget}
+        onHoverTarget={spGame.setAimTarget}
         onPickupGun={handlePickupGun}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpenScoreboard={() => setIsScoreboardOpen(true)}
         onUpdateName={spGame.setPlayerName}
-        messages={socket.messages}
-        onSendMessage={socket.sendMessage}
-        isMultiplayer={isMultiplayerMode && !!socket.gameStateData}
-        mpGameState={socket.gameStateData}
-        mpMyPlayerId={socket.myPlayerId}
-        onMpShoot={socket.shootPlayer}
         onStealItem={spGame.stealItem}
         onBootComplete={handleBootComplete}
-        matchData={isMultiplayerMode ? undefined : spGame.matchStats}
+        matchData={spGame.matchStats}
       />
 
-      {/* MP Game Over Screen */}
-      {showMpGameOver && socket.gameOverData && (
-        <MultiplayerGameOver
-          winnerName={socket.gameOverData.winnerName}
-          isWinner={socket.gameOverData.winnerId === socket.myPlayerId}
-          onPlayAgain={handlePlayAgain}
-          onMainMenu={handleMainMenu}
-        />
-      )}
-
-      {/* Loading Screens */}
-      {(appState === 'LOADING_SP' || appState === 'LOADING_MP' || appState === 'LOADING_GAME') && (
+      {(appState === 'LOADING_SP' || appState === 'LOADING_GAME') && (
         <div className="absolute inset-0 z-[100]">
           <LoadingScreen
             onComplete={onLoadingComplete}
-            text={appState === 'LOADING_GAME' ? "INITIALIZING TABLE..." : (appState === 'LOADING_SP' ? "LOADING..." : "CONNECTING...")}
-            duration={appState === 'LOADING_GAME' ? 10 : 10} // Reduced for instant feel (logic handles real loading)
-            serverCheck={appState === 'LOADING_MP'}
+            text={appState === 'LOADING_GAME' ? "INITIALIZING TABLE..." : "LOADING..."}
+            duration={appState === 'LOADING_GAME' ? 1200 : 800}
             onBack={handleBackToMenu}
           />
         </div>
       )}
 
-      {/* Lobby */}
-      {appState === 'LOBBY' && (
-        <div className="absolute inset-0 z-[100]">
-          <MultiplayerLobby
-            onStartGame={handleLobbyStart}
-            onBack={handleBackToMenu}
-            playerName={spGame.playerName || "PLAYER"}
-            socketData={socket}
-            errorMsg={socketError}
-          />
-        </div>
-      )}
-
-      {/* Scoreboard */}
       {isScoreboardOpen && (
         <Scoreboard
           onClose={() => setIsScoreboardOpen(false)}
         />
       )}
 
-      {/* Settings */}
       {isSettingsOpen && (
         <SettingsMenu
           settings={settings}
@@ -393,7 +294,6 @@ export default function App() {
         />
       )}
 
-      {/* Tutorial Guide */}
       {isGuideOpen && (
         <TutorialGuide
           onClose={() => setIsGuideOpen(false)}

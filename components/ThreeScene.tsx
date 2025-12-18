@@ -1,10 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext } from '../types';
-import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline } from '../utils/threeHelpers';
+import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext, PlayerState, GameState } from '../types';
+
 import { updateScene } from '../utils/sceneLogic';
 import { initThreeScene, cleanScene } from '../utils/three/sceneSetup';
-
 
 interface ThreeSceneProps {
     isSawed: boolean;
@@ -16,10 +15,11 @@ interface ThreeSceneProps {
     animState: AnimationState;
     turnOwner: TurnOwner;
     settings: GameSettings;
-    players?: any[];
-    playerId?: string;
-    messages?: any[];
-    knownShell?: any; // ShellType | null
+    knownShell?: any;
+    isHardMode?: boolean;
+    player: PlayerState;
+    dealer: PlayerState;
+    gameState: GameState;
 }
 
 export const ThreeScene: React.FC<ThreeSceneProps> = ({
@@ -32,10 +32,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     animState,
     turnOwner,
     settings,
-    players,
-    playerId,
-    messages,
-    knownShell
+    knownShell,
+    isHardMode,
+    player,
+    dealer,
+    gameState
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,15 +49,16 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         animState,
         turnOwner,
         settings,
-        players,
-        playerId,
-        messages,
-        knownShell
+        knownShell,
+        isHardMode: isHardMode || false,
+        player,
+        dealer,
+        gameState
     });
 
     useEffect(() => {
-        propsRef.current = { isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell };
-    }, [isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, players, playerId, messages, knownShell]);
+        propsRef.current = { isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, knownShell, isHardMode: isHardMode || false, player, dealer, gameState };
+    }, [isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, knownShell, isHardMode, player, dealer, gameState]);
 
     const sceneRef = useRef<SceneContext | null>(null);
 
@@ -140,40 +142,49 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             const height = containerRef.current.clientHeight;
             if (width === 0 || height === 0) return;
 
-            // Device-aware scaling
+            // Device-aware scaling - SHARPER for better visibility
             const isMob = window.innerWidth < 900;
             const isAnd = navigator.userAgent.toLowerCase().includes('android');
             const pixelRatio = window.devicePixelRatio || 1;
-            const isLowEnd = isMob && (width < 600 || pixelRatio < 2);
 
-            // Re-calc scale logic consistent with setup
-            let mobilePixelScale = 2;
-            if (isLowEnd) mobilePixelScale = 3.0;
+            // Re-calc scale logic - more aggressive pixelation ONLY if explicitly requested, otherwise keep it crisp but retro
+            let mobilePixelScale = pixelRatio > 1 ? 1.5 : 1.0;
+            if (isMob && width < 500) mobilePixelScale = 2.0;
 
-            const pxScale = isMob ? mobilePixelScale : (propsRef.current.settings.pixelScale || 3);
+            const pxScale = isMob ? mobilePixelScale : (propsRef.current.settings.pixelScale || 2.5);
 
             sceneRef.current.renderer.setSize(width / pxScale, height / pxScale, false);
+            sceneRef.current.renderer.domElement.style.imageRendering = 'pixelated';
+
             const aspect = width / height;
             sceneRef.current.camera.aspect = aspect;
             sceneRef.current.camera.updateProjectionMatrix();
         };
 
-        const timeout = setTimeout(() => {
-            if (containerRef.current && containerRef.current.clientWidth > 0) {
+        // Initialize immediately if possible to avoid flash
+        if (containerRef.current && containerRef.current.clientWidth > 0) {
+            initThree();
+            animate();
+        } else {
+            // Fallback for edge cases
+            const checkInterval = setInterval(() => {
+                if (containerRef.current && containerRef.current.clientWidth > 0) {
+                    initThree();
+                    animate();
+                    clearInterval(checkInterval);
+                }
+            }, 16);
+            return () => clearInterval(checkInterval);
+        }
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (sceneRef.current) {
+                updateCameraResponsive();
+            } else if (containerRef.current && containerRef.current.clientWidth > 0) {
                 initThree();
                 animate();
             }
-        }, 100);
-
-        const resizeObserver = new ResizeObserver(() => {
-            // DEBOUNCE RESIZE: Don't rebuild, just resize
-            if (sceneRef.current) {
-                requestAnimationFrame(updateCameraResponsive);
-            } else if (containerRef.current && containerRef.current.clientWidth > 0) {
-                initThree(); animate();
-            }
         });
-
         if (containerRef.current) resizeObserver.observe(containerRef.current);
 
         // INPUT HANDLING - Prevent Double Firing
@@ -222,7 +233,6 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         el.addEventListener('touchend', handleTouchEnd, touchOpt);
 
         return () => {
-            clearTimeout(timeout);
             cancelAnimationFrame(frameId);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('mousemove', handleMouseMove);
@@ -236,7 +246,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             }
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
-    }, [players?.map(p => p.id).join(',')]); // Removed settings.pixelScale to prevent full rebuild
+    }, []); // Removed settings.pixelScale to prevent full rebuild
 
     // Separate effect for Pixel Scale / Resolution updates (No Rebuild)
     useEffect(() => {
@@ -320,29 +330,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (animState.triggerRemote > 0) sceneRef.current.scene.userData.cameraShake = 0.7; // Shake on remote use
     }, [animState.triggerDrink, animState.triggerHeal, animState.triggerRemote]);
 
-    useEffect(() => {
-        if (!sceneRef.current) return;
-        const { barrelMesh, pumpMesh, magTubeMesh } = sceneRef.current;
-        if (animState.isSawing) {
-            barrelMesh.scale.y = 1;
-            pumpMesh.scale.y = 1;
-            magTubeMesh.scale.y = 1;
-        } else if (isSawed) {
-            barrelMesh.scale.y = 0.43;
-            barrelMesh.position.z = 2.5;
-            pumpMesh.scale.y = 0.5;
-            pumpMesh.position.z = 2.8;
-            magTubeMesh.scale.y = 0.45;
-            magTubeMesh.position.z = 2.0;
-        } else {
-            barrelMesh.scale.y = 1;
-            barrelMesh.position.z = 4.5;
-            pumpMesh.scale.y = 1;
-            pumpMesh.position.z = 4.5;
-            magTubeMesh.scale.y = 1;
-            magTubeMesh.position.z = 4.0;
-        }
-    }, [isSawed, animState.isSawing]);
+    // Variant transformations are now handled dynamically in sceneLogic.ts
 
     // CHOKE ATTACHMENT SYNC
     useEffect(() => {

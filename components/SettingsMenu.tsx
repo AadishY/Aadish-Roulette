@@ -85,28 +85,14 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
 
     useEffect(() => {
         const handleResize = () => {
-            // Target dimensions for the settings modal
-            // Changed to wider and shorter ratios to fit landscape mobile better
-            const targetWidth = 750;
-            const targetHeight = 450;
-
-            const wScale = Math.min(1, (window.innerWidth - 20) / targetWidth);
-            const hScale = Math.min(1, (window.innerHeight - 20) / targetHeight);
-
+            const targetWidth = 850;
+            const targetHeight = 550;
+            const wScale = Math.min(1, (window.innerWidth - 40) / targetWidth);
+            const hScale = Math.min(1, (window.innerHeight - 40) / targetHeight);
             let newScale = Math.min(wScale, hScale);
-
-            // Clamp minimum scale
-            if (newScale < 0.5) newScale = 0.5;
-
-            // Specific check for very short landscape screens
-            if (window.innerHeight < 450 && newScale > 0.45) {
-                const tightHeightScale = (window.innerHeight - 20) / targetHeight; // Use targetHeight directly
-                if (tightHeightScale < newScale) newScale = Math.max(0.45, tightHeightScale);
-            }
-
+            if (newScale < 0.6) newScale = 0.6;
             setScale(newScale);
         };
-
         window.addEventListener('resize', handleResize);
         handleResize();
         return () => window.removeEventListener('resize', handleResize);
@@ -117,106 +103,138 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
     };
 
     return (
-        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
             <div
-                className="w-full max-w-3xl bg-stone-900 border-2 border-stone-600 shadow-[0_0_50px_rgba(0,0,0,1)] p-3 md:p-6 relative flex flex-col max-h-[90vh] overflow-hidden rounded-sm origin-center transition-transform duration-100"
+                className="w-full max-w-2xl bg-stone-950/40 backdrop-blur-2xl border border-stone-800/50 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5"
                 style={{ transform: `scale(${scale})` }}
             >
-                <div className="flex justify-between items-center mb-1 border-b border-stone-700 pb-1 sticky top-0 bg-stone-900 z-10 shrink-0">
-                    <h2 className="text-lg md:text-xl font-black text-stone-200 tracking-widest pl-1">
-                        CONFIG
-                    </h2>
-                    <button onClick={onClose} className="text-stone-500 hover:text-white transition-colors">
-                        <X size={18} />
+                {/* Decorative */}
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-stone-500/20 to-transparent" />
+
+                {/* Header */}
+                <div className="p-6 border-b border-stone-800/50 flex justify-between items-center bg-stone-950/20">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-stone-900/60 rounded-xl border border-stone-800 flex items-center justify-center text-stone-400">
+                            <Monitor size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-white tracking-[0.2em] uppercase leading-tight">SETTINGS</h2>
+                            <p className="text-[10px] text-stone-500 font-bold tracking-[0.4em] uppercase">Display & Audio</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-stone-500 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95">
+                        <X size={24} />
                     </button>
                 </div>
 
-                <div className="space-y-4 flex-1 overflow-y-auto px-2 pr-1 py-1">
-                    {/* Pixelation */}
-                    <div className="space-y-0.5">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
-                            <span className="flex items-center gap-1.5"><Monitor size={12} /> RENDER RES</span>
-                            <span>{settings.pixelScale.toFixed(1)}x</span>
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+
+                    {/* Visuals Group */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-stone-500 font-extrabold tracking-[0.2em] uppercase text-[10px]">Graphics</h3>
+                            <div className="h-[1px] flex-1 bg-stone-800/30" />
                         </div>
-                        <CustomSlider
-                            min={1} max={6} step={0.5}
-                            value={settings.pixelScale}
-                            onChange={(val) => handleChange('pixelScale', val)}
-                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                            {/* Pixelation */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Resolution</span>
+                                    <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{settings.pixelScale.toFixed(1)}x</span>
+                                </div>
+                                <CustomSlider
+                                    min={1} max={6} step={0.5}
+                                    value={settings.pixelScale}
+                                    onChange={(val) => handleChange('pixelScale', val)}
+                                />
+                            </div>
+
+                            {/* Brightness */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Brightness</span>
+                                    <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{(settings.brightness * 100).toFixed(0)}%</span>
+                                </div>
+                                <CustomSlider
+                                    min={0.1} max={2.0} step={0.1}
+                                    value={settings.brightness}
+                                    onChange={(val) => handleChange('brightness', val)}
+                                />
+                            </div>
+
+                            {/* HUD Scale */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">HUD Scale</span>
+                                    <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{settings.uiScale.toFixed(2)}x</span>
+                                </div>
+                                <CustomSlider
+                                    min={0.6} max={1.4} step={0.1}
+                                    value={settings.uiScale}
+                                    onChange={(val) => handleChange('uiScale', val)}
+                                />
+                            </div>
+
+                            {/* FOV */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Field of View</span>
+                                    <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{settings.fov || 85}°</span>
+                                </div>
+                                <CustomSlider
+                                    min={60} max={110} step={1}
+                                    value={settings.fov || 85}
+                                    onChange={(val) => handleChange('fov', val)}
+                                />
+                            </div>
+
+                        </div>
                     </div>
 
-                    {/* Brightness */}
-                    <div className="space-y-0.5">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
-                            <span className="flex items-center gap-1.5"><Eye size={12} /> BRIGHTNESS</span>
-                            <span>{(settings.brightness * 100).toFixed(0)}%</span>
+                    {/* Audio Group */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-stone-500 font-extrabold tracking-[0.2em] uppercase text-[10px]">Sound</h3>
+                            <div className="h-[1px] flex-1 bg-stone-800/30" />
                         </div>
-                        <CustomSlider
-                            min={0.1} max={2.0} step={0.1}
-                            value={settings.brightness}
-                            onChange={(val) => handleChange('brightness', val)}
-                        />
-                    </div>
 
-                    {/* UI Scale */}
-                    <div className="space-y-0.5">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
-                            <span className="flex items-center gap-1.5"><Scaling size={12} /> HUD SCALE</span>
-                            <span>{settings.uiScale.toFixed(2)}x</span>
-                        </div>
-                        <CustomSlider
-                            min={0.6} max={1.4} step={0.1}
-                            value={settings.uiScale}
-                            onChange={(val) => handleChange('uiScale', val)}
-                        />
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                            {/* Music Volume */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Music</span>
+                                    <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{Math.round((settings.musicVolume ?? 0.5) * 100)}%</span>
+                                </div>
+                                <CustomSlider
+                                    min={0} max={1} step={0.1}
+                                    value={settings.musicVolume ?? 0.5}
+                                    onChange={(val) => handleChange('musicVolume', val)}
+                                />
+                            </div>
 
-                    {/* FOV */}
-                    <div className="space-y-0.5">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
-                            <span className="flex items-center gap-1.5"><Eye size={12} /> FOV</span>
-                            <span>{settings.fov || 85}°</span>
+                            {/* SFX Volume */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Effects</span>
+                                    <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{Math.round((settings.sfxVolume ?? 0.7) * 100)}%</span>
+                                </div>
+                                <CustomSlider
+                                    min={0} max={1} step={0.1}
+                                    value={settings.sfxVolume ?? 0.7}
+                                    onChange={(val) => handleChange('sfxVolume', val)}
+                                />
+                            </div>
                         </div>
-                        <CustomSlider
-                            min={60} max={110} step={1}
-                            value={settings.fov || 85}
-                            onChange={(val) => handleChange('fov', val)}
-                        />
-                    </div>
-
-                    {/* Music Volume */}
-                    <div className="space-y-0.5">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
-                            <span className="flex items-center gap-1.5">🎵 MUSIC</span>
-                            <span>{Math.round((settings.musicVolume ?? 0.5) * 100)}%</span>
-                        </div>
-                        <CustomSlider
-                            min={0} max={1} step={0.1}
-                            value={settings.musicVolume ?? 0.5}
-                            onChange={(val) => handleChange('musicVolume', val)}
-                        />
-                    </div>
-
-                    {/* SFX Volume */}
-                    <div className="space-y-0.5">
-                        <div className="flex justify-between text-stone-400 font-bold tracking-wider text-[10px] md:text-xs mb-0.5">
-                            <span className="flex items-center gap-1.5">🔊 SFX</span>
-                            <span>{Math.round((settings.sfxVolume ?? 0.7) * 100)}%</span>
-                        </div>
-                        <CustomSlider
-                            min={0} max={1} step={0.1}
-                            value={settings.sfxVolume ?? 0.7}
-                            onChange={(val) => handleChange('sfxVolume', val)}
-                        />
                     </div>
                 </div>
 
-                <div className="mt-1 pt-1 border-t border-stone-800 flex flex-row gap-2 flex-shrink-0">
-                    <button onClick={onResetDefaults} className="flex-1 border border-stone-700 text-stone-500 hover:text-white hover:border-white px-2 py-1.5 text-[10px] font-bold tracking-widest flex items-center justify-center gap-2 transition-colors">
-                        <RotateCcw size={10} /> RESET
+                <div className="p-6 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex flex-row gap-4">
+                    <button onClick={onResetDefaults} className="flex-1 h-12 border border-stone-800 text-stone-500 hover:text-white hover:bg-white/5 px-4 font-black tracking-[0.2em] flex items-center justify-center gap-2 transition-all rounded-xl text-[10px] uppercase">
+                        <RotateCcw size={14} /> Reset Defaults
                     </button>
-                    <button onClick={onClose} className="flex-[2] bg-stone-200 text-black font-black px-4 py-1.5 hover:bg-red-600 hover:text-white transition-colors tracking-widest text-[10px] md:text-xs">
-                        CLOSE
+                    <button onClick={onClose} className="flex-[1.5] h-12 bg-white text-black font-black px-6 hover:bg-stone-200 transition-all tracking-[0.3em] rounded-xl text-xs uppercase shadow-xl">
+                        Return to Game
                     </button>
                 </div>
             </div>

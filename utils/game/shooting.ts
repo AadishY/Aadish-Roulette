@@ -42,6 +42,8 @@ export const performShot = async (
     } = ctx;
 
     setIsProcessing(true);
+    // Align gun before firing
+    await wait(450);
 
     const { chamber, currentShellIndex } = gameState;
 
@@ -56,42 +58,51 @@ export const performShot = async (
     const shell = chamber[currentShellIndex];
     const isLive = shell === 'LIVE';
 
+    const isSawed = shooter === 'PLAYER' ? player.isSawedActive : dealer.isSawedActive;
+    const isChoked = shooter === 'PLAYER' ? player.isChokeActive : dealer.isChokeActive;
+
+    // Pre-calculate if this shot will "HIT" (important for animations)
+    let willHit = isLive;
+    let anyLive = isLive;
+    if (isChoked && currentShellIndex + 1 < chamber.length) {
+        anyLive = chamber[currentShellIndex] === 'LIVE' || chamber[currentShellIndex + 1] === 'LIVE';
+        willHit = anyLive;
+    }
+
     setTimeout(() => {
-        if (isLive) audioManager.playSound('liveshell');
+        if (anyLive) audioManager.playSound('liveshell');
         else audioManager.playSound('blankshell');
     }, 50);
 
     setAnim(prev => ({
         ...prev,
-        isLiveShot: isLive,
+        isLiveShot: anyLive,
         triggerRecoil: prev.triggerRecoil + 1,
-        muzzleFlashIntensity: isLive ? 100 : 0
+        muzzleFlashIntensity: anyLive ? 120 : 0
     }));
 
-    if (isLive && target === 'DEALER') {
+    if (willHit && target === 'DEALER') {
         // INSTANT HIT
         setAnim(prev => ({ ...prev, dealerHit: true, dealerDropping: true }));
-        setTimeout(() => setAnim(prev => ({ ...prev, dealerHit: false })), 200); // Short blood duration, drop persists
+        setTimeout(() => setAnim(prev => ({ ...prev, dealerHit: false })), 200);
     }
 
-    if (isLive && target === 'PLAYER') {
+    if (willHit && target === 'PLAYER') {
         // INSTANT HIT - Player knocked down
         setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: true }));
-        setOverlayColor('red'); // Instant Red Screen
+        setOverlayColor('red');
         setShowBlood(true);
-        // Player hit lasts 2.5s, then recovery animation begins
         setTimeout(() => {
             setAnim(prev => ({ ...prev, playerHit: false }));
             setShowBlood(false);
             setOverlayColor('none');
-            // Recovery animation continues for another 2s
             setTimeout(() => {
                 setAnim(prev => ({ ...prev, playerRecovering: false }));
             }, 2000);
         }, 2500);
     }
 
-    if (isLive) {
+    if (anyLive) {
         setShowFlash(true);
         setTimeout(() => {
             setShowFlash(false);
@@ -102,8 +113,7 @@ export const performShot = async (
     setOverlayText(shell);
 
     let damage = isLive ? 1 : 0;
-    const isSawed = shooter === 'PLAYER' ? player.isSawedActive : dealer.isSawedActive;
-    const isChoked = shooter === 'PLAYER' ? player.isChokeActive : dealer.isChokeActive;
+    // (Variables isSawed/isChoked already declared above)
 
     // --- CHOKE LOGIC ---
     let processedShells = 1;
@@ -174,6 +184,22 @@ export const performShot = async (
         }
     }
 
+    // --- INSTANT SHELL COUNT UPDATE ---
+    let consumedLives = 0;
+    let consumedBlanks = 0;
+    for (let i = 0; i < processedShells; i++) {
+        if (chamber[currentShellIndex + i] === 'LIVE') consumedLives++;
+        else consumedBlanks++;
+    }
+    const nextIndex = currentShellIndex + processedShells;
+
+    setGameState(prev => ({
+        ...prev,
+        currentShellIndex: nextIndex,
+        liveCount: Math.max(0, prev.liveCount - consumedLives),
+        blankCount: Math.max(0, prev.blankCount - consumedBlanks)
+    }));
+
     // Rack Sequence
     await wait(500);
 
@@ -191,7 +217,7 @@ export const performShot = async (
         triggerRack: prev.triggerRack + 1
     }));
 
-    await wait(1200);
+    await wait(800); // Shorter
     setOverlayText(null);
     setAimTarget('IDLE');
 
@@ -223,7 +249,6 @@ export const performShot = async (
 
             if (newHp <= 0) {
                 if (gameState.isHardMode && handleHardModeRoundEnd) {
-                    // In Hard Mode, Dealer dies = Player wins Round
                     addLog('ROUND WON', 'safe');
                     handleHardModeRoundEnd('PLAYER');
                     setIsProcessing(false);
@@ -232,14 +257,14 @@ export const performShot = async (
                 setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
                 if (matchStats?.current) matchStats.current.result = 'WIN';
                 gameOver = true;
-                addLog('DEALER ELIMINATED.', 'safe'); // Type: 'danger' | 'safe' | 'neutral' | 'info' | 'dealer'
+                addLog('DEALER ELIMINATED.', 'safe');
             } else {
                 setOverlayColor('green');
                 setAnim(prev => ({ ...prev, dealerRecovering: true }));
-                await wait(2000);
+                await wait(1200); // Shorter
                 if (newHp > 0) {
                     setAnim(prev => ({ ...prev, dealerDropping: false }));
-                    await wait(1500);
+                    await wait(1000); // Shorter
                     setAnim(prev => ({ ...prev, dealerRecovering: false }));
                 }
                 setOverlayColor('none');
@@ -253,28 +278,9 @@ export const performShot = async (
     }
 
     setKnownShell(null);
-    await wait(1000);
+    await wait(400); // Shorter pause
 
-    // Update Shell Counts & Check End of Round
-    // Update Shell Counts & Check End of Round
-    // Calculate consumed
-    let consumedLives = 0;
-    let consumedBlanks = 0;
-
-    for (let i = 0; i < processedShells; i++) {
-        if (chamber[currentShellIndex + i] === 'LIVE') consumedLives++;
-        else consumedBlanks++;
-    }
-
-    const nextIndex = currentShellIndex + processedShells;
     const remaining = chamber.length - nextIndex;
-
-    setGameState(prev => ({
-        ...prev,
-        currentShellIndex: nextIndex,
-        liveCount: prev.liveCount - consumedLives,
-        blankCount: prev.blankCount - consumedBlanks
-    }));
 
     if (remaining === 0) {
         startRound();
@@ -326,7 +332,7 @@ export const performShot = async (
 
     const ownerPhase = nextOwner === 'PLAYER' ? 'PLAYER_TURN' : 'DEALER_TURN';
     setGameState(prev => ({ ...prev, turnOwner: nextOwner, phase: ownerPhase, lastTurnWasSkipped: skipped }));
-    setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); // Default to PLAYER (or dealer idle view?)
+    setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'DEALER');
     // Originally setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); // Wait, why both PLAYER?
     // Original code: setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); 
     // Yes, originally it forced PLAYER view even if dealer turn, maybe because DealerAI handles view switching? 

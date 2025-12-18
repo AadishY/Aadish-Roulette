@@ -5,13 +5,15 @@ import * as THREE from 'three';
 const isMobile = typeof window !== 'undefined' &&
     (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768);
 
-const SHELL_COUNT = isMobile ? 12 : 30;
+const SHELL_COUNT = isMobile ? 16 : 64; // Denser for more "wow"
 
 interface ShellData {
     mesh: THREE.Group;
     speed: number;
     rotationSpeed: THREE.Vector3;
-    startY: number;
+    drift: number;
+    driftSpeed: number;
+    driftOffset: number;
 }
 
 interface ShellBackgroundProps {
@@ -43,177 +45,135 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
 
         // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
+        scene.background = new THREE.Color(0x000000); // Pure black to block game scene
+        scene.fog = new THREE.Fog(0x000000, 5, 30);
 
         // Camera
-        const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+        const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
         camera.position.set(0, 0, 15);
-        camera.lookAt(0, 0, 0);
 
-        const isAndroid = navigator.userAgent.toLowerCase().includes('android');
         const isLowEnd = isMobile && (width < 600 || (window.devicePixelRatio || 1) < 2);
 
-        // Renderer - low quality for performance
+        // Renderer
         const renderer = new THREE.WebGLRenderer({
             antialias: false,
-            powerPreference: 'default',
+            powerPreference: 'high-performance',
             precision: isLowEnd ? 'lowp' : 'mediump',
             alpha: false
         });
 
-        // Consistent resolution scaling - SHARPER (Reduced blur)
-        const pixelScale = isAndroid ? 1.5 : 1; // Increased density for sharpness
+        const pixelScale = isMobile ? 5.0 : 4.0;
         renderer.setSize(width / pixelScale, height / pixelScale, false);
+        renderer.domElement.style.position = 'absolute';
+        renderer.domElement.style.left = '0';
+        renderer.domElement.style.top = '0';
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
         renderer.domElement.style.imageRendering = 'pixelated';
-
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Sharper on high DPI, capped for perf
+        renderer.domElement.style.filter = 'contrast(1.2) brightness(1.1)';
+        renderer.setPixelRatio(1);
         container.appendChild(renderer.domElement);
 
-        // Lighting
-        // Lighting - ENHANCED FOR VIBRANCY
-        // Lighting - ENHANCED VIBRANCY & DEPTH
-        const ambientLight = new THREE.AmbientLight(0x1a1a1a, 8.0); // Brighter base
+        // Enhanced Lighting
+        const ambientLight = new THREE.AmbientLight(0x1a1a1a, 6.0);
         scene.add(ambientLight);
 
-        // Main Red Fill - More intense
-        const redLight = new THREE.PointLight(0xff0000, 40.0, 80);
-        redLight.position.set(0, 5, 15);
+        const redLight = new THREE.PointLight(0xcc0000, 60.0, 100);
+        redLight.position.set(-10, 5, 10);
         scene.add(redLight);
 
-        // Top White Key - Sharp highlights
-        const topLight = new THREE.DirectionalLight(0xffffff, 8.0);
-        topLight.position.set(2, 10, 5);
+        const blueLight = new THREE.PointLight(0x0044ff, 80.0, 100);
+        blueLight.position.set(10, -5, 10);
+        scene.add(blueLight);
+
+        const amberLight = new THREE.PointLight(0xffaa00, 120.0, 120);
+        amberLight.position.set(0, 5, 15);
+        scene.add(amberLight);
+
+        const topLight = new THREE.DirectionalLight(0xffffff, 10.0);
+        topLight.position.set(0, 20, 10);
         scene.add(topLight);
 
-        // Blue Rim Light - Stronger contrast
-        const rimLight = new THREE.SpotLight(0x0066ff, 25.0);
-        rimLight.position.set(0, 10, -10);
-        rimLight.lookAt(0, 0, 0);
-        scene.add(rimLight);
+        // Shell Geometry
+        const bodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.45, 6);
+        const baseGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.1, 6);
 
-        // Side fills
-        const leftLight = new THREE.PointLight(0xff4444, 5.0, 50);
-        leftLight.position.set(-15, 2, 5);
-        scene.add(leftLight);
+        const liveMat = new THREE.MeshStandardMaterial({ color: 0x991111, roughness: 0.3, metalness: 0.5 });
+        const blankMat = new THREE.MeshStandardMaterial({ color: 0x333344, roughness: 0.3, metalness: 0.4 });
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x997700, roughness: 0.2, metalness: 0.9 });
 
-        const rightLight = new THREE.PointLight(0xff4444, 5.0, 50);
-        rightLight.position.set(15, 2, 5);
-        scene.add(rightLight);
+        const disposables = [bodyGeo, baseGeo, liveMat, blankMat, baseMat];
 
-        // --- SHARED RESOURCES - LOW POLY FOR PIXELATED LOOK ---
-        const bodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.45, 6); // Low poly (6 sides)
-        const baseGeo = new THREE.CylinderGeometry(0.125, 0.125, 0.1, 6);
-        const primerGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.02, 6);
-
-        const liveMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.4, metalness: 0.5, flatShading: true });
-        const blankMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5a, roughness: 0.4, metalness: 0.4, flatShading: true });
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3, metalness: 0.8, flatShading: true }); // Gold
-        const primerMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.5, metalness: 0.6, flatShading: true });
-
-        const disposables = [bodyGeo, baseGeo, primerGeo, liveMat, blankMat, baseMat, primerMat];
-
-        const createShell = (isLive: boolean): THREE.Group => {
-            const shellGroup = new THREE.Group();
+        const shells: ShellData[] = [];
+        for (let i = 0; i < SHELL_COUNT; i++) {
+            const isLive = Math.random() > 0.4;
+            const group = new THREE.Group();
 
             const body = new THREE.Mesh(bodyGeo, isLive ? liveMat : blankMat);
-            shellGroup.add(body);
+            group.add(body);
 
             const base = new THREE.Mesh(baseGeo, baseMat);
             base.position.y = -0.22;
-            shellGroup.add(base);
+            group.add(base);
 
-            const primer = new THREE.Mesh(primerGeo, primerMat);
-            primer.position.y = -0.28;
-            shellGroup.add(primer);
+            group.position.set(
+                (Math.random() - 0.5) * 80, // Much wider distribution
+                (Math.random() * 40) - 20,
+                (Math.random() * 30) - 15
+            );
+            group.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+            // Size variation based on Z (simulated depth)
+            const depthFactor = (group.position.z + 20) / 30; // 0 to 1
+            const size = (isMobile ? 1.2 : 1.0) + (depthFactor * 1.8) + Math.random() * 0.8;
+            group.scale.setScalar(size);
 
-            return shellGroup;
-        };
-
-        // Create shells array
-        const shells: ShellData[] = [];
-        for (let i = 0; i < SHELL_COUNT; i++) {
-            const isLive = Math.random() > 0.1;
-            const shell = createShell(isLive);
-
-            let xPos: number;
-            const edgeChance = Math.random();
-            if (edgeChance < 0.3) {
-                xPos = -10 - Math.random() * 8;
-            } else if (edgeChance < 0.6) {
-                xPos = 10 + Math.random() * 8;
-            } else {
-                xPos = (Math.random() - 0.5) * 16;
-            }
-            shell.position.x = xPos;
-            shell.position.y = (Math.random() * 40) - 15;
-            shell.position.z = (Math.random() - 0.5) * 8;
-
-            shell.rotation.x = Math.random() * Math.PI * 2;
-            shell.rotation.y = Math.random() * Math.PI * 2;
-            shell.rotation.z = Math.random() * Math.PI * 2;
-
-            const scale = (isMobile ? 4 : 2) + Math.random() * 2;
-            shell.scale.setScalar(scale);
-
-            scene.add(shell);
-
+            scene.add(group);
             shells.push({
-                mesh: shell,
-                speed: 0.02 + Math.random() * 0.03,
+                mesh: group,
+                speed: 0.04 + Math.random() * 0.08,
                 rotationSpeed: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.05,
-                    (Math.random() - 0.5) * 0.05,
-                    (Math.random() - 0.5) * 0.05
+                    (Math.random() - 0.5) * 0.1,
+                    (Math.random() - 0.5) * 0.1,
+                    (Math.random() - 0.5) * 0.1
                 ),
-                startY: shell.position.y,
+                drift: Math.random() * 2,
+                driftSpeed: 0.5 + Math.random() * 1.5,
+                driftOffset: Math.random() * 10
             });
         }
 
         sceneRef.current = { scene, camera, renderer, shells, disposables };
 
-        // Animation loop
         let frameId: number;
-        let lastTimestamp = performance.now(); // Init with current time
+        let lastTime = performance.now();
 
         const animate = (time: number) => {
             if (!activeRef.current) {
-                // Low power mode when not visible
                 setTimeout(() => { frameId = requestAnimationFrame(animate); }, 500);
                 return;
             }
-
             frameId = requestAnimationFrame(animate);
+            const dt = Math.min((time - lastTime) / 1000, 0.1);
+            lastTime = time;
+            const t = time * 0.001;
 
-            const elapsed = time - lastTimestamp;
-
-            // Limit to 30fps for background on mobile to save battery
-            if (isMobile && elapsed < 33) return;
-
-            // Cap delta to 0.1s to prevent huge jumps on tab switch/lag
-            const dt = Math.min(elapsed / 1000, 0.1);
-            lastTimestamp = time;
-
-            const timeScale = dt / 0.0166; // Normalize to 60fps reference
+            // Subtle camera sway
+            camera.position.x = Math.sin(t * 0.5) * 0.8;
+            camera.position.y = Math.cos(t * 0.3) * 0.5;
+            camera.lookAt(0, 0, 0);
 
             shells.forEach((shell) => {
-                shell.mesh.position.y -= shell.speed * timeScale;
-                // Add some chaotic wobble
-                shell.mesh.rotation.x += (shell.rotationSpeed.x + Math.sin(time * 0.001 + shell.mesh.position.y) * 0.02) * timeScale;
-                shell.mesh.rotation.y += shell.rotationSpeed.y * timeScale;
-                shell.mesh.rotation.z += (shell.rotationSpeed.z + Math.cos(time * 0.0015) * 0.01) * timeScale;
+                shell.mesh.position.y -= shell.speed * (dt * 60);
+                shell.mesh.position.x += Math.sin(t * shell.driftSpeed + shell.driftOffset) * (shell.drift * 0.01);
 
-                if (shell.mesh.position.y < -15) {
-                    shell.mesh.position.y = 12 + Math.random() * 8;
-                    const edgeChance = Math.random();
-                    if (edgeChance < 0.3) {
-                        shell.mesh.position.x = -10 - Math.random() * 8;
-                    } else if (edgeChance < 0.6) {
-                        shell.mesh.position.x = 10 + Math.random() * 8;
-                    } else {
-                        shell.mesh.position.x = (Math.random() - 0.5) * 16;
-                    }
+                shell.mesh.rotation.x += shell.rotationSpeed.x * (dt * 60);
+                shell.mesh.rotation.y += shell.rotationSpeed.y * (dt * 60);
+                shell.mesh.rotation.z += shell.rotationSpeed.z * (dt * 60);
+
+                if (shell.mesh.position.y < -20) {
+                    shell.mesh.position.y = 20;
+                    shell.mesh.position.x = (Math.random() - 0.5) * 80;
+                    shell.mesh.position.z = (Math.random() * 30) - 15;
                 }
             });
 
@@ -228,17 +188,16 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
             const h = containerRef.current.clientHeight;
             sceneRef.current.camera.aspect = w / h;
             sceneRef.current.camera.updateProjectionMatrix();
-            // Recalculate size with scale - SHARPER
-            const pxScale = isAndroid ? 1.5 : 1;
+            const pxScale = isMobile ? 5.0 : 4.0;
             sceneRef.current.renderer.setSize(w / pxScale, h / pxScale, false);
+            sceneRef.current.renderer.domElement.style.width = '100%';
+            sceneRef.current.renderer.domElement.style.height = '100%';
         };
         window.addEventListener('resize', handleResize);
 
         return () => {
             cancelAnimationFrame(frameId);
             window.removeEventListener('resize', handleResize);
-
-            // Dispose everything
             if (sceneRef.current) {
                 sceneRef.current.disposables.forEach(d => d.dispose());
                 sceneRef.current.renderer.dispose();

@@ -1,8 +1,13 @@
-const CACHE_NAME = 'aadish-roulette-v2';
+const CACHE_NAME = 'aadish-roulette-v3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
-    '/manifest.json'
+    '/manifest.json',
+    '/image/favicon/android-chrome-192x192.png',
+    '/image/favicon/android-chrome-512x512.png',
+    '/image/favicon/apple-touch-icon.png',
+    '/image/favicon/favicon-32x32.png',
+    '/image/favicon/favicon-16x16.png'
 ];
 
 // Install event
@@ -10,7 +15,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             // We don't fail if some assets are missing, using catch
-            return cache.addAll(ASSETS_TO_CACHE).catch(err => console.log('Cache addAll error', err));
+            return cache.addAll(ASSETS_TO_CACHE).catch(() => { });
         })
     );
     self.skipWaiting();

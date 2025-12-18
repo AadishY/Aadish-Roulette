@@ -230,7 +230,7 @@ export const useGameLogic = () => {
       setTimeout(() => {
         setOverlayText(null);
         startRound(true, hardMode, initialHardModeState);
-      }, 3000);
+      }, 1800);
     } else {
       startRound(true, hardMode, initialHardModeState);
     }
@@ -307,7 +307,7 @@ export const useGameLogic = () => {
     addLog(`${lives} LIVE, ${blanks} BLANK`);
 
     setOverlayText(`${lives} LIVE  |  ${blanks} BLANK`);
-    await wait(3000);
+    await wait(1800); // Snappier transition
     setOverlayText(null);
 
     // Pass overrides to distributeItems if needed, or rely on setGameState above having propagated?
@@ -694,6 +694,7 @@ export const useGameLogic = () => {
     receivedItems,
     showLootOverlay,
     isProcessing,
+    setIsProcessing,
     startGame,
     fireShot,
     usePlayerItem,

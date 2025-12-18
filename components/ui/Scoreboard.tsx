@@ -21,114 +21,134 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose }) => {
     const accuracy = stats.shotsFired > 0 ? Math.round((stats.shotsHit / stats.shotsFired) * 100) : 0;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto p-6 animate-in fade-in duration-200">
-            <div className="w-full max-w-lg max-h-[90vh] bg-stone-900 border border-stone-700 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col relative overflow-hidden rounded-xl ring-1 ring-white/10">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md pointer-events-auto p-4 animate-in fade-in duration-300">
+            <div className="w-full max-w-xl max-h-[85vh] bg-stone-950/40 backdrop-blur-2xl border border-stone-800/50 shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col relative overflow-hidden rounded-2xl ring-1 ring-white/5">
+
+                {/* Decorative Elements */}
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-500/20 to-transparent" />
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-yellow-500/5 blur-[80px] rounded-full" />
 
                 {/* Header */}
-                <div className="p-4 border-b border-stone-800 flex justify-between items-center bg-stone-950 flex-none safe-top">
-                    <div className="flex items-center gap-2">
-                        <Trophy className="text-yellow-500" size={18} />
-                        <h2 className="text-base sm:text-2xl font-black text-stone-200 tracking-widest uppercase">CAREER STATS</h2>
+                <div className="p-6 border-b border-stone-800/50 flex justify-between items-center bg-stone-950/20 backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                            <Trophy className="text-yellow-500" size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-white tracking-[0.2em] uppercase leading-tight">CAREER LOG</h2>
+                            <p className="text-[10px] text-stone-500 font-bold tracking-[0.4em] uppercase">Tactical Performance Data</p>
+                        </div>
                     </div>
                     <button
                         onClick={() => {
                             audioManager.playSound('click');
                             onClose();
                         }}
-                        className="p-1 text-stone-500 hover:text-white hover:bg-red-900/50 rounded transition-all"
+                        className="p-2 text-stone-500 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95"
                     >
-                        <X size={20} />
+                        <X size={24} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide custom-scrollbar">
 
                     {/* Main Stats - Wins/Losses/WinRate */}
-                    <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-stone-800/50 p-3 border border-stone-700/50 rounded flex flex-col items-center justify-center aspect-video">
-                            <div className="text-stone-500 text-[8px] sm:text-[10px] font-bold uppercase mb-1">WINS</div>
-                            <div className="text-2xl sm:text-4xl font-black text-green-500">{stats.wins}</div>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-stone-900/40 p-5 border border-white/5 rounded-2xl flex flex-col items-center justify-center group hover:bg-stone-900/60 transition-colors">
+                            <div className="text-stone-500 text-[9px] font-black tracking-[0.2em] uppercase mb-2 group-hover:text-green-500/70 transition-colors">WINS</div>
+                            <div className="text-4xl font-black text-white px-2 relative">
+                                {stats.wins}
+                                <div className="absolute -inset-1 blur-lg bg-green-500/10 -z-10 group-hover:bg-green-500/20 transition-all" />
+                            </div>
                         </div>
-                        <div className="bg-stone-800/50 p-3 border border-stone-700/50 rounded flex flex-col items-center justify-center aspect-video">
-                            <div className="text-stone-500 text-[8px] sm:text-[10px] font-bold uppercase mb-1">LOSSES</div>
-                            <div className="text-2xl sm:text-4xl font-black text-red-500">{stats.losses}</div>
+                        <div className="bg-stone-900/40 p-5 border border-white/5 rounded-2xl flex flex-col items-center justify-center group hover:bg-stone-900/60 transition-colors">
+                            <div className="text-stone-500 text-[9px] font-black tracking-[0.2em] uppercase mb-2 group-hover:text-red-500/70 transition-colors">LOSSES</div>
+                            <div className="text-4xl font-black text-white px-2 relative">
+                                {stats.losses}
+                                <div className="absolute -inset-1 blur-lg bg-red-500/10 -z-10 group-hover:bg-red-500/20 transition-all" />
+                            </div>
                         </div>
-                        <div className="bg-stone-800/50 p-3 border border-stone-700/50 rounded flex flex-col items-center justify-center aspect-video">
-                            <div className="text-stone-500 text-[8px] sm:text-[10px] font-bold uppercase mb-1">WIN RATE</div>
-                            <div className="text-2xl sm:text-4xl font-black text-white">{winRate}<span className="text-sm align-top">%</span></div>
+                        <div className="bg-stone-900/40 p-5 border border-white/5 rounded-2xl flex flex-col items-center justify-center group hover:bg-stone-900/60 transition-colors">
+                            <div className="text-stone-500 text-[9px] font-black tracking-[0.2em] uppercase mb-2 group-hover:text-yellow-500/70 transition-colors">SUCCESS</div>
+                            <div className="text-4xl font-black text-white">
+                                {winRate}<span className="text-base text-stone-600 align-top opacity-50 ml-0.5">%</span>
+                            </div>
                         </div>
                     </div>
 
                     {/* Performance Grid */}
-                    <div className="space-y-2">
-                        <h3 className="text-stone-500 font-bold tracking-[0.2em] uppercase text-[10px] border-b border-stone-800 pb-1">Combat Performance</h3>
-                        <div className="grid grid-cols-4 gap-2">
-                            <div className="bg-stone-950 p-2 border border-stone-800 rounded flex flex-col items-center">
-                                <Activity className="text-blue-500 mb-1" size={14} />
-                                <div className="text-sm sm:text-xl font-black text-white">{stats.totalRounds}</div>
-                                <div className="text-[7px] text-stone-500 font-bold uppercase">Rounds</div>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-[1px] flex-1 bg-stone-800/50" />
+                            <h3 className="text-stone-500 font-black tracking-[0.3em] uppercase text-[9px]">Combat Analysis</h3>
+                            <div className="h-[1px] flex-1 bg-stone-800/50" />
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col items-center justify-center group hover:border-blue-900/30 transition-all">
+                                <Activity className="text-blue-500/80 mb-2 group-hover:scale-110 transition-transform" size={18} />
+                                <div className="text-2xl font-black text-white leading-none">{stats.totalRounds}</div>
+                                <div className="text-[8px] text-stone-600 font-bold uppercase tracking-wider mt-2">Rounds</div>
                             </div>
-                            <div className="bg-stone-950 p-2 border border-stone-800 rounded flex flex-col items-center">
-                                <Target className="text-red-500 mb-1" size={14} />
-                                <div className="text-sm sm:text-xl font-black text-white">{accuracy}%</div>
-                                <div className="text-[7px] text-stone-500 font-bold uppercase">Accuracy</div>
+                            <div className="bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col items-center justify-center group hover:border-red-900/30 transition-all">
+                                <Target className="text-red-500/80 mb-2 group-hover:scale-110 transition-transform" size={18} />
+                                <div className="text-2xl font-black text-white leading-none">{accuracy}%</div>
+                                <div className="text-[8px] text-stone-600 font-bold uppercase tracking-wider mt-2">Precision</div>
                             </div>
-                            <div className="bg-stone-950 p-2 border border-stone-800 rounded flex flex-col items-center">
-                                <Swords className="text-orange-500 mb-1" size={14} />
-                                <div className="text-sm sm:text-xl font-black text-white">{stats.damageDealt}</div>
-                                <div className="text-[7px] text-stone-500 font-bold uppercase">Damage</div>
+                            <div className="bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col items-center justify-center group hover:border-orange-900/30 transition-all">
+                                <Swords className="text-orange-500/80 mb-2 group-hover:scale-110 transition-transform" size={18} />
+                                <div className="text-2xl font-black text-white leading-none">{stats.damageDealt}</div>
+                                <div className="text-[8px] text-stone-600 font-bold uppercase tracking-wider mt-2">Lethality</div>
                             </div>
-                            <div className="bg-stone-950 p-2 border border-stone-800 rounded flex flex-col items-center">
-                                <Skull className="text-purple-500 mb-1" size={14} />
-                                <div className="text-sm sm:text-xl font-black text-white">{stats.highestRound}</div>
-                                <div className="text-[7px] text-stone-500 font-bold uppercase">Best Rd</div>
+                            <div className="bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col items-center justify-center group hover:border-purple-900/30 transition-all">
+                                <Skull className="text-purple-500/80 mb-2 group-hover:scale-110 transition-transform" size={18} />
+                                <div className="text-2xl font-black text-white leading-none">{stats.highestRound}</div>
+                                <div className="text-[8px] text-stone-600 font-bold uppercase tracking-wider mt-2">Tier</div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Item Stats */}
-                    <div className="space-y-2">
-                        <h3 className="text-stone-500 font-bold tracking-[0.2em] uppercase text-[10px] border-b border-stone-800 pb-1">Tactics</h3>
-                        <div className="flex gap-2 text-left">
-                            <div className="flex-1 bg-stone-950 p-3 border border-stone-800 rounded flex flex-col justify-center">
-                                <div className="text-xl sm:text-2xl font-black text-stone-200">{stats.itemsUsed}</div>
-                                <div className="text-[7px] text-stone-500 font-bold uppercase">Total Items Used</div>
-                            </div>
-                            <div className="flex-1 bg-stone-950 p-3 border border-stone-800 rounded flex flex-col justify-center">
-                                <div className="text-xl sm:text-2xl font-black text-stone-200">{stats.itemPoints}</div>
-                                <div className="text-[7px] text-stone-500 font-bold uppercase">Tactical Score</div>
-                            </div>
+                    {/* Match History */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-stone-500 font-black tracking-[0.3em] uppercase text-[9px]">Recent Operations</h3>
+                            <div className="h-[1px] flex-1 bg-stone-800/50" />
                         </div>
-                    </div>
-
-                    {/* Recent History - Limit to 8 for compact view */}
-                    <div className="space-y-2">
-                        <h3 className="text-stone-500 font-bold tracking-[0.2em] uppercase text-[10px] border-b border-stone-800 pb-1">Match History</h3>
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                             {stats.matchHistory && stats.matchHistory.length > 0 ? (
-                                stats.matchHistory.slice(0, 8).map((match, i) => (
-                                    <div key={i} className="bg-stone-950/50 hover:bg-stone-900 p-2 border border-stone-800/50 rounded flex justify-between items-center text-[10px] sm:text-xs transition-colors">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`font-black w-6 text-center ${match.result === 'WIN' ? 'text-green-500' : 'text-red-500'}`}>
+                                stats.matchHistory.slice(0, 6).map((match, i) => (
+                                    <div key={i} className="bg-stone-900/20 hover:bg-white/5 p-3 px-4 border border-white/5 rounded-xl flex justify-between items-center transition-all group">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm border ${match.result === 'WIN' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                                                 {match.result === 'WIN' ? 'W' : 'L'}
-                                            </span>
-                                            {match.isHardMode && (
-                                                <div className="flex items-center gap-1 bg-red-950/30 px-1.5 py-0.5 rounded border border-red-900/50" title="Hard Mode">
-                                                    <Skull size={10} className="text-red-500" />
-                                                    <span className="text-[8px] text-red-400 font-bold hidden sm:inline">HARD</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-black text-stone-300 tracking-wider">
+                                                        {match.isHardMode ? 'STRIKE FORCE' : 'MISSION'} {i + 1}
+                                                    </span>
+                                                    {match.isHardMode && (
+                                                        <span className="text-[7px] bg-red-950/50 text-red-500 border border-red-900/30 px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Elite</span>
+                                                    )}
                                                 </div>
-                                            )}
-                                            <span className="text-stone-700">|</span>
-                                            <span className="text-stone-500 font-mono">{match.timestamp ? new Date(match.timestamp).getDate() + '/' + (new Date(match.timestamp).getMonth() + 1) : '-'}</span>
+                                                <span className="text-[9px] text-stone-600 font-mono tracking-tighter uppercase">
+                                                    {match.timestamp ? new Date(match.timestamp).toLocaleDateString() : 'Unknown Date'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-3 text-stone-400 font-mono text-right">
-                                            <span>R: <span className="text-stone-300 font-bold">{match.roundsSurvived}</span></span>
-                                            <span>S: <span className="text-yellow-500 font-bold">{match.totalScore?.toLocaleString() || 0}</span></span>
+                                        <div className="flex gap-6 items-center">
+                                            <div className="hidden sm:flex flex-col items-end">
+                                                <span className="text-[8px] text-stone-600 font-bold uppercase tracking-widest">Score</span>
+                                                <span className="text-sm font-black text-yellow-500/80">{match.totalScore?.toLocaleString() || 0}</span>
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[8px] text-stone-600 font-bold uppercase tracking-widest">Rounds</span>
+                                                <span className="text-sm font-black text-stone-200">{match.roundsSurvived}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-stone-600 italic text-center text-[10px] py-4">No match history found</div>
+                                <div className="text-stone-700 italic text-center text-[10px] py-10 bg-black/20 rounded-2xl border border-dashed border-stone-800">No operational history found in databanks.</div>
                             )}
                         </div>
                     </div>
@@ -136,15 +156,15 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-stone-800 bg-stone-950 flex justify-center safe-bottom rounded-b-xl">
+                <div className="p-6 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex justify-center">
                     <button
                         onClick={() => {
                             audioManager.playSound('click');
                             onClose();
                         }}
-                        className="px-8 py-2 bg-stone-100 hover:bg-white text-black font-black text-xs sm:text-sm tracking-widest active:scale-95 transition-all shadow-lg rounded-sm"
+                        className="w-full py-4 bg-white text-black font-black text-xs tracking-[0.4em] active:scale-[0.98] transition-all shadow-xl hover:bg-stone-200 uppercase rounded-xl"
                     >
-                        CLOSE
+                        Return to Hub
                     </button>
                 </div>
             </div>

@@ -179,8 +179,19 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                 items.itemLight.position.z += 3;
 
                 const isDealerItem = activeItem.position.z < -2;
-                items.itemLight.intensity = isDealerItem ? 35 : 15;
-                items.itemLight.distance = isDealerItem ? 30 : 20;
+                const isHardMode = props.isHardMode;
+
+                if (isHardMode) {
+                    const pulse = Math.pow(Math.sin(time * 1.5), 10.0);
+                    // Tint item light red during hard mode
+                    items.itemLight.color.setRGB(1.0, 1.0 - pulse, 1.0 - pulse);
+                    items.itemLight.intensity = (isDealerItem ? 45 : 25) * (1.0 + pulse * 1.5);
+                    items.itemLight.distance = isDealerItem ? 35 : 25;
+                } else {
+                    items.itemLight.color.setHex(0xffffff);
+                    items.itemLight.intensity = isDealerItem ? 35 : 15;
+                    items.itemLight.distance = isDealerItem ? 30 : 20;
+                }
             } else {
                 items.itemLight.intensity = 0;
             }

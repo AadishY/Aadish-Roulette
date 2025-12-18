@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView, GameSettings } from '../types';
-import { Settings as SettingsIcon, Send, Skull } from 'lucide-react';
+import { Settings as SettingsIcon, Skull } from 'lucide-react';
 import { audioManager } from '../utils/audioManager';
 import { StatusDisplay } from './ui/StatusDisplay';
 import { Inventory } from './ui/Inventory';
@@ -10,9 +10,6 @@ import { IntroScreen } from './ui/IntroScreen';
 import ShellBackground from './ui/ShellBackground';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { LootOverlay } from './ui/LootOverlay';
-import { LogsDisplay } from './ui/LogsDisplay';
-import { MultiplayerHUD } from './MultiplayerHUD';
-import { GameStateData } from '../hooks/useSocket';
 import { Icons } from './ui/Icons';
 
 interface GameUIProps {
@@ -36,7 +33,6 @@ interface GameUIProps {
     isRecovering?: boolean; // Added for blocking gun pickup during recovery
     settings: GameSettings;
     onStartGame: (name: string, hardMode?: boolean) => void;
-    onStartMultiplayer: () => void;
     onResetGame: (toMenu: boolean) => void;
     onFireShot: (target: TurnOwner) => void;
     onUseItem: (index: number) => void;
@@ -46,12 +42,6 @@ interface GameUIProps {
     onOpenGuide: () => void;
     onOpenScoreboard: () => void;
     onUpdateName?: (name: string) => void;
-    messages?: any[];
-    onSendMessage?: (msg: string) => void;
-    isMultiplayer?: boolean;
-    mpGameState?: GameStateData | null;
-    mpMyPlayerId?: string | null;
-    onMpShoot?: (targetId: string) => void;
     onStealItem?: (index: number) => void;
     onBootComplete?: () => void;
     matchData?: any;
@@ -99,21 +89,13 @@ export const GameUI: React.FC<GameUIProps> = ({
     onOpenSettings,
     onOpenGuide,
     onOpenScoreboard,
-    onStartMultiplayer,
     onUpdateName,
-    messages = [],
-    onSendMessage,
-    isMultiplayer = false,
-    mpGameState,
-    mpMyPlayerId,
-    onMpShoot,
     onStealItem,
     onBootComplete,
     isRecovering = false,
     matchData
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
-    const [chatMsg, setChatMsg] = useState('');
 
     useEffect(() => { if (playerName) setInputName(playerName); }, [playerName]);
 
@@ -129,13 +111,6 @@ export const GameUI: React.FC<GameUIProps> = ({
         }
     };
 
-    const handleStartMP = () => {
-        if (inputName.trim()) {
-            if (onUpdateName) onUpdateName(inputName.trim());
-            localStorage.setItem('aadish_roulette_name', inputName.trim());
-            onStartMultiplayer();
-        }
-    };
 
     const [smokeActive, setSmokeActive] = useState(false);
     useEffect(() => {
@@ -154,9 +129,7 @@ export const GameUI: React.FC<GameUIProps> = ({
     }, [triggerDrink]);
 
     const isGunHeld = cameraView === 'GUN' || aimTarget === 'CHOOSING' || aimTarget === 'OPPONENT' || aimTarget === 'SELF';
-    const isMyTurn = isMultiplayer
-        ? (mpGameState?.currentTurnPlayerId === mpMyPlayerId)
-        : (gameState.phase === 'PLAYER_TURN');
+    const isMyTurn = (gameState.phase === 'PLAYER_TURN');
 
     const uiStyle = {
         transform: `scale(${settings.uiScale})`,
@@ -167,18 +140,10 @@ export const GameUI: React.FC<GameUIProps> = ({
         top: `${(100 - (100 / settings.uiScale)) / 2}%`,
     };
 
-    const handleChatSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (onSendMessage && chatMsg.trim()) {
-            onSendMessage(chatMsg.trim());
-            setChatMsg('');
-        }
-    };
-
     return (
         <>
             {/* Falling Shells Background - Always mounted for persistence, paused when not needed */}
-            <div className={`absolute inset-0 transition-opacity ${gameState.phase === 'BOOT' || gameState.phase === 'INTRO' ? 'opacity-100 duration-1000' : 'opacity-0 duration-0 pointer-events-none'}`}>
+            <div className={`absolute inset-0 bg-black transition-opacity ${gameState.phase === 'BOOT' || gameState.phase === 'INTRO' ? 'opacity-100 duration-1000' : 'opacity-0 duration-0 pointer-events-none'}`}>
                 <ShellBackground active={gameState.phase === 'BOOT' || gameState.phase === 'INTRO'} />
             </div>
 
@@ -186,16 +151,29 @@ export const GameUI: React.FC<GameUIProps> = ({
 
             {/* FX Layers */}
             <div className={`absolute inset-0 pointer-events-none transition-colors duration-300 z-10 ${overlayColor === 'red' ? 'bg-red-900/40' : overlayColor === 'green' ? 'bg-green-900/20' : overlayColor === 'scan' ? 'bg-fuchsia-900/30 mix-blend-overlay' : ''}`} />
+
+            {/* Cinematic Framing */}
+            <div className={`fixed inset-0 pointer-events-none z-[100] ${(gameState.phase === 'RESOLVING' || gameState.phase === 'STEALING' || gameState.phase === 'LOOTING' || gameState.phase === 'GAME_OVER') ? 'letterbox-active' : ''}`}>
+                <div className="letterbox-top" />
+                <div className="letterbox-bottom" />
+            </div>
+
             {/* Cinematic Vignette */}
             <div className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.6)_100%)] mix-blend-multiply" />
 
             {showFlash && <div className="absolute inset-0 z-50 flash-screen" />}
             {smokeActive && <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]" />}
             {drinkActive && <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px]" />}
-            {showBlood && <div className="absolute inset-0 pointer-events-none z-40 animate-[blood-pulse_2s_infinite]"><div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(160,0,0,0.5)_80%,rgba(80,0,0,0.9)_100%)] mix-blend-multiply" /></div>}
+            {showBlood && (
+                <div className="absolute inset-0 pointer-events-none z-40 blood-overlay blood-active">
+                    <div className="absolute inset-0 opacity-40 bg-[url('https://www.transparenttextures.com/patterns/black-linen-2.png')] mix-blend-multiply" />
+                </div>
+            )}
 
             {/* Scaled UI */}
-            <div className="absolute z-20 pointer-events-none" style={uiStyle}>
+            <div className={`absolute z-20 pointer-events-none ${gameState.isHardMode ? 'vhs-flicker' : ''}`} style={uiStyle}>
+                {/* Dynamic Scanline for Hard Mode */}
+                {gameState.isHardMode && <div className="scan-line" />}
 
                 {/* Known Shell - Mobile Optimized */}
                 {knownShell && (
@@ -216,92 +194,128 @@ export const GameUI: React.FC<GameUIProps> = ({
                 {/* Overlay Text - Centered Announcements */}
                 {overlayText && !showLootOverlay && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none px-4">
-                        {gameState.isHardMode && overlayText.includes('ROUND') ? (
-                            <div className="flex flex-col items-center animate-[glitch_0.2s_infinite]">
-                                <div className="text-2xl md:text-6xl font-black tracking-tighter text-red-600 drop-shadow-[0_0_25px_rgba(255,0,0,0.8)] pop-in text-center bg-black/90 px-6 py-4 border-y-4 border-red-600 flex items-center gap-4 md:gap-8 skew-x-[-12deg]">
-                                    <Skull size={48} className="text-red-500 animate-pulse hidden md:block" />
-                                    <div className="flex flex-col items-center">
-                                        <div className="text-sm md:text-2xl tracking-[1em] text-red-400 font-bold mb-2 uppercase animate-pulse">HARD MODE</div>
-                                        <span>{overlayText}</span>
+                        {gameState.isHardMode && (overlayText.includes('ROUND') || overlayText.includes('STAGE')) ? (
+                            <div className="flex flex-col items-center animate-[red-glitch_0.3s_infinite]">
+                                <div className="text-3xl md:text-8xl font-black italic tracking-tighter text-red-600 drop-shadow-[0_0_30px_rgba(220,38,38,0.8)] pop-in text-center bg-black/95 px-10 py-6 border-y-4 border-red-700 flex items-center gap-6 md:gap-12 skew-x-[-8deg] relative overflow-hidden group">
+                                    {/* Scanline overlay for the box */}
+                                    <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(220,38,38,0.1)_50%)] bg-[length:100%_4px] pointer-events-none" />
+
+                                    <div className="flex flex-col items-center relative z-10">
+                                        <div className="flex items-center gap-6 md:gap-10">
+                                            <Skull size={56} className="text-red-700/50 hidden md:block" />
+                                            <span>{overlayText}</span>
+                                            <Skull size={56} className="text-red-700/50 hidden md:block" />
+                                        </div>
                                     </div>
-                                    <Skull size={48} className="text-red-500 animate-pulse hidden md:block" />
+
+                                    {/* Edge highlight */}
+                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+                                    <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-lg md:text-4xl font-black tracking-tight text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center bg-black/80 px-4 py-2 md:px-8 md:py-4 border-y-2 border-stone-100/20">
+                            <div className="text-lg md:text-4xl font-black tracking-tight text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center bg-black/80 px-4 py-2 md:px-8 md:py-4 border-y-2 border-stone-100/20 backdrop-blur-sm rounded-sm">
                                 <RenderColoredText text={overlayText} />
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Stealing Overlay - ENLARGED for better clicking */}
+                {/* Stealing Overlay - CINEMATIC EXTRACTION */}
                 {gameState.phase === 'STEALING' && (
-                    <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm px-4 pointer-events-auto">
-                        <div className="text-2xl md:text-5xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(255,0,0,0.8)] animate-pulse mb-4">
-                            ⚡ STEAL AN ITEM ⚡
-                        </div>
-                        <div className="text-sm md:text-xl text-stone-300 font-bold bg-black/70 px-4 py-2 mb-8 border border-stone-700">
-                            CLICK AN ITEM TO STEAL AND USE IT
-                        </div>
+                    <div className="absolute inset-0 z-[110] flex flex-col items-center justify-center bg-red-950/20 backdrop-blur-[16px] px-6 pointer-events-auto animate-in fade-in duration-700 overflow-hidden">
+                        {/* Atmospheric Overlays */}
+                        <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.3),transparent_70%)]" />
+                        <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/black-linen-2.png')] animate-[pulse_4s_infinite]" />
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-600 to-transparent animate-[scanline_3s_linear_infinite] shadow-[0_0_20px_rgba(220,38,38,0.5)]" />
 
-                        {/* Enlarged Dealer Items */}
-                        <div className="flex gap-4 md:gap-6 flex-wrap justify-center max-w-4xl">
-                            {dealer.items.length === 0 ? (
-                                <div className="text-stone-500 text-lg font-bold py-8">NO ITEMS TO STEAL</div>
-                            ) : (
-                                dealer.items.map((item, idx) => {
-                                    const isAdrenaline = item === 'ADRENALINE';
-                                    return (
-                                        <button
-                                            key={idx}
-                                            onClick={() => !isAdrenaline && onStealItem && onStealItem(idx)}
-                                            disabled={isAdrenaline}
-                                            className={`flex flex-col items-center justify-center w-20 h-24 md:w-28 md:h-36 bg-gradient-to-b transition-all shadow-lg relative ${isAdrenaline
-                                                ? 'from-stone-900 to-stone-950 border-2 border-stone-700 cursor-not-allowed opacity-50'
-                                                : 'from-stone-800 to-stone-900 border-2 border-pink-600 hover:border-pink-400 hover:bg-stone-700 cursor-pointer shadow-pink-900/30 hover:shadow-pink-500/50 hover:scale-110 active:scale-95'
-                                                }`}
-                                        >
-                                            {isAdrenaline && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
-                                                    <span className="text-red-500 text-2xl md:text-3xl">🚫</span>
-                                                </div>
-                                            )}
-                                            <div className={`mb-2 ${isAdrenaline ? 'text-stone-600' :
-                                                item === 'BEER' ? 'text-amber-500' :
-                                                    item === 'CIGS' ? 'text-red-500' :
-                                                        item === 'GLASS' ? 'text-cyan-500' :
-                                                            item === 'CUFFS' ? 'text-stone-400' :
-                                                                item === 'SAW' ? 'text-orange-600' :
-                                                                    item === 'PHONE' ? 'text-blue-300' :
-                                                                        item === 'INVERTER' ? 'text-green-400' :
-                                                                            item === 'CHOKE' ? 'text-stone-300' :
-                                                                                item === 'REMOTE' ? 'text-red-500' :
-                                                                                    item === 'BIG_INVERTER' ? 'text-orange-500' : 'text-stone-300'
-                                                }`}>
-                                                {item === 'BEER' && <Icons.Beer size={36} />}
-                                                {item === 'CIGS' && <Icons.Cigs size={36} />}
-                                                {item === 'GLASS' && <Icons.Glass size={36} />}
-                                                {item === 'CUFFS' && <Icons.Cuffs size={36} />}
-                                                {item === 'SAW' && <Icons.Saw size={36} />}
-                                                {item === 'PHONE' && <Icons.Phone size={36} />}
-                                                {item === 'INVERTER' && <Icons.Inverter size={36} />}
-                                                {item === 'ADRENALINE' && <Icons.Adrenaline size={36} />}
-                                                {item === 'CHOKE' && <Icons.Choke size={36} />}
-                                                {item === 'REMOTE' && <Icons.Remote size={36} />}
-                                                {item === 'BIG_INVERTER' && <Icons.BigInverter size={36} />}
-                                            </div>
-                                            <span className={`text-xs md:text-sm font-bold tracking-wider ${isAdrenaline ? 'text-stone-600 line-through' : 'text-stone-200'}`}>
-                                                {item === 'INVERTER' ? 'INVERT' : item === 'BIG_INVERTER' ? 'BIG INV' : item}
-                                            </span>
-                                        </button>
-                                    );
-                                })
-                            )}
-                        </div>
+                        <div className="relative z-10 flex flex-col items-center max-w-5xl w-full">
+                            <div className="mb-14 text-center">
+                                <h2 className="text-5xl md:text-8xl font-black text-white tracking-[-0.05em] mb-4 uppercase drop-shadow-[0_0_40px_rgba(255,0,0,0.4)] italic">
+                                    Adrenaline <span className="text-red-700 animate-pulse">Extraction</span>
+                                </h2>
+                                <div className="flex flex-col items-center gap-2">
+                                    <p className="text-stone-400 font-bold tracking-[0.6em] text-[9px] md:text-xs uppercase bg-black/40 px-6 py-1.5 rounded-full border border-red-900/30">
+                                        Neural Link Active • Seize Repository
+                                    </p>
+                                    <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-red-900/50 to-transparent mt-2" />
+                                </div>
+                            </div>
 
-                        <div className="mt-6 text-stone-500 text-xs md:text-sm">
-                            Stolen item will be USED IMMEDIATELY • <span className="text-red-500">ADRENALINE cannot be stolen</span>
+                            {/* Extraction Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-6 w-full">
+                                {dealer.items.length === 0 ? (
+                                    <div className="col-span-full py-20 text-center">
+                                        <p className="text-stone-600 font-black tracking-[0.3em] uppercase italic text-xl">Inventory Empty</p>
+                                    </div>
+                                ) : (
+                                    dealer.items.map((item, idx) => {
+                                        const isAdrenaline = item === 'ADRENALINE';
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => !isAdrenaline && onStealItem && onStealItem(idx)}
+                                                disabled={isAdrenaline}
+                                                className={`group relative flex flex-col items-center justify-center aspect-[3/4] rounded-2xl border transition-all duration-500 overflow-hidden ${isAdrenaline
+                                                    ? 'bg-black/60 border-white/5 cursor-not-allowed grayscale'
+                                                    : 'bg-stone-900/40 border-white/10 hover:border-red-600/50 hover:bg-red-950/20 hover:scale-105 active:scale-95 shadow-xl hover:shadow-red-900/20'
+                                                    }`}
+                                            >
+                                                {/* Card BG Deco */}
+                                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),transparent_70%)]" />
+
+                                                {isAdrenaline ? (
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-20">
+                                                        <Icons.Adrenaline size={48} className="text-stone-700 mb-2" />
+                                                        <span className="text-[8px] font-black text-stone-600 tracking-widest uppercase bg-stone-900 px-2 py-0.5 rounded">Locked</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="relative z-10 flex flex-col items-center">
+                                                        <div className={`mb-4 transition-transform group-hover:scale-110 duration-500 ${item === 'BEER' ? 'text-amber-500' :
+                                                            item === 'CIGS' ? 'text-red-500' :
+                                                                item === 'GLASS' ? 'text-cyan-500' :
+                                                                    item === 'CUFFS' ? 'text-stone-400' :
+                                                                        item === 'SAW' ? 'text-orange-600' :
+                                                                            item === 'PHONE' ? 'text-blue-300' :
+                                                                                item === 'INVERTER' ? 'text-green-400' :
+                                                                                    item === 'CHOKE' ? 'text-stone-300' :
+                                                                                        item === 'REMOTE' ? 'text-red-500' :
+                                                                                            item === 'BIG_INVERTER' ? 'text-orange-500' : 'text-stone-300'
+                                                            }`}>
+                                                            {item === 'BEER' && <Icons.Beer size={48} />}
+                                                            {item === 'CIGS' && <Icons.Cigs size={48} />}
+                                                            {item === 'GLASS' && <Icons.Glass size={48} />}
+                                                            {item === 'CUFFS' && <Icons.Cuffs size={48} />}
+                                                            {item === 'SAW' && <Icons.Saw size={48} />}
+                                                            {item === 'PHONE' && <Icons.Phone size={48} />}
+                                                            {item === 'INVERTER' && <Icons.Inverter size={48} />}
+                                                            {item === 'CHOKE' && <Icons.Choke size={48} />}
+                                                            {item === 'REMOTE' && <Icons.Remote size={48} />}
+                                                            {item === 'BIG_INVERTER' && <Icons.BigInverter size={48} />}
+                                                        </div>
+                                                        <span className="text-[10px] md:text-sm font-black text-stone-200 tracking-[0.2em] uppercase group-hover:text-white transition-colors">
+                                                            {item === 'INVERTER' ? 'INVERT' : item === 'BIG_INVERTER' ? 'BIG INV' : item}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Hover Overlay info */}
+                                                {!isAdrenaline && (
+                                                    <div className="absolute bottom-0 left-0 w-full h-1/4 bg-red-600 flex items-center justify-center translate-y-full group-hover:translate-y-0 transition-transform">
+                                                        <span className="text-[10px] font-black text-white tracking-[0.3em] uppercase">SEIZE</span>
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            <div className="mt-16 text-stone-600 text-[10px] font-bold tracking-[0.5em] uppercase flex items-center gap-6">
+                                <div className="h-[1px] w-12 bg-stone-800" />
+                                Operation Immediate Extraction
+                                <div className="h-[1px] w-12 bg-stone-800" />
+                            </div>
                         </div>
                     </div>
                 )}
@@ -315,7 +329,6 @@ export const GameUI: React.FC<GameUIProps> = ({
                         inputName={inputName}
                         setInputName={setInputName}
                         onStartGame={handleStartGame}
-                        onStartMultiplayer={handleStartMP}
                         onOpenSettings={onOpenSettings}
                         onOpenGuide={onOpenGuide}
                         onOpenScoreboard={onOpenScoreboard}
@@ -323,7 +336,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                 )}
 
                 {/* Game Over - Singleplayer only */}
-                {gameState.phase === 'GAME_OVER' && !isMultiplayer && (
+                {gameState.phase === 'GAME_OVER' && (
                     <GameOverScreen
                         winner={gameState.winner}
                         onResetGame={onResetGame}
@@ -337,11 +350,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
                         {/* Top Bar */}
                         <div className="flex justify-between items-start gap-2">
-                            {isMultiplayer && mpGameState && mpMyPlayerId ? (
-                                <MultiplayerHUD gameState={mpGameState} myPlayerId={mpMyPlayerId} />
-                            ) : (
-                                <StatusDisplay player={player} dealer={dealer} playerName={playerName} gameState={gameState} />
-                            )}
+                            <StatusDisplay player={player} dealer={dealer} playerName={playerName} gameState={gameState} />
                             <button onClick={() => {
                                 audioManager.playSound('click');
                                 onOpenSettings();
@@ -362,57 +371,14 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     onFireShot={onFireShot}
                                     onHoverTarget={onHoverTarget}
                                     currentAimTarget={aimTarget}
-                                    isMultiplayer={isMultiplayer}
-                                    mpGameState={mpGameState}
-                                    mpMyPlayerId={mpMyPlayerId}
-                                    onMpShoot={onMpShoot}
+                                    isMultiplayer={false}
                                 />
                             )}
                         </div>
 
-                        {/* Waiting Message */}
-                        {isMultiplayer && !isMyTurn && mpGameState && !showLootOverlay && !isProcessing && (
-                            <div className="flex-1 flex items-center justify-center pointer-events-none">
-                                <div className="text-lg md:text-3xl font-black text-stone-500 bg-black/80 px-4 py-2 md:px-6 md:py-3 border border-stone-800 animate-pulse">
-                                    {mpGameState.currentTurnPlayerId && mpGameState.players[mpGameState.currentTurnPlayerId]
-                                        ? `${mpGameState.players[mpGameState.currentTurnPlayerId].name}'S TURN`
-                                        : 'WAITING...'}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Bottom - Chat/Logs + Inventory */}
                         <div className="flex justify-between items-end gap-2 w-full h-16 lg:h-40 pointer-events-none">
-                            {/* Chat (MP) or Logs (SP) */}
-                            {isMultiplayer ? (
-                                <div className="pointer-events-auto flex-1 max-w-[280px] md:max-w-[350px] bg-black/70 border border-stone-800 flex flex-col h-full text-[10px] md:text-xs font-mono">
-                                    <div className="bg-stone-900 px-2 py-0.5 text-stone-500 font-bold text-[8px] md:text-[10px]">
-                                        COMMS
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto p-1 md:p-2 space-y-0.5">
-                                        {messages.slice(-10).map((m, idx) => (
-                                            <div key={idx} className="break-words leading-tight">
-                                                <span className="text-blue-400 font-bold">{m.sender}: </span>
-                                                <span className="text-stone-300">{m.text}</span>
-                                            </div>
-                                        ))}
-                                        {messages.length === 0 && <div className="text-stone-700 italic text-center text-[8px]">-</div>}
-                                    </div>
-                                    <form onSubmit={handleChatSubmit} className="border-t border-stone-800 flex">
-                                        <input
-                                            value={chatMsg}
-                                            onChange={e => setChatMsg(e.target.value)}
-                                            placeholder="TYPE..."
-                                            className="flex-1 bg-transparent p-1 px-2 text-stone-200 outline-none placeholder-stone-700 text-[10px] md:text-xs min-w-0"
-                                        />
-                                        <button type="submit" className="px-2 text-stone-500 hover:text-white">
-                                            <Send size={12} />
-                                        </button>
-                                    </form>
-                                </div>
-                            ) : (
-                                null
-                            )}
+                            <div className="flex-1" />
 
                             {/* Inventory */}
                             {/* Inventory vs Steal UI */}
@@ -440,7 +406,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                         audioManager.playSound('grab');
                                         onUseItem(idx);
                                     }}
-                                    disabled={isMultiplayer && !isMyTurn}
+                                    disabled={false}
                                     isGunHeld={isGunHeld}
                                 />
                             )}

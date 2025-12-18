@@ -69,7 +69,6 @@ export interface GameSettings {
   pixelScale: number;
   brightness: number;
   uiScale: number;
-  fishEye: boolean;
   fov: number;
   musicVolume: number;
   sfxVolume: number;
@@ -94,9 +93,14 @@ export interface SceneContext {
   mouse: THREE.Vector2;
   raycaster: THREE.Raycaster;
   barrelMesh: THREE.Mesh;
-  pumpMesh: THREE.Mesh;
-  magTubeMesh: THREE.Mesh;
-  chokeMesh?: THREE.Mesh; // Added
+  shortBarrelMesh?: THREE.Mesh;
+  sawCut?: THREE.Mesh | THREE.Group;
+  pumpMesh: THREE.Mesh | THREE.Group;
+  magTube: THREE.Mesh | THREE.Group;
+  shortMagTube?: THREE.Mesh | THREE.Group;
+  sight?: THREE.Mesh | THREE.Group;
+  sSight?: THREE.Mesh | THREE.Group;
+  chokeMesh?: THREE.Mesh | THREE.Group;
   bloodParticles: THREE.Points;
   sparkParticles: THREE.Points;
   dustParticles: THREE.Points;
@@ -129,24 +133,11 @@ export interface SceneProps {
   isPlayerCuffed?: boolean;
   settings: GameSettings;
   knownShell: ShellType | null;
-  players?: MPPlayer[]; // Added for multiplayer
-  playerId?: string; // Added for multiplayer
-  messages?: any[]; // Added for multiplayer chat
+  isHardMode?: boolean;
   targetPlayerId?: string;
-}
-
-export interface MPPlayer {
-  id: string;
-  name: string;
-  ready: boolean;
-  isHost: boolean;
-  hp?: number;
-  maxHp?: number;
-  items?: string[];
-  isHandcuffed?: boolean;
-  isSawedActive?: boolean;
-  position?: number;
-  isAlive?: boolean;
+  gameState: GameState;
+  player: PlayerState;
+  dealer: PlayerState;
 }
 
 export interface ChokeResult {

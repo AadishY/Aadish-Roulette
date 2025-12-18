@@ -2,6 +2,7 @@ import React from 'react';
 import { ItemType, GameState, CameraView, PlayerState } from '../../types';
 import { Icons } from './Icons';
 import { ITEM_DESCRIPTIONS } from '../../constants';
+import { audioManager } from '../../utils/audioManager';
 
 interface InventoryProps {
     player: PlayerState;
@@ -27,9 +28,11 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                         <div key={idx} className="group relative shrink-0">
                             <button
                                 onClick={() => onUseItem(idx)}
+                                onMouseEnter={() => !isUsageDisabled && audioManager.playSound('click')}
                                 disabled={isUsageDisabled}
-                                className={`w-12 h-14 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 duration-200 relative`}
+                                className={`w-12 h-14 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] duration-200 relative overflow-hidden ${!isUsageDisabled ? 'animate-[pulse_4s_infinite] scale-100 hover:scale-105' : 'grayscale-[0.5]'}`}
                             >
+                                <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
@@ -42,7 +45,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                 {item === 'REMOTE' && <Icons.Remote className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'BIG_INVERTER' && <Icons.BigInverter className="text-orange-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'CONTRACT' && <Icons.Contract className="text-red-700 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
-                                <span className="text-[6px] md:text-[8px] text-stone-300 font-bold tracking-widest block text-center px-1 truncate w-full">
+                                <span className="text-[6px] md:text-[8px] text-stone-300 font-black tracking-widest block text-center px-1 truncate w-full relative z-10 transition-colors group-hover:text-white">
                                     {{
                                         'BEER': 'BEER',
                                         'CIGS': 'CIGS',
@@ -60,7 +63,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                 </span>
 
                                 {isCuffDisabled && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-red-600 font-bold text-lg pointer-events-none">
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-red-600 font-bold text-lg pointer-events-none z-20">
                                         🚫
                                     </div>
                                 )}

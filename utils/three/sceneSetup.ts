@@ -29,8 +29,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     // Visible dark background - NOT black so you can always see something
     scene.background = new THREE.Color(0x151210);
 
-    const isMultiplayer = props.players && props.players.length > 0;
-    const defaultFov = isMultiplayer ? 95 : 85;
+    const defaultFov = 85;
     const camera = new THREE.PerspectiveCamera(props.settings.fov || defaultFov, width / height, 0.1, 100);
     camera.position.set(0, 4, 14);
 
@@ -102,7 +101,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const dustParticles = createDust(scene, isMobile);
     createTable(scene);
 
-    const { gunGroup, barrelMesh, muzzleFlash, pump, magTube, chokeMesh } = createGunModel(scene);
+    const { gunGroup, barrelMesh, shortBarrelMesh, sawCut, muzzleFlash, pump, magTube, shortMagTube, chokeMesh, sight, sSight } = createGunModel(scene);
 
     // Gun Light
     const gunLight = new THREE.PointLight(0xffeebb, 0, 15);
@@ -129,39 +128,9 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemContract, itemLight };
 
 
-    // Multiplayer Logic
-    let dealerGroup = new THREE.Group();
+    // Singleplayer: Always create dealer
+    const dealerGroup = createDealerModel(scene);
     const playerAvatars: THREE.Group[] = [];
-
-    const mpPlayers = props.players || [];
-    const myId = props.playerId;
-    const opponents = mpPlayers.filter((p: any) => p.id !== myId && p.id);
-    const isMultiplayerGame = opponents.length > 0;
-
-    if (isMultiplayerGame) {
-        const positions = [
-            { pos: new THREE.Vector3(0, -5, -14), rot: 0 },
-            { pos: new THREE.Vector3(-14, -5, 0), rot: Math.PI / 2 },
-            { pos: new THREE.Vector3(14, -5, 0), rot: -Math.PI / 2 }
-        ];
-        opponents.forEach((opp: any, i: number) => {
-            if (i < positions.length) {
-                const { pos, rot } = positions[i];
-                const hp = opp.hp !== undefined ? opp.hp : 4;
-                const maxHp = opp.maxHp !== undefined ? opp.maxHp : 4;
-                const avatar = createPlayerAvatar(scene, pos, rot, opp.name, hp, maxHp);
-                avatar.userData.playerId = opp.id;
-                playerAvatars.push(avatar);
-            }
-        });
-        camera.fov = opponents.length >= 2 ? 100 : 95;
-        camera.updateProjectionMatrix();
-    } else {
-        dealerGroup = createDealerModel(scene);
-    }
-
-    scene.userData.playerAvatars = playerAvatars;
-    scene.userData.isMultiplayer = isMultiplayerGame;
 
     const { bulletMesh: bMesh, shellCasing, shellCasings, shellVelocities } = createProjectiles(scene);
 
@@ -230,8 +199,13 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
         shellCasings,
         shellVelocities,
         barrelMesh,
+        shortBarrelMesh,
+        sawCut,
         pumpMesh: pump,
-        magTubeMesh: magTube,
+        magTube,
+        shortMagTube,
+        sight,
+        sSight,
         chokeMesh,
         muzzleLight: lights.muzzleLight,
         roomRedLight: lights.roomRedLight,

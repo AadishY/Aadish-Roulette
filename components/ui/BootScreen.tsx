@@ -62,17 +62,28 @@ export const BootScreen: React.FC<BootScreenProps> = ({ onContinue }) => {
     if (loadingComplete) {
         return (
             <div
-                className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono cursor-pointer"
+                className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono cursor-pointer animate-in fade-in duration-1000 overflow-hidden"
                 onClick={handleContinue}
             >
-                <div className="text-center">
-                    <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-stone-100 mb-8 tracking-tighter leading-none">
-                        AADISH<br /><span className="text-red-600">ROULETTE</span>
+                {/* Background ambient light */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.05)_0%,transparent_70%)] animate-pulse" />
+
+                <div className="text-center relative z-10">
+                    <h1 className="text-7xl md:text-9xl font-black text-stone-100 mb-8 tracking-tighter leading-none select-none drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                        <span className="block animate-in slide-in-from-top duration-700">AADISH</span>
+                        <span className="block text-red-700 animate-[text-pop_0.5s_ease-out] relative">
+                            ROULETTE
+                            <span className="absolute -inset-1 text-red-400 opacity-20 blur-sm animate-glitch pointer-events-none">ROULETTE</span>
+                        </span>
                     </h1>
-                    <div className="text-stone-500 text-sm md:text-lg animate-pulse tracking-widest">
-                        [ CLICK ANYWHERE TO CONTINUE ]
+                    <div className="text-stone-500 text-sm md:text-xl tracking-[0.5em] font-bold uppercase transition-all duration-300 group hover:text-stone-100">
+                        <div className="animate-pulse mb-2">[ CLICK TO BIND SOUL ]</div>
+                        <div className="text-[10px] text-stone-700 group-hover:text-red-900 transition-colors">By entering, you waive all rights to physical continuity</div>
                     </div>
                 </div>
+
+                {/* Scanline overlay */}
+                <div className="scan-line !opacity-20" />
             </div>
         );
     }
