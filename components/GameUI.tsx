@@ -131,13 +131,28 @@ export const GameUI: React.FC<GameUIProps> = ({
     const isGunHeld = cameraView === 'GUN' || aimTarget === 'CHOOSING' || aimTarget === 'OPPONENT' || aimTarget === 'SELF';
     const isMyTurn = (gameState.phase === 'PLAYER_TURN');
 
+    // Robust UI Scaling: Scale the UI container while keeping it centered and contained
+    const [screenSize, setScreenSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+    useEffect(() => {
+        const handleResize = () => setScreenSize({ w: window.innerWidth, h: window.innerHeight });
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isVeryNarrow = screenSize.w < 400;
+    const isMobileViewport = screenSize.w < 768;
+
+    // Auto-adjust scale for small screens if needed, otherwise use user setting
+    const baseScale = isMobileViewport ? Math.min(settings.uiScale, 0.75) : settings.uiScale;
+    const finalScale = isVeryNarrow ? baseScale * 0.85 : baseScale;
+
     const uiStyle = {
-        transform: `scale(${settings.uiScale})`,
+        transform: `scale(${finalScale})`,
         transformOrigin: 'center center',
-        width: `${100 / settings.uiScale}%`,
-        height: `${100 / settings.uiScale}%`,
-        left: `${(100 - (100 / settings.uiScale)) / 2}%`,
-        top: `${(100 - (100 / settings.uiScale)) / 2}%`,
+        width: `${100 / finalScale}%`,
+        height: `${100 / finalScale}%`,
+        left: `${(100 - (100 / finalScale)) / 2}%`,
+        top: `${(100 - (100 / finalScale)) / 2}%`,
     };
 
     return (

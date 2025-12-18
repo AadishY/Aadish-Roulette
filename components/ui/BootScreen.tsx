@@ -51,6 +51,14 @@ export const BootScreen: React.FC<BootScreenProps> = ({ onContinue }) => {
 
     const handleContinue = async () => {
         if (!loadingComplete) return;
+
+        // Try to enter fullscreen on first user interaction
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen().catch(() => { });
+            }
+        } catch (e) { }
+
         // Initialize audio on user click
         await audioManager.initialize();
         audioManager.playSound('click');

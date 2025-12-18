@@ -50,10 +50,15 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
         if (isMobileUA || ios) setIsInstallable(true);
 
         const handleResize = () => {
-            const hScale = Math.min(1, (window.innerHeight - 40) / 600);
-            const wScale = Math.min(1, (window.innerWidth - 40) / 800);
+            const hScale = Math.min(1, (window.innerHeight - 20) / 650);
+            const wScale = Math.min(1, (window.innerWidth - 20) / 850);
             let newScale = Math.min(hScale, wScale);
-            if (newScale < 0.4) newScale = 0.4;
+            // On mobile, we want it a bit larger than 0.4 if possible
+            if (window.innerWidth < 500) {
+                newScale = Math.max(newScale, 0.55);
+            } else {
+                newScale = Math.max(newScale, 0.4);
+            }
             if (newScale > 1.2) newScale = 1.2;
             setScale(newScale);
         };
