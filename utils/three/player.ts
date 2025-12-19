@@ -40,7 +40,8 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     rArm.name = "RIGHT_ARM";
     avatarGroup.add(rArm);
 
-    // === HEALTH BAR ===
+    // === HEALTH BAR REMOVED AT USER REQUEST ===
+    /*
     const hpGroup = new THREE.Group();
     hpGroup.position.set(0, 10.5, 0);
 
@@ -59,6 +60,7 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     avatarGroup.userData.hpGroup = hpGroup;
     avatarGroup.userData.hpFill = hpFill;
     avatarGroup.userData.maxHp = maxHp;
+    */
 
     // === NAME TAG ===
     const canvas = document.createElement('canvas');

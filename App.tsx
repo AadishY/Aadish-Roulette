@@ -187,9 +187,14 @@ export default function App() {
     spGame.stealItem(index, 'PLAYER');
   };
 
+  const nextHoverRef = React.useRef(0);
   const handleHoverTarget = (target: any) => {
+    const now = Date.now();
     if (appState === 'GAME' && spGame.gameState.isMultiplayer) {
-      mp.sendAction(mp.room.id, { type: 'HOVER_TARGET', target });
+      if (now > nextHoverRef.current) {
+        mp.sendAction(mp.room.id, { type: 'HOVER_TARGET', target });
+        nextHoverRef.current = now + 100; // 10hz throttle
+      }
     }
     spGame.setAimTarget(target);
   };

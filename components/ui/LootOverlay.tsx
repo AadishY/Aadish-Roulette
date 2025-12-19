@@ -53,7 +53,7 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
     }, [receivedItems]);
 
     return (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-2xl p-4 animate-in fade-in duration-1000">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/85 backdrop-blur-2xl p-4 animate-in fade-in duration-1000">
             {/* Background Grid/Scanlines */}
             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                 <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.05)_50%,transparent_100%)] bg-[length:100%_4px] animate-[scanline_8s_linear_infinite]" />

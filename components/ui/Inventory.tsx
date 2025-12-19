@@ -17,7 +17,7 @@ interface InventoryProps {
 
 const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false, isGunHeld = false }) => {
     return (
-        <div className="flex-1 flex justify-end gap-1 pointer-events-auto h-full items-end">
+        <div className="flex-1 flex justify-center gap-1 pointer-events-auto h-full items-end">
             <div className="flex gap-1 md:gap-3 p-2 md:p-4 bg-gradient-to-t from-black/95 to-black/70 border-t border-l border-r border-white/10 backdrop-blur-3xl min-h-[40px] md:min-h-[140px] items-end overflow-x-auto md:overflow-visible max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none] rounded-t-[2rem] shadow-[0_-20px_80px_rgba(0,0,0,0.8)]">
                 {player.items.map((item, idx) => {
                     const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;

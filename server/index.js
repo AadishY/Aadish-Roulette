@@ -20,12 +20,30 @@ const io = new Server(httpServer, {
     cors: {
         origin: allowedOrigins,
         methods: ["GET", "POST"]
-    }
+    },
+    // PERFORMANCE BOOSTER: Tune Socket.IO for low-latency gaming
+    pingTimeout: 10000,   // Disconnect faster if heartbeats fail
+    pingInterval: 5000,    // More frequent heartbeats to keep connection alive
+    connectTimeout: 10000,
+    cookie: false,         // Disable cookies to save headers
+    transports: ['websocket', 'polling'] // Prefer websocket
 });
 
 // Room data structure
 // roomId -> { hostId, players: [{id, name, color, ready, hp, items, isHandcuffed, isSawedActive}], settings: {rounds, hp, itemsPerShipment}, gameState: {...} }
 const rooms = new Map();
+
+// PRODUCTION OPTIMIZATION: Periodic cleanup of empty or stale rooms
+setInterval(() => {
+    const now = Date.now();
+    for (const [roomId, room] of rooms.entries()) {
+        // Only if room is empty or last activity was too long ago (e.g., 2 hours)
+        if (room.players.length === 0 || (room.lastActivity && now - room.lastActivity > 7200000)) {
+            rooms.delete(roomId);
+            console.log(`[CLEANUP] Pruned room ${roomId}`);
+        }
+    }
+}, 300000); // Run every 5 minutes
 
 const PLAYER_COLORS = [
     '#ff4444', // Red
@@ -146,6 +164,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('gameAction', ({ roomId, action }) => {
+        const room = rooms.get(roomId);
+        if (room) room.lastActivity = Date.now();
+
         // Log interesting actions
         if (action.type === 'SYNC_ROUND') {
             console.log(`[SYNC ROUND] Room ${roomId}: Chamber=${action.chamber}, HostItems=${action.hostItems}, ClientItems=${action.clientItems}`);
@@ -210,6 +231,7 @@ io.on('connection', (socket) => {
                     timestamp: Date.now()
                 };
                 room.messages.push(chatEntry);
+                room.lastActivity = Date.now();
                 if (room.messages.length > 50) room.messages.shift();
                 console.log(`[CHAT] Room ${roomId} | ${player.name}: ${message}`);
                 io.to(roomId).emit('chatMessageReceived', chatEntry);
