@@ -27,6 +27,9 @@ interface ShootingContext {
     setIsProcessing: StateSetter<boolean>;
     matchStats?: React.MutableRefObject<MatchStats>; // Added
     handleHardModeRoundEnd?: (winner: TurnOwner) => void;
+    handleMPRoundEnd?: (winner: TurnOwner) => void;
+    opponentName: string;
+    onBatchEnd?: () => void;
 }
 
 export const performShot = async (
@@ -38,7 +41,7 @@ export const performShot = async (
         gameState, setGameState, player, setPlayer, dealer, setDealer,
         setAnim, setKnownShell, setAimTarget, setCameraView, setOverlayText, setOverlayColor,
         setShowFlash, setShowBlood, addLog, playerName, startRound, setIsProcessing, matchStats,
-        handleHardModeRoundEnd
+        handleHardModeRoundEnd, handleMPRoundEnd, opponentName, onBatchEnd
     } = ctx;
 
     setIsProcessing(true);
@@ -48,8 +51,19 @@ export const performShot = async (
     const { chamber, currentShellIndex } = gameState;
 
     if (currentShellIndex >= chamber.length) {
-        startRound();
-        setIsProcessing(false);
+        setGameState(prev => ({ ...prev, phase: 'RESOLVING' })); // Mark as resolving while waiting
+        console.log("CHAMBER EMPTY - SYNCING...");
+        if (gameState.isMultiplayer) {
+            if (onBatchEnd) {
+                onBatchEnd();
+            } else {
+                addLog("WAITING FOR REPLENISHMENT...", 'info');
+                setOverlayText("WAITING FOR HOST...");
+            }
+        } else {
+            startRound();
+        }
+        // Don't setIsProcessing(false) yet, we are waiting for the next round
         return;
     }
 
@@ -231,17 +245,32 @@ export const performShot = async (
         if (target === 'PLAYER') {
             const newHp = Math.max(0, player.hp - damage);
             setPlayer(p => ({ ...p, hp: newHp }));
+
             if (newHp <= 0) {
                 if (gameState.isHardMode && handleHardModeRoundEnd) {
                     addLog('ROUND LOST', 'danger');
                     handleHardModeRoundEnd('DEALER');
                     setIsProcessing(false);
-                    return; // Early return for Hard Mode
+                    return;
+                }
+                if (gameState.isMultiplayer && handleMPRoundEnd) {
+                    addLog('ROUND LOST', 'danger');
+                    handleMPRoundEnd('DEALER');
+                    setIsProcessing(false);
+                    return;
                 }
                 setGameState(prev => ({ ...prev, winner: 'DEALER', phase: 'GAME_OVER' }));
                 if (matchStats?.current) matchStats.current.result = 'LOSS';
                 gameOver = true;
                 addLog('YOU DIED.', 'danger');
+            } else {
+                setOverlayColor('red');
+                setAnim(prev => ({ ...prev, playerHit: true }));
+                await wait(1800);
+                setAnim(prev => ({ ...prev, playerHit: false, playerRecovering: true }));
+                await wait(1500);
+                setAnim(prev => ({ ...prev, playerRecovering: false }));
+                setOverlayColor('none');
             }
         } else {
             const newHp = Math.max(0, dealer.hp - damage);
@@ -252,21 +281,27 @@ export const performShot = async (
                     addLog('ROUND WON', 'safe');
                     handleHardModeRoundEnd('PLAYER');
                     setIsProcessing(false);
-                    return; // Early return
+                    return;
+                }
+                if (gameState.isMultiplayer && handleMPRoundEnd) {
+                    addLog('ROUND WON', 'safe');
+                    handleMPRoundEnd('PLAYER');
+                    setIsProcessing(false);
+                    return;
                 }
                 setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
                 if (matchStats?.current) matchStats.current.result = 'WIN';
                 gameOver = true;
-                addLog('DEALER ELIMINATED.', 'safe');
+                addLog(`${opponentName.toUpperCase()} ELIMINATED.`, 'safe');
             } else {
                 setOverlayColor('green');
-                setAnim(prev => ({ ...prev, dealerRecovering: true }));
-                await wait(1200); // Shorter
-                if (newHp > 0) {
-                    setAnim(prev => ({ ...prev, dealerDropping: false }));
-                    await wait(1000); // Shorter
-                    setAnim(prev => ({ ...prev, dealerRecovering: false }));
-                }
+                setAnim(prev => ({ ...prev, dealerHit: true, dealerDropping: true }));
+                await wait(1200);
+                setAnim(prev => ({ ...prev, dealerHit: false, dealerRecovering: true }));
+                await wait(1200);
+                setAnim(prev => ({ ...prev, dealerDropping: false }));
+                await wait(1000);
+                setAnim(prev => ({ ...prev, dealerRecovering: false }));
                 setOverlayColor('none');
             }
         }
@@ -283,8 +318,19 @@ export const performShot = async (
     const remaining = chamber.length - nextIndex;
 
     if (remaining === 0) {
-        startRound();
-        setIsProcessing(false);
+        setGameState(prev => ({ ...prev, phase: 'RESOLVING' })); // Mark as resolving while waiting
+        console.log("NO SHELLS REMAINING - SYNCING...");
+        if (gameState.isMultiplayer) {
+            if (onBatchEnd) {
+                onBatchEnd();
+            } else {
+                addLog("WAITING FOR REPLENISHMENT...", 'info');
+                setOverlayText("WAITING FOR HOST...");
+            }
+        } else {
+            startRound();
+        }
+        // Don't setIsProcessing(false) yet
         return;
     }
 
@@ -303,7 +349,7 @@ export const performShot = async (
     let nextOwner = keepTurn ? shooter : (shooter === 'PLAYER' ? 'DEALER' : 'PLAYER');
     let turnChanged = !keepTurn;
 
-    const shooterName = shooter === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
+    const shooterName = shooter === 'PLAYER' ? playerName.toUpperCase() : opponentName.toUpperCase();
     if (keepTurn) {
         addLog(`${shooterName} GOES AGAIN`, 'neutral');
     }
@@ -312,7 +358,7 @@ export const performShot = async (
     let skipped = false;
     if (turnChanged) {
         const nextPersonState = nextOwner === 'PLAYER' ? player : dealer;
-        const nextPersonName = nextOwner === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
+        const nextPersonName = nextOwner === 'PLAYER' ? playerName.toUpperCase() : opponentName.toUpperCase();
         if (nextPersonState.isHandcuffed) {
             const message = `${nextPersonName} CUFFED. SKIPPING.`;
             addLog(message, 'info');

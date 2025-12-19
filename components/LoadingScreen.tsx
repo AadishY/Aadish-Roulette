@@ -2,19 +2,28 @@ import React, { useEffect, useState } from 'react';
 
 interface LoadingScreenProps {
     onComplete: () => void;
-    onBack?: () => void; // New prop for back navigation
+    onBack?: () => void;
     text?: string;
     duration?: number;
-    serverCheck?: boolean;
+    error?: string | null;
+    onRetry?: () => void;
 }
 
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete, onBack, text: initialText = "INITIALIZING...", duration = 3000 }) => {
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({
+    onComplete,
+    onBack,
+    text: initialText = "INITIALIZING...",
+    duration = 3000,
+    error,
+    onRetry
+}) => {
     const [progress, setProgress] = useState(0);
     const [text, setText] = useState(initialText);
     const [terminalLines, setTerminalLines] = useState<string[]>([]);
 
     // Progress Timer Effect
     useEffect(() => {
+        if (error) return; // Stop progress if there's an error
         const startTime = Date.now();
         const interval = setInterval(() => {
             const elapsed = Date.now() - startTime;
@@ -28,7 +37,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete, onBack
         }, 50);
 
         return () => clearInterval(interval);
-    }, [duration, onComplete]);
+    }, [duration, onComplete, error]);
 
     // Terminal Lines Effect
     useEffect(() => {
@@ -72,7 +81,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete, onBack
             <div className="scan-line !opacity-20" />
 
             {/* Main Loading UI */}
-            <div className="relative z-10 flex flex-col items-center">
+            <div className={`relative z-10 flex flex-col items-center transition-opacity duration-500 ${error ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                 <div className="text-4xl md:text-6xl font-black tracking-widest mb-12 text-glitch text-shadow-none">
                     {text}
                 </div>
@@ -94,6 +103,37 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete, onBack
                     Unauthorized access is punishable by death
                 </div>
             </div>
+
+            {/* Error UI */}
+            {error && (
+                <div className="absolute inset-0 z-[310] flex flex-col items-center justify-center bg-black/90 p-6 animate-in fade-in duration-500">
+                    <div className="text-red-600 mb-8 flex flex-col items-center gap-4">
+                        <div className="text-6xl font-black tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]">CONNECTION_ERROR</div>
+                        <div className="text-sm border border-red-900/50 bg-red-900/10 px-4 py-2 font-mono uppercase tracking-widest">
+                            {error}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 w-64">
+                        <button
+                            onClick={onRetry}
+                            className="h-12 border-2 border-green-900 hover:border-green-500 text-green-500 font-bold uppercase tracking-[0.3em] transition-all active:scale-95"
+                        >
+                            TRY_AGAIN
+                        </button>
+                        <button
+                            onClick={onBack}
+                            className="h-12 border-2 border-stone-800 hover:border-white text-stone-500 hover:text-white font-bold uppercase tracking-[0.3em] transition-all active:scale-95"
+                        >
+                            TERMINATE
+                        </button>
+                    </div>
+
+                    <div className="mt-12 text-[8px] text-stone-700 font-mono text-center max-w-xs uppercase leading-relaxed">
+                        Emergency shutdown sequence engaged. Please contact network administrator or verify server status.
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

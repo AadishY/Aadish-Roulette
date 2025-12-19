@@ -18,8 +18,7 @@ interface InventoryProps {
 const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false, isGunHeld = false }) => {
     return (
         <div className="flex-1 flex justify-end gap-1 pointer-events-auto h-full items-end">
-            {/* Changed overflow-x-auto to md:overflow-visible to let tooltips pop out on desktop */}
-            <div className="flex gap-1 md:gap-2 p-1 md:p-3 bg-black/80 border-t border-l border-r border-stone-800 backdrop-blur-sm min-h-[40px] md:min-h-[100px] items-end overflow-x-auto md:overflow-visible max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+            <div className="flex gap-1 md:gap-3 p-2 md:p-4 bg-gradient-to-t from-black/95 to-black/70 border-t border-l border-r border-white/10 backdrop-blur-3xl min-h-[40px] md:min-h-[140px] items-end overflow-x-auto md:overflow-visible max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none] rounded-t-[2rem] shadow-[0_-20px_80px_rgba(0,0,0,0.8)]">
                 {player.items.map((item, idx) => {
                     const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
                     const isUsageDisabled = disabled || gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled || isProcessing;
@@ -30,9 +29,10 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                 onClick={() => onUseItem(idx)}
                                 onMouseEnter={() => !isUsageDisabled && audioManager.playSound('click')}
                                 disabled={isUsageDisabled}
-                                className={`w-12 h-14 md:w-20 md:h-24 bg-stone-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/20' : 'border-stone-700'} flex flex-col items-center justify-center hover:bg-stone-800 hover:border-stone-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md active:scale-95 group-hover:-translate-y-2 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)] duration-200 relative overflow-hidden ${!isUsageDisabled ? 'animate-[pulse_4s_infinite] scale-100 hover:scale-105' : 'grayscale-[0.5]'}`}
+                                className={`w-14 h-18 md:w-24 md:h-32 bg-zinc-900/40 border-2 ${isCuffDisabled ? 'border-red-900/50 bg-red-950/10' : 'border-white/5'} flex flex-col items-center justify-center hover:bg-white/5 hover:border-white/20 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-xl active:scale-95 group-hover:-translate-y-4 group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] duration-300 relative overflow-hidden rounded-xl ${!isUsageDisabled ? 'animate-[pulse_4s_infinite]' : 'grayscale'}`}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                                 {item === 'BEER' && <Icons.Beer className="text-amber-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'CIGS' && <Icons.Cigs className="text-red-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}
                                 {item === 'GLASS' && <Icons.Glass className="text-cyan-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6" />}

@@ -53,19 +53,28 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
     }, [receivedItems]);
 
     return (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-            <div className="relative w-full max-w-5xl flex flex-col items-center">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-2xl p-4 animate-in fade-in duration-1000">
+            {/* Background Grid/Scanlines */}
+            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+                <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.05)_50%,transparent_100%)] bg-[length:100%_4px] animate-[scanline_8s_linear_infinite]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.5)_0%,transparent_100%)]" />
+            </div>
 
-                {/* Header */}
-                <div className="mb-10 md:mb-16 text-center animate-slide-in-from-top-10 duration-700">
-                    <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-stone-100 to-stone-600 drop-shadow-[0_0_25px_rgba(255,255,255,0.2)]">
-                        SHIPMENT
+            <div className="relative z-10 w-full max-w-6xl flex flex-col items-center">
+                {/* Header Section */}
+                <div className="mb-14 text-center animate-in slide-in-from-top-10 duration-1000">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="h-[1px] w-20 lg:w-40 bg-gradient-to-r from-transparent to-red-600" />
+                        <span className="text-red-600 font-black tracking-[0.5em] text-[10px] lg:text-sm uppercase animate-pulse">Incoming Shipment Verified</span>
+                        <div className="h-[1px] w-20 lg:w-40 bg-gradient-to-l from-transparent to-red-600" />
+                    </div>
+                    <h2 className="text-5xl lg:text-8xl font-black italic tracking-tighter text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.3)]">
+                        RESOURCE <span className="text-stone-500">PACK</span>
                     </h2>
-                    <div className="h-1 w-full bg-gradient-to-r from-transparent via-red-600 to-transparent mt-2 mb-2" />
                 </div>
 
                 {/* Grid */}
-                <div className="flex flex-wrap gap-4 md:gap-8 justify-center items-center w-full">
+                <div className="flex flex-wrap gap-6 lg:gap-10 justify-center items-center w-full">
                     {receivedItems.map((item, i) => {
                         const isVisible = i < visibleCount;
                         return (
@@ -73,53 +82,68 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                                 key={`${item}-${i}`}
                                 className={`
                                     flex flex-col items-center justify-center
-                                    transition-all duration-500 transform
-                                    ${isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90'}
+                                    transition-all duration-1000 transform
+                                    ${isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-16 scale-75 rotate-3'}
                                 `}
+                                style={{ transitionDelay: `${i * 150}ms` }}
                             >
                                 <div className={`
                                     relative group
-                                    w-24 md:w-36 aspect-square shrink-0
-                                    flex items-center justify-center
-                                    border-2 ${ITEM_COLORS[item]}
-                                    shadow-[0_0_20px_rgba(0,0,0,0.5)]
-                                    overflow-hidden
-                                    backdrop-blur-md
+                                    w-28 lg:w-44 aspect-[4/5] shrink-0
+                                    flex flex-col items-center justify-center
+                                    border border-white/10 rounded-2xl
+                                    shadow-2xl overflow-hidden
+                                    bg-gradient-to-b from-stone-900/60 to-black/80
+                                    backdrop-blur-xl
                                 `}>
-                                    {/* Scanline / Grid Background Effect */}
-                                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%,transparent_100%)] bg-[length:4px_4px]" />
+                                    {/* Item Glow */}
+                                    <div className={`absolute inset-0 opacity-10 blur-2xl group-hover:opacity-30 transition-opacity bg-current ${ITEM_COLORS[item].split(' ')[0]}`} />
 
-                                    {/* Icon */}
-                                    <div className="relative z-10 transform transition-transform duration-300 group-hover:scale-110 drop-shadow-md">
-                                        {item === 'BEER' && <Icons.Beer size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'CIGS' && <Icons.Cigs size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'GLASS' && <Icons.Glass size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'CUFFS' && <Icons.Cuffs size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'SAW' && <Icons.Saw size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'PHONE' && <Icons.Phone size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'INVERTER' && <Icons.Inverter size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'ADRENALINE' && <Icons.Adrenaline size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'CHOKE' && <Icons.Choke size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'REMOTE' && <Icons.Remote size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'BIG_INVERTER' && <Icons.BigInverter size={40} className="md:w-16 md:h-16" />}
-                                        {item === 'CONTRACT' && <Icons.Contract size={40} className="md:w-16 md:h-16" />}
+                                    {/* Scanline Effect */}
+                                    <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.02)_50%,transparent_100%)] bg-[length:100%_4px] pointer-events-none" />
+
+                                    {/* Icon Container */}
+                                    <div className={`relative z-10 p-6 rounded-3xl bg-black/40 border border-white/5 mb-4 group-hover:scale-110 group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all duration-500 ${ITEM_COLORS[item].split(' ')[0]}`}>
+                                        {item === 'BEER' && <Icons.Beer size={56} />}
+                                        {item === 'CIGS' && <Icons.Cigs size={56} />}
+                                        {item === 'GLASS' && <Icons.Glass size={56} />}
+                                        {item === 'CUFFS' && <Icons.Cuffs size={56} />}
+                                        {item === 'SAW' && <Icons.Saw size={56} />}
+                                        {item === 'PHONE' && <Icons.Phone size={56} />}
+                                        {item === 'INVERTER' && <Icons.Inverter size={56} />}
+                                        {item === 'ADRENALINE' && <Icons.Adrenaline size={56} />}
+                                        {item === 'CHOKE' && <Icons.Choke size={56} />}
+                                        {item === 'REMOTE' && <Icons.Remote size={56} />}
+                                        {item === 'BIG_INVERTER' && <Icons.BigInverter size={56} />}
+                                        {item === 'CONTRACT' && <Icons.Contract size={56} />}
                                     </div>
 
-                                    {/* Corner Accents */}
-                                    <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-white/50" />
-                                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-white/50" />
-                                </div>
+                                    {/* Text Label */}
+                                    <div className="relative z-10 text-center px-4">
+                                        <span className={`text-[9px] lg:text-xs font-black tracking-[0.4em] uppercase ${ITEM_COLORS[item].split(' ')[0]}`}>
+                                            {ITEM_NAMES[item]}
+                                        </span>
+                                    </div>
 
-                                <span className={`
-                                    mt-3 text-[10px] md:text-sm font-black tracking-widest text-center uppercase
-                                    ${ITEM_COLORS[item].split(' ')[0]} 
-                                    bg-black/80 px-2 py-1 border border-stone-800
-                                `}>
-                                    {ITEM_NAMES[item]}
-                                </span>
+                                    {/* Decorative Indices */}
+                                    <div className="absolute top-4 left-4 text-[8px] font-black text-white/10 tracking-widest">{`0${i + 1}`}</div>
+                                    <div className="absolute bottom-4 right-4 text-[8px] font-black text-white/10 tracking-widest">ACT_LOG_SYS</div>
+
+                                    {/* Corner Bars */}
+                                    <div className="absolute top-0 left-0 w-8 h-[1px] bg-white/20" />
+                                    <div className="absolute top-0 left-0 w-[1px] h-8 bg-white/20" />
+                                    <div className="absolute bottom-0 right-0 w-8 h-[1px] bg-white/20" />
+                                    <div className="absolute bottom-0 right-0 w-[1px] h-8 bg-white/20" />
+                                </div>
                             </div>
                         );
                     })}
+                </div>
+
+                {/* Footer deco */}
+                <div className="mt-20 flex flex-col items-center gap-4 animate-pulse">
+                    <span className="text-stone-600 font-bold tracking-[0.8em] text-[9px] uppercase">Awaiting Protocol Acknowledgement</span>
+                    <div className="h-[2px] w-48 bg-gradient-to-r from-transparent via-stone-800 to-transparent" />
                 </div>
             </div>
         </div>

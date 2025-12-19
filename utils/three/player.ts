@@ -13,12 +13,14 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     const torso = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), suitMat);
     torso.position.set(0, 3, 0);
     torso.castShadow = true;
+    torso.name = "TORSO";
     avatarGroup.add(torso);
 
     // Head (Normal Sphere)
     const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), skinMat);
     head.position.set(0, 7.5, 0);
     head.castShadow = true;
+    head.name = "HEAD";
     avatarGroup.add(head);
 
     // Sunglasses
@@ -30,10 +32,12 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     const lArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
     lArm.position.set(-3, 3, 0); lArm.rotation.z = 0.2;
     lArm.castShadow = true;
+    lArm.name = "LEFT_ARM";
     avatarGroup.add(lArm);
     const rArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
     rArm.position.set(3, 3, 0); rArm.rotation.z = -0.2;
     rArm.castShadow = true;
+    rArm.name = "RIGHT_ARM";
     avatarGroup.add(rArm);
 
     // === HEALTH BAR ===

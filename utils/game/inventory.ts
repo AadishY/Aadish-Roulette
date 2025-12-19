@@ -102,6 +102,46 @@ export const getContractLoot = (): ItemType[] => {
     return [item1, item2];
 };
 
+export const generateLootBatch = (amount: number, isHardMode: boolean, forDealer: boolean, dealerHp: number): ItemType[] => {
+    const batch: ItemType[] = [];
+    const counts: Record<string, number> = {};
+
+    for (let i = 0; i < amount; i++) {
+        let item: ItemType | null = null;
+        let tries = 0;
+
+        // Soft duplicate limit: Max 2 of same item per batch
+        do {
+            let candidate: ItemType;
+
+            if (forDealer && isHardMode) {
+                // CHEATING LOGIC FOR DEALER IN HARD MODE
+                candidate = getDealerCheatingItem(dealerHp);
+            } else {
+                // Standard Logic
+                candidate = getRandomItem(isHardMode, forDealer);
+            }
+
+            const currentCount = counts[candidate] || 0;
+
+            if (currentCount < 2) {
+                item = candidate;
+            }
+            tries++;
+        } while (!item && tries < 15);
+
+        // Fallback if random keeps giving same item
+        if (!item) {
+            if (forDealer && isHardMode) item = getDealerCheatingItem(dealerHp);
+            else item = getRandomItem(isHardMode, forDealer);
+        }
+
+        batch.push(item);
+        counts[item] = (counts[item] || 0) + 1;
+    }
+    return batch;
+};
+
 export const distributeItems = async (
     forceClear: boolean,
     gameState: GameState,
@@ -110,7 +150,9 @@ export const distributeItems = async (
     setGameState: StateSetter<GameState>,
     setReceivedItems: StateSetter<ItemType[]>,
     setShowLootOverlay: StateSetter<boolean>,
-    dealerHp: number = 2 // Default to 2 if not provided
+    dealerHp: number = 2,
+    pItemsOverride?: ItemType[],
+    dItemsOverride?: ItemType[]
 ) => {
     // If forceClear, ensure items are cleared FIRST before anything else
     if (forceClear) {
@@ -122,7 +164,9 @@ export const distributeItems = async (
     // Generate items based on round count
     let amount = 2;
 
-    if (gameState.isHardMode) {
+    if (gameState.isMultiplayer && gameState.roomSettings) {
+        amount = gameState.roomSettings.itemsPerShipment || 4;
+    } else if (gameState.isHardMode) {
         // HARD MODE LOGIC
         const currentStage = gameState.hardModeState?.round || 1;
         if (currentStage === 1) amount = 2;
@@ -138,48 +182,12 @@ export const distributeItems = async (
     }
 
     const generateLoot = (forDealer: boolean) => {
-        const batch: ItemType[] = [];
-        const counts: Record<string, number> = {};
-
-        for (let i = 0; i < amount; i++) {
-            let item: ItemType | null = null;
-            let tries = 0;
-
-            // Soft duplicate limit: Max 2 of same item per batch
-            do {
-                let candidate: ItemType;
-
-                if (forDealer && gameState.isHardMode) {
-                    // CHEATING LOGIC FOR DEALER IN HARD MODE
-                    candidate = getDealerCheatingItem(dealerHp);
-                } else {
-                    // Standard Logic
-                    candidate = getRandomItem(gameState.isHardMode, forDealer);
-                }
-
-                const currentCount = counts[candidate] || 0;
-
-                if (currentCount < 2) {
-                    item = candidate;
-                }
-                tries++;
-            } while (!item && tries < 15);
-
-            // Fallback if random keeps giving same item
-            if (!item) {
-                if (forDealer && gameState.isHardMode) item = getDealerCheatingItem(dealerHp);
-                else item = getRandomItem(gameState.isHardMode, forDealer);
-            }
-
-            batch.push(item);
-            counts[item] = (counts[item] || 0) + 1;
-        }
-        return batch;
+        return generateLootBatch(amount, gameState.isHardMode, forDealer, dealerHp);
     };
 
     // Generate loot pools separately
-    const pNew = generateLoot(false); // Player uses standard random
-    const dNew = generateLoot(true);  // Dealer uses Cheating AI if Hard Mode
+    const pNew = pItemsOverride || generateLoot(false);
+    const dNew = dItemsOverride || generateLoot(true);
 
     // SAFETY: Clear any previous overlay state explicitely before showing new
     setShowLootOverlay(false);

@@ -62,7 +62,7 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                         ? 'text-green-500 drop-shadow-[0_0_15px_rgba(34,197,94,0.5)]'
                         : 'text-red-600 drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]'
                         } ${gameState.isHardMode && gameState.turnOwner === 'DEALER' ? 'animate-[chromatic_0.2s_infinite]' : ''}`}>
-                        {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : "DEALER"}
+                        {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : (gameState.opponentName?.toUpperCase() || "DEALER") + "'S TURN"}
                     </div>
                 </div>
 
@@ -81,11 +81,11 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
 
             {/* Dealer Side */}
             <div className="flex flex-col items-end min-w-[80px] md:w-1/3 animate-in slide-in-from-right duration-700">
-                <div className="flex flex-col mb-4 items-end">
-                    <span className="text-[10px] md:text-sm font-black tracking-[0.4em] text-stone-500 mb-1 uppercase">
-                        DEALER_CORE
+                <div className="flex flex-col items-end">
+                    <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase">
+                        {gameState.isMultiplayer ? (gameState.opponentName || 'OPPONENT') : 'DEALER_CORE'}
                     </span>
-                    <div className="flex items-center gap-1.5 md:gap-3">
+                    <div className="flex gap-1 md:gap-2">
                         {[...Array(dealer.maxHp)].map((_, i) => (
                             <div key={i} className={`relative group w-2 h-6 md:w-6 md:h-20 border rounded-sm transition-all duration-1000 ${i < dealer.hp
                                 ? 'bg-gradient-to-t from-red-950/80 via-red-600/60 to-red-500/40 border-red-500/50 shadow-[0_0_25px_rgba(239,68,68,0.3)]'

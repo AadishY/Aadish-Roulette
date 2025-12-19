@@ -11,9 +11,18 @@ interface IntroScreenProps {
     onOpenSettings: () => void;
     onOpenGuide: () => void;
     onOpenScoreboard: () => void;
+    onStartMultiplayer: (name: string) => void;
 }
 
-export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputName, onStartGame, onOpenSettings, onOpenGuide, onOpenScoreboard }) => {
+export const IntroScreen: React.FC<IntroScreenProps> = ({
+    inputName,
+    setInputName,
+    onStartGame,
+    onOpenSettings,
+    onOpenGuide,
+    onOpenScoreboard,
+    onStartMultiplayer
+}) => {
     const nameInputRef = useRef<HTMLInputElement>(null);
     const [scale, setScale] = React.useState(1);
     const [showHardModeWarning, setShowHardModeWarning] = React.useState(false);
@@ -222,17 +231,22 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ inputName, setInputNam
                         <button onClick={() => {
                             audioManager.playSound('click');
                             onStartGame(false);
-                        }} disabled={!inputName.trim()} className="col-span-8 px-4 py-5 bg-white text-black font-black text-xl hover:bg-stone-200 active:scale-[0.98] transition-all duration-300 disabled:opacity-20 disabled:grayscale tracking-[0.4em] rounded-xl shadow-[0_20px_50px_rgba(255,255,255,0.1)] relative overflow-hidden group/btn uppercase">
+                        }} disabled={!inputName.trim()} className="col-span-8 px-4 py-5 bg-white text-black font-black text-xl hover:bg-stone-200 active:scale-[0.98] transition-all duration-300 disabled:opacity-20 disabled:grayscale tracking-[0.4em] rounded-xl shadow-[0_20px_50px_rgba(255,255,255,0.1)] relative overflow-hidden group/btn uppercase leading-none">
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
-                            <div className="flex flex-col items-center leading-none">
-                                <span>START GAME</span>
-                            </div>
+                            <span>START GAME</span>
+                        </button>
+
+                        <button onClick={() => {
+                            audioManager.playSound('click');
+                            onStartMultiplayer(inputName.trim());
+                        }} disabled={!inputName.trim()} className="col-span-4 py-5 bg-stone-950/60 border border-stone-800 text-stone-200 font-black text-[10px] md:text-sm hover:text-white hover:border-white active:scale-[0.98] transition-all duration-300 disabled:opacity-20 flex flex-col items-center justify-center gap-1 group rounded-xl hover:bg-stone-900/40 shadow-[0_10px_30px_rgba(255,255,255,0.02)] uppercase tracking-widest leading-none">
+                            MULTIPLAYER
                         </button>
 
                         <button onClick={() => {
                             audioManager.playSound('click');
                             setShowHardModeWarning(true);
-                        }} disabled={!inputName.trim()} className="col-span-4 py-5 bg-stone-950/60 border border-red-900/40 text-red-600 font-black text-[10px] md:text-sm hover:text-red-500 hover:border-red-600 active:scale-[0.98] transition-all duration-300 disabled:opacity-20 flex flex-col items-center justify-center gap-1 group rounded-xl hover:bg-red-950/20 shadow-[0_10px_30px_rgba(220,38,38,0.05)] uppercase tracking-widest leading-none">
+                        }} disabled={!inputName.trim()} className="col-span-12 py-3 bg-stone-950/60 border border-red-900/40 text-red-600 font-black text-[9px] md:text-xs hover:text-red-500 hover:border-red-600 active:scale-[0.98] transition-all duration-300 disabled:opacity-20 flex flex-col items-center justify-center gap-1 group rounded-xl hover:bg-red-950/20 shadow-[0_10px_30px_rgba(220,38,38,0.05)] uppercase tracking-widest leading-none">
                             HARD MODE
                         </button>
                     </div>

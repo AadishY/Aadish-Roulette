@@ -128,8 +128,19 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemContract, itemLight };
 
 
-    // Singleplayer: Always create dealer
-    const dealerGroup = createDealerModel(scene);
+    // Multiplayer vs Singleplayer representation
+    const isMP = props.gameState?.isMultiplayer;
+    let dealerGroup: THREE.Group;
+
+    if (isMP) {
+        // Opponent is another player
+        const opponentName = props.gameState?.opponentName || 'OPPONENT';
+        // Positioned lower so head aligns with dealer head height
+        dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI, opponentName);
+        dealerGroup.name = 'DEALER'; // Keep name 'DEALER' for animation logic compatibility
+    } else {
+        dealerGroup = createDealerModel(scene);
+    }
     const playerAvatars: THREE.Group[] = [];
 
     const { bulletMesh: bMesh, shellCasing, shellCasings, shellVelocities } = createProjectiles(scene);

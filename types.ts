@@ -2,7 +2,7 @@
 export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER' | 'CONTRACT';
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
-export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI'; // Added STEAL_UI for Adrenaline
+export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI' | 'DEALER_GUN'; // Added DEALER_GUN
 export type AimTarget = 'OPPONENT' | 'SELF' | 'IDLE' | 'CHOOSING';
 
 export interface GameState {
@@ -16,12 +16,50 @@ export interface GameState {
   lastTurnWasSkipped?: boolean;
   roundCount: number;
   isHardMode: boolean;
+  isMultiplayer?: boolean;
+  opponentName?: string;
+  multiplayerState?: MultiplayerGameState;
   hardModeState?: {
     round: number;
     playerWins: number;
     dealerWins: number;
   };
+  roomSettings?: RoomSettings;
+  multiModeState?: {
+    playerWins: number;
+    opponentWins: number;
+  };
 }
+
+export interface MultiplayerGameState {
+  players: MultiplayerPlayer[];
+  hostId: string;
+  roomId: string;
+  settings: RoomSettings;
+  turnIndex: number; // For 4-player scalability
+}
+
+export interface MultiplayerPlayer extends PlayerState {
+  id: string;
+  name: string;
+  color: string;
+  ready: boolean;
+}
+
+export interface RoomSettings {
+  rounds: number;
+  hp: number;
+  itemsPerShipment: number;
+}
+
+export interface ChatMessage {
+  sender: string;
+  color: string;
+  text: string;
+  timestamp: number;
+}
+
+export type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_MP' | 'LOADING_GAME' | 'LOBBY' | 'GAME';
 
 export interface PlayerState {
   hp: number;

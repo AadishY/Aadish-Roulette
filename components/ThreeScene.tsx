@@ -246,7 +246,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             }
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
-    }, []); // Removed settings.pixelScale to prevent full rebuild
+    }, [gameState.isMultiplayer]); // Added isMultiplayer to rebuild scene when switching between SP/MP
 
     // Separate effect for Pixel Scale / Resolution updates (No Rebuild)
     useEffect(() => {
@@ -282,11 +282,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             sceneRef.current.scene.userData.cameraShake = 0.6;
             const pos = sparkParticles.geometry.attributes.position.array as Float32Array;
             const vel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
+            const isPlayer = propsRef.current.turnOwner === 'PLAYER';
+            const sparkZOffset = isPlayer ? 4.5 : -4.5; // Offset towards the side using it
+
             for (let i = 0; i < pos.length / 3; i++) {
                 const idx = i * 3;
                 pos[idx] = gunGroup.position.x + (Math.random() - 0.5) * 0.5;
                 pos[idx + 1] = gunGroup.position.y + 0.3;
-                pos[idx + 2] = gunGroup.position.z + 4.5;
+                pos[idx + 2] = gunGroup.position.z + (Math.random() - 0.5) * 1.5 + sparkZOffset;
                 vel[idx] = (Math.random() - 0.5) * 0.8;
                 vel[idx + 1] = Math.random() * 0.5;
                 vel[idx + 2] = (Math.random() - 0.5) * 0.4;

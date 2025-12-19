@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { GameState, PlayerState, ShellType, ItemType, LogEntry, TurnOwner, CameraView, AimTarget, AnimationState } from '../types';
+import { GameState, PlayerState, ShellType, ItemType, LogEntry, TurnOwner, CameraView, AimTarget, AnimationState, RoomSettings } from '../types';
 import { MAX_HP, MAX_ITEMS, ITEMS } from '../constants';
 import { randomInt, wait } from '../utils/gameUtils';
 import * as ItemActions from '../utils/game/itemActions';
@@ -12,6 +12,7 @@ export const useGameLogic = () => {
   // --- State ---
   const [playerName, setPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const onBatchEndRef = useRef<(() => void) | null>(null);
 
   const [gameState, setGameState] = useState<GameState>({
     phase: 'BOOT',
@@ -22,7 +23,9 @@ export const useGameLogic = () => {
     liveCount: 0,
     blankCount: 0,
     roundCount: 0,
-    isHardMode: false
+    isHardMode: false,
+    roomSettings: { rounds: 1, hp: 2, itemsPerShipment: 4 },
+    multiModeState: { playerWins: 0, opponentWins: 0 }
   });
 
   const [player, setPlayer] = useState<PlayerState>({
@@ -104,6 +107,10 @@ export const useGameLogic = () => {
   const [receivedItems, setReceivedItems] = useState<ItemType[]>([]);
   const [showLootOverlay, setShowLootOverlay] = useState(false);
 
+  const getOpponentName = () => {
+    return gameState.isMultiplayer ? (gameState.opponentName || 'OPPONENT') : 'DEALER';
+  };
+
   const addLog = (text: string, type: LogEntry['type'] = 'neutral') => {
     setLogs(prev => [...prev, { id: Date.now() + Math.random(), text, type }]);
   };
@@ -169,7 +176,18 @@ export const useGameLogic = () => {
     }
   };
 
-  const startGame = (name: string, hardMode: boolean = false) => {
+  const startGame = (
+    name: string,
+    hardMode: boolean = false,
+    isMultiplayer: boolean = false,
+    opponentName: string = 'OPPONENT',
+    turnOwner: TurnOwner = 'PLAYER',
+    chamberOverride?: ShellType[],
+    pItemsOverride?: ItemType[],
+    dItemsOverride?: ItemType[],
+    hpOverride?: number,
+    mpSettings?: RoomSettings
+  ) => {
     // Clear any pending resets from previous actions
     if (resetTimeoutRef.current) {
       clearTimeout(resetTimeoutRef.current);
@@ -179,8 +197,11 @@ export const useGameLogic = () => {
     localStorage.setItem('aadish_roulette_name', name);
     setPlayerName(name);
 
-    // Full Reset (same as resetGame)
-    const initialHp = 2; // Round 1 starts with 2 charges
+    setIsProcessing(true); // Lock input during initialization
+
+    // HP from override or settings
+    const initialHp = hpOverride || (mpSettings?.hp) || 2;
+
     setPlayer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false });
     setDealer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false });
     setLogs([]);
@@ -193,7 +214,7 @@ export const useGameLogic = () => {
     });
     setCameraView('PLAYER');
     setShowBlood(false);
-    setIsProcessing(false);
+
     matchStatsRef.current = {
       result: 'LOSS',
       roundsSurvived: 0,
@@ -212,7 +233,7 @@ export const useGameLogic = () => {
 
     setGameState({
       phase: 'LOAD',
-      turnOwner: 'PLAYER',
+      turnOwner: turnOwner,
       winner: null,
       chamber: [],
       currentShellIndex: 0,
@@ -220,41 +241,65 @@ export const useGameLogic = () => {
       blankCount: 0,
       roundCount: 0,
       isHardMode: hardMode,
-      hardModeState: initialHardModeState
+      isMultiplayer: isMultiplayer,
+      opponentName: opponentName,
+      hardModeState: initialHardModeState,
+      roomSettings: mpSettings || { rounds: 1, hp: 4, itemsPerShipment: 4 },
+      multiModeState: { playerWins: 0, opponentWins: 0 }
     });
 
     matchStatsRef.current.isHardMode = hardMode;
 
-    if (hardMode) {
-      setOverlayText('ROUND 1');
-      setTimeout(() => {
-        setOverlayText(null);
-        startRound(true, hardMode, initialHardModeState);
-      }, 1800);
-    } else {
-      startRound(true, hardMode, initialHardModeState);
-    }
+    // Show ROUND 1 overlay explicitly for EVERY mode
+    // setOverlayText('ROUND 1'); // Removed - Redundant with startRound
+    // setOverlayColor('none');
+
+    // Start with a delay to let player see the message
+    setTimeout(() => {
+      // setOverlayText(null);
+      startRound(true, hardMode, initialHardModeState, chamberOverride, pItemsOverride, dItemsOverride, turnOwner, hpOverride);
+    }, 100); // Reduced delay since startRound has its own delay
   };
 
-  const startRound = async (resetItems: boolean = false, hardModeOverride?: boolean, hardModeStateOverride?: any) => {
+  const startRound = async (
+    resetItems: boolean = false,
+    hardModeOverride?: boolean,
+    hardModeStateOverride?: any,
+    chamberOverride?: ShellType[],
+    pItemsOverride?: ItemType[],
+    dItemsOverride?: ItemType[],
+    turnOwnerOverride?: TurnOwner,
+    hpOverride?: number,
+    multiWinsOverride?: { playerWins: number, opponentWins: number }
+  ) => {
     // Resolve Hard Mode State
     // Prioritize override, then current state
     const isHM = hardModeOverride !== undefined ? hardModeOverride : gameState.isHardMode;
     const hmState = hardModeStateOverride !== undefined ? hardModeStateOverride : gameState.hardModeState;
 
-    const total = randomInt(2, 8);
-    const maxLives = Math.floor(total / 2);
-    let lives = randomInt(1, maxLives);
-    if (lives < maxLives && Math.random() > 0.4) {
-      lives = maxLives;
-    }
-    const blanks = total - lives;
+    let chamber: ShellType[];
+    let lives: number;
+    let blanks: number;
 
-    let chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
+    if (chamberOverride) {
+      chamber = chamberOverride;
+      lives = chamber.filter(s => s === 'LIVE').length;
+      blanks = chamber.filter(s => s === 'BLANK').length;
+    } else {
+      const total = randomInt(2, 8);
+      const maxLives = Math.floor(total / 2);
+      lives = randomInt(1, maxLives);
+      if (lives < maxLives && Math.random() > 0.4) {
+        lives = maxLives;
+      }
+      blanks = total - lives;
 
-    for (let i = chamber.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [chamber[i], chamber[j]] = [chamber[j], chamber[i]];
+      chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
+
+      for (let i = chamber.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [chamber[i], chamber[j]] = [chamber[j], chamber[i]];
+      }
     }
 
     setGameState(prev => ({
@@ -281,8 +326,8 @@ export const useGameLogic = () => {
     setCameraView('TABLE');
 
     // Hard Mode HP Setup
-    let startingHp = MAX_HP;
-    if (isHM) {
+    let startingHp = hpOverride || MAX_HP;
+    if (isHM && !hpOverride) {
       const stage = hmState?.round || 1;
       if (stage === 1) startingHp = 2;
       else if (stage === 2) startingHp = 3;
@@ -299,15 +344,30 @@ export const useGameLogic = () => {
       setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, isChokeActive: false }));
     }
 
-    // Show Batch/Round Message
-    // In Hard Mode, round announcements are handled by startGame/roundEnd logic
-    // to allow for custom color effects and flow.
+    setIsProcessing(true);
 
+    // 1. Show ROUND X announcement
+    let displayRound = gameState.roundCount + 1;
+    if (isHM) {
+      displayRound = hmState?.round || 1;
+    } else if (gameState.isMultiplayer) {
+      const wins = multiWinsOverride || gameState.multiModeState;
+      displayRound = (wins?.playerWins || 0) + (wins?.opponentWins || 0) + 1;
+    }
+
+    setOverlayText(`ROUND ${displayRound}`);
+    setOverlayColor(isHM ? 'red' : 'none');
+    audioManager.playSound('rack');
+    await wait(2200);
+    setOverlayText(null);
+    setOverlayColor('none');
+
+    // 2. Show LIVE/BLANK announcement
     addLog('--- NEW BATCH ---');
     addLog(`${lives} LIVE, ${blanks} BLANK`);
-
     setOverlayText(`${lives} LIVE  |  ${blanks} BLANK`);
-    await wait(1800); // Snappier transition
+    audioManager.playSound('insert');
+    await wait(2200);
     setOverlayText(null);
 
     // Pass overrides to distributeItems if needed, or rely on setGameState above having propagated?
@@ -329,12 +389,21 @@ export const useGameLogic = () => {
 
     await distributeItemsAction(
       resetItems, effectiveState, setPlayer, setDealer, setGameState,
-      setReceivedItems, setShowLootOverlay, dealer.hp
+      setReceivedItems, setShowLootOverlay, dealer.hp,
+      pItemsOverride, dItemsOverride
     );
 
-    setGameState(prev => ({ ...prev, phase: 'PLAYER_TURN', turnOwner: 'PLAYER' }));
-    setCameraView('PLAYER');
-    addLog('YOUR MOVE.');
+    const nextTurn = turnOwnerOverride || 'PLAYER';
+    setGameState(prev => ({ ...prev, phase: nextTurn === 'PLAYER' ? 'PLAYER_TURN' : 'DEALER_TURN', turnOwner: nextTurn }));
+    if (nextTurn === 'PLAYER') {
+      setCameraView('PLAYER');
+      addLog('YOUR MOVE.');
+    } else {
+      setCameraView('DEALER');
+      addLog(`${getOpponentName().toUpperCase()}'S TURN.`);
+    }
+
+    setIsProcessing(false);
   };
 
   /* Fixed Hard Mode logic */
@@ -357,7 +426,7 @@ export const useGameLogic = () => {
     matchStatsRef.current.roundResults.push(winner === 'PLAYER' ? 'WIN' : 'LOSS');
 
     // 1. Show Winner of Round Visuals
-    const winMsg = winner === 'PLAYER' ? `${playerName} WON ROUND ${currentRound}` : `DEALER WON ROUND ${currentRound}`;
+    const winMsg = winner === 'PLAYER' ? `${playerName} WON ROUND ${currentRound}` : `${getOpponentName().toUpperCase()} WON ROUND ${currentRound}`;
     const color = winner === 'PLAYER' ? 'green' : 'red';
 
     setOverlayColor(color);
@@ -396,7 +465,53 @@ export const useGameLogic = () => {
 
     // Trigger Next Round
     setGameState(prev => ({ ...prev, hardModeState: nextState, phase: 'LOAD' }));
+    // Trigger Next Round
     await startRound(true, true, nextState);
+    setIsProcessing(false);
+  };
+
+  const handleMPRoundEnd = async (winner: TurnOwner) => {
+    setIsProcessing(true);
+
+    const mSettings = gameState.roomSettings || { rounds: 1, hp: 4 };
+    const winsNeeded = Math.ceil(mSettings.rounds / 2) || 1;
+
+    // Increment wins locally first
+    let pWin = (gameState.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0);
+    let oWin = (gameState.multiModeState?.opponentWins || 0) + (winner === 'PLAYER' ? 0 : 1);
+
+    setGameState(prev => ({
+      ...prev,
+      multiModeState: { playerWins: pWin, opponentWins: oWin }
+    }));
+
+    const winMsg = winner === 'PLAYER' ? `${playerName.toUpperCase()} WON THE MATCH!` : `${getOpponentName().toUpperCase()} WON THE MATCH!`;
+    const color = winner === 'PLAYER' ? 'green' : 'red';
+
+    setOverlayColor(color);
+    setOverlayText(winMsg);
+    await wait(3000);
+
+    if (pWin >= winsNeeded || oWin >= winsNeeded) {
+      setGameState(prev => ({ ...prev, winner, phase: 'GAME_OVER' }));
+      setIsProcessing(false);
+      return;
+    }
+
+    // Next Round
+    const nextRoundNum = pWin + oWin + 1;
+    setOverlayColor('none');
+    setOverlayText(`ROUND ${nextRoundNum}`);
+    await wait(2200);
+    setOverlayText(null);
+
+    // Reset HP but keep going
+    const initialHp = mSettings.hp || 4;
+    setPlayer(p => ({ ...p, hp: initialHp }));
+    setDealer(d => ({ ...d, hp: initialHp }));
+
+    // Start a new batch
+    startRound(true, false, undefined, undefined, undefined, undefined, undefined, undefined, { playerWins: pWin, opponentWins: oWin });
     setIsProcessing(false);
   };
 
@@ -410,6 +525,10 @@ export const useGameLogic = () => {
 
   const pickupGun = () => {
     if (isProcessing) return;
+    if (gameState.turnOwner !== 'PLAYER') {
+      addLog("NOT YOUR TURN TO PICK UP THE GUN", 'info');
+      return;
+    }
     // PREVENT GUN PICKUP WHILE ANYONE IS KNOCKED DOWN OR RECOVERING
     if (animState.playerHit || animState.playerRecovering ||
       animState.dealerDropping || animState.dealerRecovering) {
@@ -418,9 +537,19 @@ export const useGameLogic = () => {
     }
     // New Logic: Don't move camera yet. Just show target choices.
     setAimTarget('CHOOSING');
+    setCameraView('GUN'); // Set camera to gun view immediately
   };
 
   const fireShot = async (shooter: TurnOwner, target: TurnOwner) => {
+    // Basic phase check
+    if (gameState.phase !== 'PLAYER_TURN' && gameState.phase !== 'DEALER_TURN' && gameState.phase !== 'RESOLVING') return;
+
+    // Strict turn check for local player
+    if (shooter === 'PLAYER' && gameState.turnOwner !== 'PLAYER') {
+      console.warn("Attempted to fire out of turn.");
+      return;
+    }
+
     if (isProcessing) return;
     // setIsProcessing(true); // Lock input immediately to prevent mobile touch interference - moved below
 
@@ -461,9 +590,12 @@ export const useGameLogic = () => {
       setAnim, setKnownShell, setAimTarget, setCameraView, setOverlayText,
       setOverlayColor, setShowFlash, setShowBlood, addLog, playerName,
       startRound, setIsProcessing,
+      onBatchEnd: onBatchEndRef.current || undefined,
       // Pass stats ref to update hits/damage inside shooting logic
       matchStats: matchStatsRef,
-      handleHardModeRoundEnd
+      handleHardModeRoundEnd,
+      handleMPRoundEnd,
+      opponentName: getOpponentName()
     });
   };
 
@@ -472,7 +604,7 @@ export const useGameLogic = () => {
       const opponent = user === 'PLAYER' ? dealer : player;
       // Check if opponent is already cuffed OR if we just skipped their turn via cuffs
       if (opponent.isHandcuffed || gameState.lastTurnWasSkipped) {
-        addLog(`${user === 'PLAYER' ? 'DEALER' : 'YOU'} CAN'T BE CUFFED AGAIN!`, 'info');
+        addLog(`${user === 'PLAYER' ? getOpponentName().toUpperCase() : 'YOU'} CAN'T BE CUFFED AGAIN!`, 'info');
         if (user === 'PLAYER') {
           setPlayer(p => ({ ...p, items: [...p.items, 'CUFFS'] }));
         }
@@ -480,7 +612,7 @@ export const useGameLogic = () => {
       }
     }
 
-    const userName = user === 'PLAYER' ? playerName.toUpperCase() : 'DEALER';
+    const userName = user === 'PLAYER' ? playerName.toUpperCase() : getOpponentName().toUpperCase();
     setOverlayText(`${userName} USED ${item}`);
 
     addLog(`${userName} USED ${item}`, 'info');
@@ -503,7 +635,8 @@ export const useGameLogic = () => {
           (v) => setAnim(p => ({ ...p, ejectedShellColor: typeof v === 'function' ? v(p.ejectedShellColor) : v })),
           (v) => setAnim(p => ({ ...p, triggerDrink: typeof v === 'function' ? v(p.triggerDrink) : v })),
           setOverlayText,
-          addLog, startRound
+          addLog, startRound,
+          onBatchEndRef.current || undefined
         );
         break;
 
@@ -597,6 +730,7 @@ export const useGameLogic = () => {
 
   const usePlayerItem = async (index: number) => {
     if (gameState.phase !== 'PLAYER_TURN') return;
+    if (gameState.turnOwner !== 'PLAYER') return; // Strict turn check
     if (isProcessing) return;
 
     // Check if gun is held - blocking all item usage
@@ -634,44 +768,49 @@ export const useGameLogic = () => {
     setGameState(prev => ({ ...prev, phase }));
   };
 
-  const stealItem = async (index: number) => {
+  const stealItem = async (index: number, stealer: TurnOwner = 'PLAYER') => {
     // Prevent actions during steal
     if (isProcessing) return;
 
-    // 1. Remove from dealer
-    const itemToSteal = dealer.items[index];
+    const target = stealer === 'PLAYER' ? dealer : player;
+    const user = stealer === 'PLAYER' ? player : dealer;
+    const setUser = stealer === 'PLAYER' ? setPlayer : setDealer;
+    const setTarget = stealer === 'PLAYER' ? setDealer : setPlayer;
+
+    const itemToSteal = target.items[index];
     if (!itemToSteal) return;
 
-    // Can't steal ADRENALINE with ADRENALINE
     if (itemToSteal === 'ADRENALINE') {
-      addLog("CAN'T STEAL ADRENALINE!", 'danger');
-      setOverlayText("❌ CAN'T STEAL ADRENALINE! PICK ANOTHER");
-      await wait(2000);
-      setOverlayText(null);
-      // Stay in STEALING phase so player can pick another item
+      if (stealer === 'PLAYER') {
+        addLog("CAN'T STEAL ADRENALINE!", 'danger');
+        setOverlayText("❌ CAN'T STEAL ADRENALINE! PICK ANOTHER");
+        await wait(2000);
+        setOverlayText(null);
+      }
       return;
     }
 
-    // Lock processing immediately
     setIsProcessing(true);
 
-    const newDealerItems = [...dealer.items];
-    newDealerItems.splice(index, 1);
-    setDealer(prev => ({ ...prev, items: newDealerItems }));
+    const newTargetItems = [...target.items];
+    newTargetItems.splice(index, 1);
+    setTarget(prev => ({ ...prev, items: newTargetItems }));
 
-    // Show steal message and wait for it to be visible
-    addLog(`${playerName.toUpperCase()} STOLE ${itemToSteal}`, 'info');
-    setOverlayText(`🎯 STOLE ${itemToSteal}!`);
-    await wait(800); // Faster feedback (was 1800)
+    const stealerName = stealer === 'PLAYER' ? (playerName || 'PLAYER') : (gameState.opponentName || 'OPPONENT');
+    addLog(`${stealerName.toUpperCase()} STOLE ${itemToSteal}`, 'info');
+    setOverlayText(`🎯 ${stealerName.toUpperCase()} STOLE ${itemToSteal}!`);
+    await wait(800);
     setOverlayText(null);
 
-    setGameState(p => ({ ...p, phase: 'PLAYER_TURN' }));
+    if (stealer === 'PLAYER') {
+      setGameState(p => ({ ...p, phase: 'PLAYER_TURN' }));
+    } else {
+      setGameState(p => ({ ...p, phase: 'DEALER_TURN' }));
+    }
 
-    // 2. Use it immediately - with clear gap for readability
-    await wait(100); // Quicker transition (was 800)
-    await processItemEffect('PLAYER', itemToSteal);
+    await wait(100);
+    await processItemEffect(stealer, itemToSteal);
 
-    // Final sync wait
     await wait(300);
     setIsProcessing(false);
   };
@@ -706,9 +845,32 @@ export const useGameLogic = () => {
     processItemEffect,
     resetGame,
     setPlayerName,
-    pickupGun,
+    pickupGun: (picker: TurnOwner = 'PLAYER') => {
+      if (gameState.phase !== 'PLAYER_TURN' && gameState.phase !== 'DEALER_TURN' && gameState.phase !== 'RESOLVING') return;
+
+      // Strict turn check
+      if (picker === 'PLAYER' && gameState.turnOwner !== 'PLAYER') return;
+      if (picker === 'DEALER' && gameState.turnOwner !== 'DEALER') return;
+
+      if (picker === 'PLAYER') {
+        setCameraView('GUN');
+        setAimTarget('CHOOSING');
+      } else {
+        setCameraView('DEALER_GUN');
+        setAimTarget('IDLE');
+      }
+    },
+    syncState: (data: { player: PlayerState, dealer: PlayerState, gameState: Partial<GameState> }) => {
+      if (data.player) setPlayer(p => ({ ...p, ...data.player }));
+      if (data.dealer) setDealer(d => ({ ...d, ...data.dealer }));
+      if (data.gameState) setGameState(s => ({ ...s, ...data.gameState }));
+    },
     setGamePhase,
     setOverlayText,
-    matchStats: matchStatsRef.current // Export stats
+    matchStats: matchStatsRef.current,
+    setOnBatchEnd: (cb: () => void) => { onBatchEndRef.current = cb; },
+    startRound,
+    handleHardModeRoundEnd,
+    handleMPRoundEnd
   };
 };

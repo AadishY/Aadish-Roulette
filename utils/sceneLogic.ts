@@ -111,6 +111,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         } else if (cameraView === 'GUN') {
             targets.targetPos.set(0, -0.75, 4);
             targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
+        } else if (cameraView === 'DEALER_GUN') {
+            // Gun held by Dealer/Remote player in PLAYER turn (e.g. Adrenaline check?) or transition
+            targets.targetPos.set(0, 1.2, -6); // Up at dealer level
+            targets.targetRot.set(0, Math.PI / 2, Math.PI / 2); // Sideways hold
         } else {
             // Table rest
             targets.targetPos.set(0, -0.8, 2);
@@ -127,6 +131,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             targets.targetPos.set(0, 2, -10);
             targets.targetRot.set(0, 0, 0);
             targetGunLightIntensity = 5.0;
+        } else if (cameraView === 'DEALER_GUN') {
+            // Holding gun, but not aimed yet
+            targets.targetPos.set(0, 1.2, -6);
+            targets.targetRot.set(0, Math.PI / 2, Math.PI / 2);
         } else {
             // Dealer Idle / Thinking / Table
             targets.targetPos.set(0, -0.7, -2.5);
@@ -271,6 +279,9 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     if (cameraView === 'TABLE') {
         targetCamPos.set(0, 10, 4);
+    } else if (cameraView === 'DEALER_GUN') {
+        // Look at the dealer holding the gun
+        targetCamPos.set(pSwayX * 0.5 - 4, 3 + pSwayY * 0.2, 5);
     } else if (turnOwner === 'DEALER') {
         if (aimTarget === 'OPPONENT') {
             targetCamPos.set(pSwayX * 0.1, 1.0 + pSwayY * 0.1, 3.5); // Closer & lower
@@ -279,11 +290,11 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
     } else if (turnOwner === 'PLAYER') {
         if (aimTarget === 'SELF') {
-            targetCamPos.set(pSwayX * 0.2 + 0.5, 2.8 + pSwayY * 0.2, 8.5); // Cinematic angle
+            targetCamPos.set(pSwayX * 0.2 + 0.3, 2.5 + pSwayY * 0.2, 7); // Closer to face
         } else if (aimTarget === 'OPPONENT') {
-            targetCamPos.set(4 + pSwayX * 0.1, 3.5 + pSwayY * 0.1, 12); // Higher shoulder view
+            targetCamPos.set(2.5 + pSwayX * 0.1, 3.0 + pSwayY * 0.1, 9); // Lower, closer shoulder
         } else {
-            targetCamPos.set(pSwayX, 4.5 + pSwayY, 14.5);
+            targetCamPos.set(pSwayX * 0.5, 3.8 + pSwayY, 12); // Closer to table
         }
     }
 
@@ -292,6 +303,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const lookAtPos = new THREE.Vector3(0, 2, -5);
     if (cameraView === 'TABLE') {
         lookAtPos.set(0, 0, 0);
+    } else if (cameraView === 'DEALER_GUN') {
+        lookAtPos.set(-0.5, 2, -6); // Look at dealer's chest/gun area
     } else if (turnOwner === 'DEALER') {
         if (aimTarget === 'OPPONENT') {
             lookAtPos.set(-0.5, 2.5, -8); // Look closer at dealer face
@@ -397,14 +410,25 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     }
 
     // Dealer Animation - Enhanced with better drop/recovery
-    const baseY = 3.0;
+    // --- SPAWN PARTICLES ---
+    // Dealer Animation - Enhanced with better drop/recovery
+    const baseY = gameState.isMultiplayer ? -4.5 : 3.0;
     let dealerTargetY = dealerGroup.userData.targetY ?? (baseY + Math.sin(time) * 0.05);
+
+    // Sync Health Bar if it's a Player Model (Multiplayer)
+    if (dealerGroup.userData.hpFill) {
+        const hpFill = dealerGroup.userData.hpFill as THREE.Mesh;
+        const maxHp = dealerGroup.userData.maxHp || 4;
+        const currentHp = props.dealer.hp;
+        const targetScaleX = Math.max(0, currentHp / maxHp);
+        hpFill.scale.x = THREE.MathUtils.lerp(hpFill.scale.x, targetScaleX, 0.1);
+        const hpWidth = (hpFill.scale.x) * 3.8;
+        hpFill.position.x = (hpWidth - 3.8) / 2;
+    }
 
     // DEALER RECOVERY ANIMATION
     if (animState.dealerRecovering && !animState.dealerDropping) {
         const wobble = Math.sin(time * 4) * 0.15;
-        // dealerTargetY = wobble; // OLD
-
         if (!scene.userData.dealerRecoveryStart) {
             scene.userData.dealerRecoveryStart = time;
         }
@@ -426,29 +450,33 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.2, 0.05);
         headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.1, 0.05);
 
-        // ENHANCED RED EYES
-        headGroup.children.forEach(child => {
-            if (child instanceof THREE.PointLight) {
-                const basePulse = 4.0 + Math.sin(time * 4) * 2.0;
-                const heartbeat = Math.sin(time * 8) > 0.7 ? 3.0 : 0;
-                const randomFlicker = Math.random() > 0.85 ? Math.random() * 4 : 0;
-                child.intensity = (basePulse + heartbeat + randomFlicker) * brightnessMult;
-                child.color.setRGB(1, 0, 0);
-            }
-            if (child instanceof THREE.Mesh && (child.name === 'LEFT_PUPIL' || child.name === 'RIGHT_PUPIL')) {
-                const mat = child.material as THREE.MeshBasicMaterial;
-                const glowBase = 0.85 + Math.sin(time * 5) * 0.15;
-                mat.color.setRGB(glowBase, 0, 0);
-            }
-        });
+        // ENHANCED RED EYES - Skip for Player Model
+        if (!gameState.isMultiplayer) {
+            headGroup.children.forEach(child => {
+                if (child instanceof THREE.PointLight) {
+                    const basePulse = 4.0 + Math.sin(time * 4) * 2.0;
+                    const heartbeat = Math.sin(time * 8) > 0.7 ? 3.0 : 0;
+                    const randomFlicker = Math.random() > 0.85 ? Math.random() * 4 : 0;
+                    child.intensity = (basePulse + heartbeat + randomFlicker) * brightnessMult;
+                    child.color.setRGB(1, 0, 0);
+                }
+                if (child instanceof THREE.Mesh && (child.name === 'LEFT_PUPIL' || child.name === 'RIGHT_PUPIL')) {
+                    const mat = child.material as THREE.MeshBasicMaterial;
+                    const glowBase = 0.85 + Math.sin(time * 5) * 0.15;
+                    mat.color.setRGB(glowBase, 0, 0);
+                }
+            });
+        }
     }
 
-    if (!scene.userData.cachedFaceLight) scene.userData.cachedFaceLight = dealerGroup.getObjectByName("FACE_LIGHT");
-    const faceLight = scene.userData.cachedFaceLight as THREE.PointLight;
-    if (faceLight) {
-        const pulse = 2.0 + Math.sin(time * 1.2) * 0.6;
-        const flicker = Math.random() > 0.90 ? Math.random() * 1.5 : 0;
-        faceLight.intensity = (pulse + flicker) * brightnessMult;
+    if (!gameState.isMultiplayer) {
+        if (!scene.userData.cachedFaceLight) scene.userData.cachedFaceLight = dealerGroup.getObjectByName("FACE_LIGHT");
+        const faceLight = scene.userData.cachedFaceLight as THREE.PointLight;
+        if (faceLight) {
+            const pulse = 2.0 + Math.sin(time * 1.2) * 0.6;
+            const flicker = Math.random() > 0.90 ? Math.random() * 1.5 : 0;
+            faceLight.intensity = (pulse + flicker) * brightnessMult;
+        }
     }
 
     if (underLight) {
@@ -508,12 +536,15 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     if (animState.isSawing || animState.triggerSparks > 0) {
         const sPos = sparkParticles.geometry.attributes.position.array as Float32Array;
         const sVel = sparkParticles.geometry.attributes.velocity.array as Float32Array;
+        const isPlayer = props.turnOwner === 'PLAYER';
+        const sparkZOffset = isPlayer ? 4.5 : -4.5;
+
         for (let k = 0; k < 2; k++) {
             for (let i = 0; i < sPos.length / 3; i++) {
                 if (sPos[i * 3] > 100) {
                     sPos[i * 3] = gunGroup.position.x + (Math.random() - 0.5) * 0.5;
                     sPos[i * 3 + 1] = gunGroup.position.y + 0.5;
-                    sPos[i * 3 + 2] = gunGroup.position.z;
+                    sPos[i * 3 + 2] = gunGroup.position.z + sparkZOffset + (Math.random() - 0.5) * 1.5;
                     sVel[i * 3] = (Math.random() - 0.5) * 0.2;
                     sVel[i * 3 + 1] = Math.random() * 0.2 + 0.1;
                     sVel[i * 3 + 2] = (Math.random() - 0.5) * 0.2;

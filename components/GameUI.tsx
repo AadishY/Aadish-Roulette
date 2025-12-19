@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView, GameSettings } from '../types';
+import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView, GameSettings, ChatMessage } from '../types';
 import { Settings as SettingsIcon, Skull } from 'lucide-react';
 import { audioManager } from '../utils/audioManager';
 import { StatusDisplay } from './ui/StatusDisplay';
@@ -44,7 +44,11 @@ interface GameUIProps {
     onUpdateName?: (name: string) => void;
     onStealItem?: (index: number) => void;
     onBootComplete?: () => void;
+    onStartMultiplayer?: (name: string) => void;
     matchData?: any;
+    isMultiplayer?: boolean;
+    messages?: ChatMessage[];
+    onSendMessage?: (text: string) => void;
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -93,11 +97,22 @@ export const GameUI: React.FC<GameUIProps> = ({
     onStealItem,
     onBootComplete,
     isRecovering = false,
-    matchData
+    matchData,
+    onStartMultiplayer,
+    isMultiplayer = false,
+    messages = [],
+    onSendMessage
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
 
     useEffect(() => { if (playerName) setInputName(playerName); }, [playerName]);
+
+    const chatScrollRef = React.useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (chatScrollRef.current) {
+            chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     const handleStartGame = (hardMode?: boolean) => {
         if (inputName.trim()) {
@@ -129,7 +144,7 @@ export const GameUI: React.FC<GameUIProps> = ({
     }, [triggerDrink]);
 
     const isGunHeld = cameraView === 'GUN' || aimTarget === 'CHOOSING' || aimTarget === 'OPPONENT' || aimTarget === 'SELF';
-    const isMyTurn = (gameState.phase === 'PLAYER_TURN');
+    const isMyTurn = (gameState.turnOwner === 'PLAYER' && (gameState.phase === 'PLAYER_TURN' || gameState.phase === 'LOOTING'));
 
     // Robust UI Scaling: Scale the UI container while keeping it centered and contained
     const [screenSize, setScreenSize] = useState({ w: window.innerWidth, h: window.innerHeight });
@@ -206,30 +221,66 @@ export const GameUI: React.FC<GameUIProps> = ({
                     </div>
                 )}
 
+                {/* Cinematic Letterbox for Round Announcements */}
+                {overlayText?.startsWith('ROUND') && !showLootOverlay && (
+                    <>
+                        <div className="fixed top-0 left-0 w-full h-[12vh] bg-black z-[40] animate-in slide-in-from-top duration-1000 border-b border-white/5" />
+                        <div className="fixed bottom-0 left-0 w-full h-[12vh] bg-black z-[40] animate-in slide-in-from-bottom duration-1000 border-t border-white/5" />
+                    </>
+                )}
+
                 {/* Overlay Text - Centered Announcements */}
                 {overlayText && !showLootOverlay && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none px-4">
-                        {gameState.isHardMode && (overlayText.includes('ROUND') || overlayText.includes('STAGE')) ? (
-                            <div className="flex flex-col items-center animate-[red-glitch_0.3s_infinite]">
-                                <div className="text-3xl md:text-8xl font-black italic tracking-tighter text-red-600 drop-shadow-[0_0_30px_rgba(220,38,38,0.8)] pop-in text-center bg-black/95 px-10 py-6 border-y-4 border-red-700 flex items-center gap-6 md:gap-12 skew-x-[-8deg] relative overflow-hidden group">
-                                    {/* Scanline overlay for the box */}
-                                    <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(220,38,38,0.1)_50%)] bg-[length:100%_4px] pointer-events-none" />
-
-                                    <div className="flex flex-col items-center relative z-10">
-                                        <div className="flex items-center gap-6 md:gap-10">
-                                            <Skull size={56} className="text-red-700/50 hidden md:block" />
-                                            <span>{overlayText}</span>
-                                            <Skull size={56} className="text-red-700/50 hidden md:block" />
+                        {overlayText.startsWith('ROUND') || overlayText.includes('LIVE') ? (
+                            <div className="flex flex-col items-center">
+                                {overlayText.startsWith('ROUND') ? (
+                                    <div className="flex flex-col items-center gap-6 animate-in zoom-in-95 duration-1000">
+                                        <div className="h-[2px] w-[300px] lg:w-[800px] bg-gradient-to-r from-transparent via-white/60 to-transparent shadow-[0_0_20px_rgba(255,255,255,0.3)]" />
+                                        <div className="relative group">
+                                            <div className="absolute inset-0 blur-[100px] bg-white/20 animate-pulse" />
+                                            <h1 className="text-6xl lg:text-9xl font-black tracking-[0.6em] lg:tracking-[1.2em] text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.5)] transition-all uppercase italic text-center select-none">
+                                                {overlayText}
+                                            </h1>
+                                        </div>
+                                        <div className="h-[2px] w-[300px] lg:w-[800px] bg-gradient-to-r from-transparent via-white/60 to-transparent shadow-[0_0_20px_rgba(255,255,255,0.3)]" />
+                                        <div className="flex flex-col items-center mt-2">
+                                            <span className="text-[12px] lg:text-sm font-black tracking-[0.6em] text-white/60 uppercase animate-pulse">Synchronizing Protocol</span>
+                                            <div className="flex gap-1 mt-4">
+                                                {[...Array(3)].map((_, i) => (
+                                                    <div key={i} className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-
-                                    {/* Edge highlight */}
-                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
-                                    <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
-                                </div>
+                                ) : (
+                                    <div className="flex flex-col items-center gap-4 bg-gradient-to-b from-stone-900/40 to-black/90 backdrop-blur-3xl px-16 py-10 rounded-[2.5rem] border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-1000">
+                                        <div className="flex items-center gap-16">
+                                            <div className="flex flex-col items-center group">
+                                                <div className="relative">
+                                                    <div className="absolute inset-0 blur-2xl bg-red-600/20 group-hover:bg-red-600/40 transition-colors" />
+                                                    <span className="relative text-red-500 text-5xl lg:text-8xl font-black drop-shadow-[0_0_20px_rgba(239,68,68,0.5)] italic tracking-tighter transition-transform group-hover:scale-110">{overlayText.split('|')[0].trim().split(' ')[0]}</span>
+                                                </div>
+                                                <span className="text-[10px] lg:text-xs font-black tracking-[0.4em] text-red-900/80 uppercase mt-2">Live Shells</span>
+                                            </div>
+                                            <div className="w-[1px] h-20 bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+                                            <div className="flex flex-col items-center group">
+                                                <div className="relative">
+                                                    <div className="absolute inset-0 blur-2xl bg-cyan-600/10 group-hover:bg-cyan-600/30 transition-colors" />
+                                                    <span className="relative text-stone-300 text-5xl lg:text-8xl font-black italic tracking-tighter transition-transform group-hover:scale-110">{overlayText.split('|')[1].trim().split(' ')[0]}</span>
+                                                </div>
+                                                <span className="text-[10px] lg:text-xs font-black tracking-[0.4em] text-stone-600 uppercase mt-2">Blanks</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex flex-col items-center gap-4">
+                                            <div className="h-[1px] w-48 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                                            <span className="text-[10px] font-bold tracking-[0.8em] text-white/20 uppercase">Chamber Synchronized</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ) : (
-                            <div className="text-lg md:text-4xl font-black tracking-tight text-stone-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] pop-in text-center bg-black/80 px-4 py-2 md:px-8 md:py-4 border-y-2 border-stone-100/20 backdrop-blur-sm rounded-sm">
+                            <div className="text-lg md:text-5xl font-black tracking-[0.2em] text-stone-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] pop-in text-center bg-black/90 px-8 py-4 border-y-2 border-stone-100/20 backdrop-blur-md rounded-sm uppercase italic">
                                 <RenderColoredText text={overlayText} />
                             </div>
                         )}
@@ -258,10 +309,14 @@ export const GameUI: React.FC<GameUIProps> = ({
                             </div>
 
                             {/* Extraction Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-6 w-full">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 md:gap-8 w-full max-w-6xl mx-auto">
                                 {dealer.items.length === 0 ? (
-                                    <div className="col-span-full py-20 text-center">
-                                        <p className="text-stone-600 font-black tracking-[0.3em] uppercase italic text-xl">Inventory Empty</p>
+                                    <div className="col-span-full py-32 text-center bg-black/40 rounded-3xl border border-white/5 backdrop-blur-xl">
+                                        <div className="mb-4 inline-block p-4 rounded-full bg-stone-900/60 border border-white/10">
+                                            <Icons.Adrenaline size={48} className="text-stone-700 opacity-50" />
+                                        </div>
+                                        <p className="text-stone-500 font-black tracking-[0.4em] uppercase italic text-2xl">Vault Empty</p>
+                                        <p className="text-stone-700 text-sm mt-2 font-bold tracking-widest uppercase truncate px-4">Subject Has No Extractable Assets</p>
                                     </div>
                                 ) : (
                                     dealer.items.map((item, idx) => {
@@ -271,25 +326,28 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                 key={idx}
                                                 onClick={() => !isAdrenaline && onStealItem && onStealItem(idx)}
                                                 disabled={isAdrenaline}
-                                                className={`group relative flex flex-col items-center justify-center aspect-[3/4] rounded-2xl border transition-all duration-500 overflow-hidden ${isAdrenaline
-                                                    ? 'bg-black/60 border-white/5 cursor-not-allowed grayscale'
-                                                    : 'bg-stone-900/40 border-white/10 hover:border-red-600/50 hover:bg-red-950/20 hover:scale-105 active:scale-95 shadow-xl hover:shadow-red-900/20'
+                                                className={`group relative flex flex-col items-center justify-center aspect-[5/7] rounded-2xl border transition-all duration-700 overflow-hidden ${isAdrenaline
+                                                    ? 'bg-black/80 border-white/5 cursor-not-allowed grayscale-[0.8] opacity-60'
+                                                    : 'bg-stone-900/60 border-white/10 hover:border-red-500 hover:bg-red-500/10 hover:shadow-[0_0_40px_rgba(239,68,68,0.2)] hover:-translate-y-2 active:scale-95 active:translate-y-0'
                                                     }`}
                                             >
+                                                {/* Scanline effect for grid items */}
+                                                <div className="absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.03)_50%,transparent_100%)] bg-[length:100%_4px] animate-[scanline_4s_linear_infinite] pointer-events-none" />
+
                                                 {/* Card BG Deco */}
-                                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),transparent_70%)]" />
+                                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_center,rgba(255,100,100,0.1),transparent_70%)]" />
 
                                                 {isAdrenaline ? (
                                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-20">
-                                                        <Icons.Adrenaline size={48} className="text-stone-700 mb-2" />
-                                                        <span className="text-[8px] font-black text-stone-600 tracking-widest uppercase bg-stone-900 px-2 py-0.5 rounded">Locked</span>
+                                                        <Icons.Adrenaline size={48} className="text-stone-700 mb-2 opacity-30" />
+                                                        <span className="text-[10px] font-black tracking-widest text-red-900 border border-red-900/40 px-2 py-1 rounded bg-black/80 rotate-12">LOCKED</span>
                                                     </div>
                                                 ) : (
                                                     <div className="relative z-10 flex flex-col items-center">
-                                                        <div className={`mb-4 transition-transform group-hover:scale-110 duration-500 ${item === 'BEER' ? 'text-amber-500' :
+                                                        <div className={`mb-4 transition-all duration-500 group-hover:scale-125 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] ${item === 'BEER' ? 'text-amber-500' :
                                                             item === 'CIGS' ? 'text-red-500' :
-                                                                item === 'GLASS' ? 'text-cyan-500' :
-                                                                    item === 'CUFFS' ? 'text-stone-400' :
+                                                                item === 'GLASS' ? 'text-cyan-400' :
+                                                                    item === 'CUFFS' ? 'text-stone-300' :
                                                                         item === 'SAW' ? 'text-orange-600' :
                                                                             item === 'PHONE' ? 'text-blue-300' :
                                                                                 item === 'INVERTER' ? 'text-green-400' :
@@ -297,27 +355,34 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                                                         item === 'REMOTE' ? 'text-red-500' :
                                                                                             item === 'BIG_INVERTER' ? 'text-orange-500' : 'text-stone-300'
                                                             }`}>
-                                                            {item === 'BEER' && <Icons.Beer size={48} />}
-                                                            {item === 'CIGS' && <Icons.Cigs size={48} />}
-                                                            {item === 'GLASS' && <Icons.Glass size={48} />}
-                                                            {item === 'CUFFS' && <Icons.Cuffs size={48} />}
-                                                            {item === 'SAW' && <Icons.Saw size={48} />}
-                                                            {item === 'PHONE' && <Icons.Phone size={48} />}
-                                                            {item === 'INVERTER' && <Icons.Inverter size={48} />}
-                                                            {item === 'CHOKE' && <Icons.Choke size={48} />}
-                                                            {item === 'REMOTE' && <Icons.Remote size={48} />}
-                                                            {item === 'BIG_INVERTER' && <Icons.BigInverter size={48} />}
+                                                            {item === 'BEER' && <Icons.Beer size={56} />}
+                                                            {item === 'CIGS' && <Icons.Cigs size={56} />}
+                                                            {item === 'GLASS' && <Icons.Glass size={56} />}
+                                                            {item === 'CUFFS' && <Icons.Cuffs size={56} />}
+                                                            {item === 'SAW' && <Icons.Saw size={56} />}
+                                                            {item === 'PHONE' && <Icons.Phone size={56} />}
+                                                            {item === 'INVERTER' && <Icons.Inverter size={56} />}
+                                                            {item === 'CHOKE' && <Icons.Choke size={56} />}
+                                                            {item === 'REMOTE' && <Icons.Remote size={56} />}
+                                                            {item === 'BIG_INVERTER' && <Icons.BigInverter size={56} />}
                                                         </div>
                                                         <span className="text-[10px] md:text-sm font-black text-stone-200 tracking-[0.2em] uppercase group-hover:text-white transition-colors">
-                                                            {item === 'INVERTER' ? 'INVERT' : item === 'BIG_INVERTER' ? 'BIG INV' : item}
+                                                            {item.replace('_', ' ')}
                                                         </span>
                                                     </div>
                                                 )}
 
                                                 {/* Hover Overlay info */}
                                                 {!isAdrenaline && (
-                                                    <div className="absolute bottom-0 left-0 w-full h-1/4 bg-red-600 flex items-center justify-center translate-y-full group-hover:translate-y-0 transition-transform">
-                                                        <span className="text-[10px] font-black text-white tracking-[0.3em] uppercase">SEIZE</span>
+                                                    <div className="absolute bottom-0 left-0 w-full h-1/4 bg-red-600 flex items-center justify-center translate-y-full group-hover:translate-y-0 transition-all duration-300">
+                                                        <span className="text-[10px] font-black text-white tracking-[0.4em] uppercase">EXTRACT</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Active pulse dot */}
+                                                {!isAdrenaline && (
+                                                    <div className="absolute top-3 right-3 opacity-20 group-hover:opacity-100 transition-opacity">
+                                                        <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
                                                     </div>
                                                 )}
                                             </button>
@@ -347,6 +412,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         onOpenSettings={onOpenSettings}
                         onOpenGuide={onOpenGuide}
                         onOpenScoreboard={onOpenScoreboard}
+                        onStartMultiplayer={onStartMultiplayer}
                     />
                 )}
 
@@ -386,17 +452,17 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     onFireShot={onFireShot}
                                     onHoverTarget={onHoverTarget}
                                     currentAimTarget={aimTarget}
-                                    isMultiplayer={false}
+                                    isMultiplayer={isMultiplayer}
                                 />
                             )}
                         </div>
 
                         {/* Bottom - Chat/Logs + Inventory */}
-                        <div className="flex justify-between items-end gap-2 w-full h-16 lg:h-40 pointer-events-none">
-                            <div className="flex-1" />
+                        <div className="flex justify-between items-end gap-2 w-full h-64 lg:h-96 pointer-events-none px-4 pb-4">
+                        </div>
 
-                            {/* Inventory */}
-                            {/* Inventory vs Steal UI */}
+                        {/* Inventory */}
+                        <div className="pointer-events-auto">
                             {gameState.phase === 'STEALING' ? (
                                 <Inventory
                                     player={dealer} // Show DEALER items to steal
@@ -425,6 +491,56 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     isGunHeld={isGunHeld}
                                 />
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Global Chat Overlay - Visible whenever game is active (Multiplayer only) */}
+                {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && (
+                    <div className="absolute bottom-4 left-4 z-[100] w-72 lg:w-96 h-64 lg:h-96 pointer-events-auto">
+                        <div className="h-full flex flex-col justify-end">
+                            <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
+                                <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex justify-between items-center">
+                                    <span className="text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">Comm_Link</span>
+                                    <div className="flex gap-1">
+                                        <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+                                        <div className="w-1 h-1 rounded-full bg-green-500/50" />
+                                    </div>
+                                </div>
+                                <div
+                                    ref={chatScrollRef}
+                                    className="flex-1 overflow-y-auto p-4 space-y-3 text-[12px] lg:text-[13px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20"
+                                >
+                                    {messages.filter(m => m.sender !== 'SYSTEM').map((msg, i) => (
+                                        <div key={i} className="animate-in fade-in slide-in-from-left-1 duration-300 group">
+                                            <div className="flex items-baseline gap-2">
+                                                <span style={{ color: msg.color }} className="font-black text-[10px] lg:text-[11px] uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">{msg.sender}</span>
+                                                <span className="text-white font-medium break-words leading-relaxed drop-shadow-sm">{msg.text}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const input = e.currentTarget.elements.namedItem('chat-input') as HTMLInputElement;
+                                        if (input.value.trim() && onSendMessage) {
+                                            onSendMessage(input.value.trim());
+                                            input.value = '';
+                                        }
+                                    }}
+                                    className="p-3 bg-white/5 border-t border-white/5 flex gap-2"
+                                >
+                                    <input
+                                        name="chat-input"
+                                        type="text"
+                                        autoComplete="off"
+                                        placeholder="TYPE A MESSAGE..."
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-[11px] lg:text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-white/30 transition-all focus:bg-black/60 shadow-inner"
+                                        onKeyDown={(e) => e.stopPropagation()}
+                                    />
+                                </form>
+                            </div>
                         </div>
                     </div>
                 )}
