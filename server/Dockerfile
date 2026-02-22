@@ -4,12 +4,18 @@ FROM node:18-slim
 # Create app directory
 WORKDIR /usr/src/app
 
+# Change ownership of the working directory to the node user
+RUN chown node:node /usr/src/app
+
+# Switch to 'node' user
+USER node
+
 # Install app dependencies
-COPY package*.json ./
+COPY --chown=node:node package*.json ./
 RUN npm install --production
 
 # Bundle app source
-COPY . .
+COPY --chown=node:node . .
 
 # Expose port
 EXPOSE 3001
