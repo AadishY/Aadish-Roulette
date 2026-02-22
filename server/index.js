@@ -33,12 +33,26 @@ const io = new Server(httpServer, {
 // roomId -> { hostId, players: [{id, name, color, ready, hp, items, isHandcuffed, isSawedActive}], settings: {rounds, hp, itemsPerShipment}, gameState: {...} }
 const rooms = new Map();
 
+// PERFORMANCE OPTIMIZATION: Reverse map for O(1) room lookup
+// socketId -> Set<roomId>
+const socketIdToRoomId = new Map();
+
 // PRODUCTION OPTIMIZATION: Periodic cleanup of empty or stale rooms
 setInterval(() => {
     const now = Date.now();
     for (const [roomId, room] of rooms.entries()) {
         // Only if room is empty or last activity was too long ago (e.g., 2 hours)
         if (room.players.length === 0 || (room.lastActivity && now - room.lastActivity > 7200000)) {
+            // Cleanup reverse map for any players in this room
+            for (const player of room.players) {
+                const playerRooms = socketIdToRoomId.get(player.id);
+                if (playerRooms) {
+                    playerRooms.delete(roomId);
+                    if (playerRooms.size === 0) {
+                        socketIdToRoomId.delete(player.id);
+                    }
+                }
+            }
             rooms.delete(roomId);
             console.log(`[CLEANUP] Pruned room ${roomId}`);
         }
@@ -97,6 +111,12 @@ io.on('connection', (socket) => {
 
         room.players.push(newPlayer);
         socket.join(roomId);
+
+        // Add to reverse map
+        if (!socketIdToRoomId.has(socket.id)) {
+            socketIdToRoomId.set(socket.id, new Set());
+        }
+        socketIdToRoomId.get(socket.id).add(roomId);
 
         console.log(`[JOIN] ${playerName} joined room ${roomId} (${room.players.length}/4)`);
 
@@ -241,31 +261,40 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
-        rooms.forEach((room, roomId) => {
-            const playerIndex = room.players.findIndex(p => p.id === socket.id);
-            if (playerIndex !== -1) {
-                const playerName = room.players[playerIndex].name;
-                room.players.splice(playerIndex, 1);
-                console.log(`[LEAVE] ${playerName} left room ${roomId} (${room.players.length}/4)`);
 
-                if (room.players.length === 0) {
-                    rooms.delete(roomId);
-                    console.log(`[ROOM DELETED] Room ${roomId} empty.`);
-                } else {
-                    if (room.hostId === socket.id) {
-                        room.hostId = room.players[0].id;
-                        console.log(`[NEW HOST] ${room.players[0].name} is now host of ${roomId}`);
+        const joinedRooms = socketIdToRoomId.get(socket.id);
+        if (joinedRooms) {
+            for (const roomId of joinedRooms) {
+                const room = rooms.get(roomId);
+                if (room) {
+                    const playerIndex = room.players.findIndex(p => p.id === socket.id);
+                    if (playerIndex !== -1) {
+                        const playerName = room.players[playerIndex].name;
+                        room.players.splice(playerIndex, 1);
+                        console.log(`[LEAVE] ${playerName} left room ${roomId} (${room.players.length}/4)`);
+
+                        if (room.players.length === 0) {
+                            rooms.delete(roomId);
+                            console.log(`[ROOM DELETED] Room ${roomId} empty.`);
+                        } else {
+                            if (room.hostId === socket.id) {
+                                room.hostId = room.players[0].id;
+                                console.log(`[NEW HOST] ${room.players[0].name} is now host of ${roomId}`);
+                            }
+                            io.to(roomId).emit('roomUpdated', room);
+                            io.to(roomId).emit('chatMessageReceived', {
+                                sender: 'SYSTEM',
+                                color: '#aaaaaa',
+                                text: 'A player has disconnected.',
+                                timestamp: Date.now()
+                            });
+                        }
                     }
-                    io.to(roomId).emit('roomUpdated', room);
-                    io.to(roomId).emit('chatMessageReceived', {
-                        sender: 'SYSTEM',
-                        color: '#aaaaaa',
-                        text: 'A player has disconnected.',
-                        timestamp: Date.now()
-                    });
                 }
             }
-        });
+            // Cleanup reverse map
+            socketIdToRoomId.delete(socket.id);
+        }
     });
 });
 
