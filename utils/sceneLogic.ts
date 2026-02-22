@@ -3,6 +3,9 @@ import { SceneContext, SceneProps } from '../types';
 import { audioManager } from './audioManager';
 import { updateItemAnimations, updateBlood, updateSparks, updateBullet, updateShell } from './scene/animations';
 
+const _tempTargetPos = new THREE.Vector3();
+const _tempTargetRot = new THREE.Euler();
+
 export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, gameState, player, dealer } = props;
@@ -211,8 +214,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const gunDampingCurve = isMobile ? 8.0 : 6.0; // Snappier
     const gunDamping = 1 - Math.exp(-gunDampingCurve * dt);
 
-    const targetPos = targets.targetPos.clone();
-    const targetRot = targets.targetRot.clone();
+    const targetPos = _tempTargetPos.copy(targets.targetPos);
+    const targetRot = _tempTargetRot.copy(targets.targetRot);
 
     if (cameraView !== 'TABLE') {
         const swayX = mouse.x * 0.15;
