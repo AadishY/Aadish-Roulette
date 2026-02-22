@@ -3,6 +3,9 @@ import { SceneContext, SceneProps } from '../types';
 import { audioManager } from './audioManager';
 import { updateItemAnimations, updateBlood, updateSparks, updateBullet, updateShell } from './scene/animations';
 
+const RECOIL_IMPULSE = new THREE.Vector3(0, 0, 1.6);
+const _recoilScratch = new THREE.Vector3();
+
 export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, gameState, player, dealer } = props;
@@ -236,8 +239,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     if (animState.triggerRecoil > scene.userData.lastRecoil) {
         scene.userData.lastRecoil = animState.triggerRecoil;
         // Complex Kick Impulse (Visceral)
-        const kickDir = new THREE.Vector3(0, 0, 1.6).applyEuler(gunGroup.rotation);
-        gunGroup.position.add(kickDir);
+        _recoilScratch.copy(RECOIL_IMPULSE).applyEuler(gunGroup.rotation);
+        gunGroup.position.add(_recoilScratch);
         gunGroup.rotation.x += 0.75;
         gunGroup.rotation.z += (Math.random() - 0.5) * 0.4;
         scene.userData.cameraShake = 0.8;
