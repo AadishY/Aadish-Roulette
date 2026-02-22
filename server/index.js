@@ -58,6 +58,12 @@ io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
     socket.on('joinRoom', ({ roomId, playerName }) => {
+        // Validate roomId length and content
+        if (!roomId || typeof roomId !== 'string' || roomId.length > 20 || !/^[a-zA-Z0-9_-]+$/.test(roomId)) {
+            socket.emit('error', 'Invalid room ID');
+            return;
+        }
+
         let room = rooms.get(roomId);
 
         if (!room) {
