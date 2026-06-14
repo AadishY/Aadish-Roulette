@@ -96,7 +96,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         const isLowEndMobile = isMobile && (isAndroid || window.devicePixelRatio < 2);
         const targetFPS = isLowEndMobile ? 30 : 60; // Unlock 60FPS for high-end mobile
         const frameInterval = 1000 / targetFPS;
-        let lastFrameTime = 0;
+        let lastFrameTime = performance.now();
         let isTabVisible = true;
 
         const handleVisibilityChange = () => {
@@ -110,7 +110,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        const animate = (currentTime: number = 0) => {
+        const animate = (currentTime: number = performance.now()) => {
             frameId = requestAnimationFrame(animate);
             if (!sceneRef.current) return;
             if (!isTabVisible) {
@@ -127,8 +127,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             }
 
             const rawDelta = (currentTime - lastTime) / 1000;
-            // Cap delta to prevent huge jumps
-            const delta = Math.min(rawDelta, 0.1);
+            // Cap delta to prevent huge jumps and negative values
+            const delta = Math.max(0.0, Math.min(rawDelta, 0.1));
             lastTime = currentTime;
 
             time += delta;

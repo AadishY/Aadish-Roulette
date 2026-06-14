@@ -10,7 +10,7 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const isMobile = scene.userData.isMobile;
 
     const MAX_DT = 0.05;
-    const dt = Math.min(delta || 0.016, MAX_DT); // Clamp DT to prevent huge jumps/skips
+    const dt = Math.max(0.0, Math.min(delta || 0.016, MAX_DT)); // Clamp DT to prevent huge jumps/skips and negative values
 
     // --- BRIGHTNESS & FOV ---
     const brightnessMult = settings.brightness || 1.0;

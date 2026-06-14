@@ -87,12 +87,12 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
 
     useEffect(() => {
         const handleResize = () => {
-            const targetWidth = 850;
-            const targetHeight = 550;
+            const targetWidth = 720;
+            const targetHeight = 680;
             const wScale = Math.min(1, (window.innerWidth - 40) / targetWidth);
             const hScale = Math.min(1, (window.innerHeight - 40) / targetHeight);
             let newScale = Math.min(wScale, hScale);
-            if (newScale < 0.6) newScale = 0.6;
+            if (newScale < 0.4) newScale = 0.4;
             setScale(newScale);
         };
         window.addEventListener('resize', handleResize);
@@ -107,14 +107,14 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
     return (
         <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
             <div
-                className="w-full max-w-2xl bg-stone-950/40 backdrop-blur-2xl border border-stone-800/50 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5"
-                style={{ transform: `scale(${scale})` }}
+                className="w-full max-w-2xl max-h-[90vh] bg-stone-950/40 backdrop-blur-2xl border border-stone-800/50 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5"
+                style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
             >
                 {/* Decorative */}
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-stone-500/20 to-transparent" />
 
                 {/* Header */}
-                <div className="p-6 border-b border-stone-800/50 flex justify-between items-center bg-stone-950/20">
+                <div className="p-4 md:p-5 border-b border-stone-800/50 flex justify-between items-center bg-stone-950/20">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-stone-900/60 rounded-xl border border-stone-800 flex items-center justify-center text-stone-400">
                             <Monitor size={20} />
@@ -129,18 +129,18 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-5 md:space-y-6 custom-scrollbar">
 
                     {/* Visuals Group */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-5">
                         <div className="flex items-center gap-2">
                             <h3 className="text-stone-500 font-extrabold tracking-[0.2em] uppercase text-[10px]">Graphics</h3>
                             <div className="h-[1px] flex-1 bg-stone-800/30" />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-5">
                             {/* Pixelation */}
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 <div className="flex justify-between items-end">
                                     <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Resolution</span>
                                     <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{settings.pixelScale.toFixed(1)}x</span>
@@ -153,7 +153,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             </div>
 
                             {/* Brightness */}
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 <div className="flex justify-between items-end">
                                     <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Brightness</span>
                                     <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{(settings.brightness * 100).toFixed(0)}%</span>
@@ -166,7 +166,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             </div>
 
                             {/* HUD Scale */}
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 <div className="flex justify-between items-end">
                                     <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">HUD Scale</span>
                                     <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{settings.uiScale.toFixed(2)}x</span>
@@ -179,7 +179,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             </div>
 
                             {/* FOV */}
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 <div className="flex justify-between items-end">
                                     <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Field of View</span>
                                     <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{settings.fov || 85}°</span>
@@ -195,15 +195,15 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </div>
 
                     {/* Audio Group */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-5">
                         <div className="flex items-center gap-2">
                             <h3 className="text-stone-500 font-extrabold tracking-[0.2em] uppercase text-[10px]">Sound</h3>
                             <div className="h-[1px] flex-1 bg-stone-800/30" />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-5">
                             {/* Music Volume */}
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 <div className="flex justify-between items-end">
                                     <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Music</span>
                                     <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{Math.round((settings.musicVolume ?? 0.5) * 100)}%</span>
@@ -216,7 +216,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             </div>
 
                             {/* SFX Volume */}
-                            <div className="space-y-3">
+                            <div className="space-y-1.5">
                                 <div className="flex justify-between items-end">
                                     <span className="text-stone-300 font-bold tracking-widest text-[10px] uppercase">Effects</span>
                                     <span className="text-white font-black text-xs tabular-nums bg-stone-900 px-2 py-0.5 rounded border border-white/5">{Math.round((settings.sfxVolume ?? 0.7) * 100)}%</span>
@@ -231,7 +231,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </div>
 
                     {/* Debug Group */}
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                         <div className="flex items-center gap-2">
                             <h3 className="text-red-500 font-extrabold tracking-[0.2em] uppercase text-[10px]">Developer</h3>
                             <div className="h-[1px] flex-1 bg-red-950/30" />
@@ -271,7 +271,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex flex-row gap-4">
+                <div className="p-4 md:p-5 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex flex-row gap-3 md:gap-4">
                     <button onClick={onResetDefaults} className="flex-1 h-12 border border-stone-800 text-stone-500 hover:text-white hover:bg-white/5 px-4 font-black tracking-[0.2em] flex items-center justify-center gap-2 transition-all rounded-xl text-[10px] uppercase cursor-pointer">
                         <RotateCcw size={14} /> Reset Defaults
                     </button>
