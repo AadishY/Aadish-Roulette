@@ -12,13 +12,12 @@ interface LoadingScreenProps {
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     onComplete,
     onBack,
-    text: initialText = "INITIALIZING...",
+    text: initialText = "INITIALIZING SYSTEM...",
     duration = 3000,
     error,
     onRetry
 }) => {
     const [progress, setProgress] = useState(0);
-    const [text, setText] = useState(initialText);
     const [terminalLines, setTerminalLines] = useState<string[]>([]);
     const [warningText, setWarningText] = useState("UNAUTHORIZED ACCESS IS PUNISHABLE BY DEATH");
 
@@ -46,7 +45,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
 
     // Progress Timer Effect
     useEffect(() => {
-        if (error) return; // Stop progress if there's an error
+        if (error) return; 
         const startTime = Date.now();
         const interval = setInterval(() => {
             const elapsed = Date.now() - startTime;
@@ -57,7 +56,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
                 clearInterval(interval);
                 setTimeout(onComplete, 500);
             }
-        }, 50);
+        }, 30);
 
         return () => clearInterval(interval);
     }, [duration, onComplete, error]);
@@ -66,22 +65,22 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     useEffect(() => {
         const lines = [
             "BOOT_SEQ: 0x4F229A",
-            "SCANNING_MEMORY...",
-            "LOADING_NEURAL_NET...",
-            "CONNECTING_TABLE_CONTROL...",
+            "SCANNING_CORE_MEMORY...",
+            "ALLOCATING_NEURAL_NET_BUFFERS...",
+            "ESTABLISHING_TABLE_HYDRAULICS...",
             "CHECKING_AMMUNITION_INTEGRITY...",
-            "VERIFYING_DEALER_HANDSHAKE...",
+            "VERIFYING_DEALER_HANDSHAKE_v4...",
             "INITIALIZING_PHYSICS_ENGINE...",
-            "CALIBRATING_RNG_SEED...",
+            "CALIBRATING_RNG_SEED_STREAM...",
             "SYNCING_AUDIO_DRIVERS...",
             "ENABLING_LIFELINE_MONITOR...",
-            "BOOT_COMPLETE."
+            "CORE_BOOT_COMPLETE. READY TO INJECT."
         ];
 
         let current = 0;
         const lineInterval = setInterval(() => {
             if (current < lines.length) {
-                setTerminalLines(prev => [...prev, `> ${lines[current]}`].slice(-15));
+                setTerminalLines(prev => [...prev, `> ${lines[current]}`].slice(-18));
                 current++;
             }
         }, duration / lines.length);
@@ -90,70 +89,99 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     }, [duration]);
 
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full bg-black text-green-500 z-[300] absolute inset-0 font-mono crt overflow-hidden">
-            {/* Background Terminal Atmosphere */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none p-4 font-mono text-[10px] md:text-xs">
+        <div className="flex flex-col items-center justify-center w-full h-full bg-black text-green-500 z-[300] absolute inset-0 font-mono crt overflow-hidden select-none">
+            {/* Ambient Background Grid Tech */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#052e16_1px,transparent_1px),linear-gradient(to_bottom,#052e16_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-25 pointer-events-none" />
+
+            {/* Background Terminal Feed */}
+            <div className="absolute inset-0 opacity-15 pointer-events-none p-6 font-mono text-[10px] md:text-xs leading-relaxed max-w-3xl mx-auto flex flex-col justify-start h-2/3 mt-8">
                 {terminalLines.map((line, i) => (
-                    <div key={i} className="mb-1 animate-in fade-in slide-in-from-left duration-300">
+                    <div key={i} className="mb-1 tracking-wider font-semibold animate-in fade-in slide-in-from-left duration-200">
                         {line}
                     </div>
                 ))}
             </div>
 
-            {/* Scanning Line overlay */}
-            <div className="scan-line !opacity-20" />
+            {/* Scanline Overlay Grid */}
+            <div className="scan-line !opacity-[0.12] pointer-events-none" />
 
-            {/* Main Loading UI */}
-            <div className={`relative z-10 flex flex-col items-center transition-opacity duration-500 ${error ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-                <div className="text-4xl md:text-6xl font-black tracking-widest mb-12 text-glitch text-shadow-none">
-                    {text}
+            {/* Main Center Console Loading UI */}
+            <div className={`relative z-10 flex flex-col items-center max-w-xl w-full p-8 rounded-2xl border border-green-950/40 bg-black/60 backdrop-blur-md transition-all duration-500 ${error ? 'opacity-0 pointer-events-none scale-95' : 'opacity-100 scale-100'}`}>
+                {/* Visual Accent Ticks */}
+                <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-green-700/40" />
+                <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-green-700/40" />
+                <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-green-700/40" />
+                <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-green-700/40" />
+
+                <div className="text-2xl md:text-4xl font-black tracking-[0.25em] mb-10 text-center uppercase text-green-400 drop-shadow-[0_0_12px_rgba(74,222,128,0.3)]">
+                    {initialText}
                 </div>
 
-                <div className="w-96 max-w-[90%] h-4 md:h-8 border-4 border-green-900 bg-stone-950 relative overflow-hidden">
+                {/* Progress Bar Frame */}
+                <div className="w-full max-w-md h-6 border-2 border-green-800 bg-stone-950 p-0.5 relative rounded-sm overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]">
                     <div
-                        className="h-full bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.6)] transition-all duration-75 ease-out"
+                        className="h-full bg-gradient-to-r from-green-600 to-green-400 shadow-[0_0_20px_rgba(34,197,94,0.7)] transition-all duration-75 ease-out rounded-sm relative"
                         style={{ width: `${progress}%` }}
-                    />
-                    {/* Glass glare effect */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                    >
+                        {/* Segment Stripes for Premium Feel */}
+                        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_50%,rgba(0,0,0,0.4)_50%)] bg-[size:8px_100%]" />
+                    </div>
+                    {/* Glass sheen reflection */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent pointer-events-none" />
                 </div>
 
-                <div className="mt-6 font-mono text-sm md:text-xl tracking-[0.5em] font-bold">
-                    {Math.round(progress)}%
+                {/* Performance Matrix Readout */}
+                <div className="mt-6 flex items-baseline gap-2 font-black text-xl md:text-3xl tracking-[0.1em]">
+                    <span className="text-green-600 text-sm font-bold">SYS_LOAD:</span>
+                    <span>{Math.round(progress)}</span>
+                    <span className="text-xs text-green-600 font-bold">%</span>
                 </div>
 
-                <div className="mt-2 text-[10px] text-green-800 animate-pulse font-bold tracking-[0.2em] uppercase">
+                <div className="mt-8 text-[10px] md:text-xs text-green-700/90 font-black tracking-[0.3em] uppercase text-center max-w-xs leading-relaxed animate-pulse border-t border-green-950/60 pt-4 w-full">
                     {warningText}
                 </div>
             </div>
 
-            {/* Error UI */}
+            {/* High-Fidelity Error UI Overlay */}
             {error && (
-                <div className="absolute inset-0 z-[310] flex flex-col items-center justify-center bg-black/90 p-6 animate-in fade-in duration-500">
-                    <div className="text-red-600 mb-8 flex flex-col items-center gap-4">
-                        <div className="text-6xl font-black tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(220,38,38,0.5)]">CONNECTION_ERROR</div>
-                        <div className="text-sm border border-red-900/50 bg-red-900/10 px-4 py-2 font-mono uppercase tracking-widest">
+                <div className="absolute inset-0 z-[310] flex flex-col items-center justify-center bg-black/95 p-6 animate-in fade-in duration-500">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.1)_0%,transparent_65%)] pointer-events-none" />
+                    
+                    <div className="max-w-md w-full border border-red-900/60 bg-stone-950/80 p-8 rounded-2xl shadow-[0_0_80px_rgba(220,38,38,0.15)] flex flex-col items-center text-center relative font-mono">
+                        <div className="absolute top-4 left-4 w-3 h-3 border-t border-l border-red-500/40" />
+                        <div className="absolute top-4 right-4 w-3 h-3 border-t border-r border-red-500/40" />
+                        
+                        <div className="text-red-500 mb-6 flex flex-col items-center gap-2">
+                            <div className="text-4xl md:text-5xl font-black tracking-tighter uppercase italic drop-shadow-[0_0_15px_rgba(220,38,38,0.6)] animate-pulse">
+                                LINK_FAULT
+                            </div>
+                            <div className="text-[10px] text-stone-500 font-bold uppercase tracking-[0.4em] mt-1">
+                                Critical Protocol Aborted
+                            </div>
+                        </div>
+
+                        <div className="w-full text-xs text-red-400 border border-red-950 bg-red-950/20 px-4 py-3.5 rounded-xl uppercase tracking-widest leading-relaxed mb-8 break-all max-h-32 overflow-y-auto font-bold select-text scrollbar-thin">
                             {error}
                         </div>
-                    </div>
 
-                    <div className="flex flex-col gap-4 w-64">
-                        <button
-                            onClick={onRetry}
-                            className="h-12 border-2 border-green-900 hover:border-green-500 text-green-500 font-bold uppercase tracking-[0.3em] transition-all active:scale-95"
-                        >
-                            TRY_AGAIN
-                        </button>
-                        <button
-                            onClick={onBack}
-                            className="h-12 border-2 border-stone-800 hover:border-white text-stone-500 hover:text-white font-bold uppercase tracking-[0.3em] transition-all active:scale-95"
-                        >
-                            TERMINATE
-                        </button>
-                    </div>
+                        <div className="flex flex-col gap-3 w-full">
+                            <button
+                                onClick={onRetry}
+                                className="h-13 bg-gradient-to-r from-green-950/60 to-green-900/40 hover:from-green-900 hover:to-green-700 text-green-400 hover:text-white border border-green-800/60 hover:border-green-500 font-bold uppercase tracking-[0.25em] text-xs transition-all rounded-xl active:scale-98 cursor-pointer shadow-lg hover:shadow-[0_0_20px_rgba(34,197,94,0.2)] flex items-center justify-center"
+                            >
+                                RETRY_CONNECTION
+                            </button>
+                            <button
+                                onClick={onBack}
+                                className="h-11 bg-transparent hover:bg-stone-900/50 border border-stone-800 hover:border-stone-600 text-stone-500 hover:text-stone-300 font-bold uppercase tracking-[0.25em] text-[10px] transition-all rounded-xl active:scale-98 cursor-pointer"
+                            >
+                                TERMINATE_INSTANCE
+                            </button>
+                        </div>
 
-                    <div className="mt-12 text-[8px] text-stone-700 font-mono text-center max-w-xs uppercase leading-relaxed">
-                        Emergency shutdown sequence engaged. Please contact network administrator or verify server status.
+                        <div className="mt-8 text-[8px] text-stone-600 font-mono text-center max-w-xs uppercase leading-normal border-t border-stone-900 pt-4 w-full">
+                            Emergency hard separation engaged. Check hardware configuration parameters or contact server proxy.
+                        </div>
                     </div>
                 </div>
             )}
