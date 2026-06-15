@@ -173,7 +173,7 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
             <div className="p-3 bg-red-950/30 border-b border-red-900/30 flex justify-between items-center">
                 <div className="flex items-center gap-2 text-red-500 font-extrabold tracking-widest text-[10px] uppercase">
                     <Bug size={14} className="animate-pulse" />
-                    <span>Dealer Lair Debug Panel</span>
+                    <span>Debug Panel</span>
                 </div>
                 <div className="flex gap-2">
                     <button

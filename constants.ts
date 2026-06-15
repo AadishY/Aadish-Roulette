@@ -28,7 +28,7 @@ const getInitialSettings = (): GameSettings => {
   if (isAndroid || isMobile) {
     return {
       pixelScale: 3.5,
-      brightness: 1.2,
+      brightness: 1.0,
       uiScale: 0.60,
       fov: 60,
       musicVolume: 0.5,
@@ -40,7 +40,7 @@ const getInitialSettings = (): GameSettings => {
     // PC
     return {
       pixelScale: 3.0,
-      brightness: 1.2,
+      brightness: 1.0,
       uiScale: 0.8,
       fov: 60,
       musicVolume: 0.5,
@@ -53,5 +53,5 @@ const getInitialSettings = (): GameSettings => {
 
 export const DEFAULT_SETTINGS: GameSettings = getInitialSettings();
 
-export const GAME_VERSION = '1.1.1';
+export const GAME_VERSION = '1.1.2';
 
