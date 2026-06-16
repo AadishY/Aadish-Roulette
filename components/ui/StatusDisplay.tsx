@@ -19,8 +19,9 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
             {/* Player Side */}
             <div className="flex flex-col items-start min-w-[80px] md:w-1/3 animate-in slide-in-from-left duration-700">
                 <div className="flex flex-col mb-4">
-                    <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase truncate max-w-[80px] md:max-w-full">
+                    <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase truncate max-w-[80px] md:max-w-full flex items-center gap-1">
                         {playerName || 'OPERATOR'}
+                        {player.isFlashbanged && <span className="text-red-500 animate-pulse text-[8px] md:text-xs font-black">⚡ BLINDED</span>}
                     </span>
                     <div className="flex items-center gap-1.5 md:gap-3">
                         {[...Array(player.maxHp)].map((_, i) => {
@@ -102,8 +103,9 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
             {/* Dealer Side */}
             <div className="flex flex-col items-end min-w-[80px] md:w-1/3 animate-in slide-in-from-right duration-700">
                 <div className="flex flex-col items-end">
-                    <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase">
+                    <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase flex items-center gap-1">
                         {gameState.isMultiplayer ? (gameState.opponentName || 'OPPONENT') : 'DEALER'}
+                        {dealer.isFlashbanged && <span className="text-red-500 animate-pulse text-[8px] md:text-xs font-black">⚡ BLINDED</span>}
                     </span>
                     <div className="flex gap-1 md:gap-2">
                         {[...Array(dealer.maxHp)].map((_, i) => {
@@ -151,6 +153,12 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                                 {item === 'CHOKE' && <Icons.Choke size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-stone-300" />}
                                 {item === 'REMOTE' && <Icons.Remote size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-red-500/80" />}
                                 {item === 'BIG_INVERTER' && <Icons.BigInverter size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-orange-500/80" />}
+                                {item === 'CONTRACT' && <Icons.Contract size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-red-750/80" />}
+                                {item === 'LUCKYCHARM' && <Icons.Luckycharm size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-emerald-500/80" />}
+                                {item === 'FLASHBANG' && <Icons.Flashbang size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-zinc-300" />}
+                                {item === 'CRUSHER' && <Icons.Crusher size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-amber-600/80" />}
+                                {item === 'TOTEM' && <Icons.Totem size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-amber-500/80 animate-pulse" />}
+                                {item === 'MIRROR' && <Icons.Mirror size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-indigo-400" />}
                             </div>
                         </div>
                     ))}

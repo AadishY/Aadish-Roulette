@@ -9,12 +9,20 @@ import { MAX_ITEMS } from '../../constants';
 type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 export const handleContract = async (
     user: TurnOwner,
+    player: PlayerState,
+    dealer: PlayerState,
     setPlayer: StateSetter<PlayerState>,
     setDealer: StateSetter<PlayerState>,
+    setGameState: StateSetter<GameState>,
+    setAnim: (update: any) => void,
     setTriggerContract: StateSetter<number>,
     addLog: (text: string, type: LogEntry['type']) => void,
     setOverlayText?: StateSetter<string | null>,
-    setOverlayColor?: StateSetter<'none' | 'red' | 'green' | 'scan'>
+    setOverlayColor?: StateSetter<'none' | 'red' | 'green' | 'scan'>,
+    isHardMode?: boolean,
+    isMultiplayer?: boolean,
+    handleHardModeRoundEnd?: (winner: TurnOwner) => void,
+    handleMPRoundEnd?: (winner: TurnOwner) => void
 ) => {
     setTriggerContract(p => p + 1);
     await wait(2500); // Wait for contract sign/burn animation
@@ -23,12 +31,95 @@ export const handleContract = async (
 
     // 1. Pay Handling Cost (1 HP)
     if (user === 'PLAYER') {
-        setPlayer(p => {
-            // SACRIFICE 1HP - This can result in death
-            return { ...p, hp: Math.max(0, p.hp - 1) };
-        });
+        const newHp = player.hp - 1;
+        const hasTotem = player.items.includes('TOTEM');
+
+        if (newHp <= 0) {
+            if (hasTotem) {
+                setPlayer(p => {
+                    const idx = p.items.indexOf('TOTEM');
+                    const newItems = [...p.items];
+                    if (idx !== -1) newItems.splice(idx, 1);
+                    return { ...p, hp: 1, items: newItems };
+                });
+
+                if (setOverlayText) setOverlayText('✨ TOTEM ACTIVATED ✨\nSurvives at 1 HP!');
+                setAnim(prev => ({
+                    ...prev,
+                    triggerTotem: (prev.triggerTotem || 0) + 1,
+                    totemTarget: 'PLAYER'
+                }));
+                audioManager.playSound('totem');
+                addLog("PLAYER'S TOTEM ACTIVATED: Survived lethal blood contract sacrifice at 1 HP!", 'safe');
+                await wait(3000);
+                if (setOverlayText) setOverlayText(null);
+            } else {
+                setPlayer(p => ({ ...p, hp: 0 }));
+                // Immediate Death
+                if (isHardMode && handleHardModeRoundEnd) {
+                    addLog('YOU DIED (BLOOD CONTRACT).', 'danger');
+                    handleHardModeRoundEnd('DEALER');
+                    return;
+                }
+                if (isMultiplayer && handleMPRoundEnd) {
+                    addLog('YOU DIED (BLOOD CONTRACT).', 'danger');
+                    handleMPRoundEnd('DEALER');
+                    return;
+                }
+                setGameState(prev => ({ ...prev, winner: 'DEALER', phase: 'GAME_OVER' }));
+                addLog('YOU DIED (BLOOD CONTRACT).', 'danger');
+                await wait(1500);
+                if (setOverlayColor) setOverlayColor('none');
+                return; // End execution
+            }
+        } else {
+            setPlayer(p => ({ ...p, hp: newHp }));
+        }
     } else {
-        setDealer(d => ({ ...d, hp: Math.max(0, d.hp - 1) }));
+        const newHp = dealer.hp - 1;
+        const hasTotem = dealer.items.includes('TOTEM');
+
+        if (newHp <= 0) {
+            if (hasTotem) {
+                setDealer(d => {
+                    const idx = d.items.indexOf('TOTEM');
+                    const newItems = [...d.items];
+                    if (idx !== -1) newItems.splice(idx, 1);
+                    return { ...d, hp: 1, items: newItems };
+                });
+
+                if (setOverlayText) setOverlayText('✨ TOTEM ACTIVATED ✨\nDealer survives at 1 HP!');
+                setAnim(prev => ({
+                    ...prev,
+                    triggerTotem: (prev.triggerTotem || 0) + 1,
+                    totemTarget: 'DEALER'
+                }));
+                audioManager.playSound('totem');
+                addLog("DEALER'S TOTEM ACTIVATED: Survived lethal blood contract sacrifice at 1 HP!", 'safe');
+                await wait(3000);
+                if (setOverlayText) setOverlayText(null);
+            } else {
+                setDealer(d => ({ ...d, hp: 0 }));
+                // Immediate Death
+                if (isHardMode && handleHardModeRoundEnd) {
+                    addLog('DEALER DIED (BLOOD CONTRACT).', 'safe');
+                    handleHardModeRoundEnd('PLAYER');
+                    return;
+                }
+                if (isMultiplayer && handleMPRoundEnd) {
+                    addLog('DEALER DIED (BLOOD CONTRACT).', 'safe');
+                    handleMPRoundEnd('PLAYER');
+                    return;
+                }
+                setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
+                addLog('DEALER DIED (BLOOD CONTRACT).', 'safe');
+                await wait(1500);
+                if (setOverlayColor) setOverlayColor('none');
+                return; // End execution
+            }
+        } else {
+            setDealer(d => ({ ...d, hp: newHp }));
+        }
     }
 
     await wait(800); // Wait for pain
@@ -435,3 +526,148 @@ export const handleRemote = async (
 
     await wait(800);
 };
+
+export const handleLuckycharm = async (
+    user: TurnOwner,
+    setPlayer: StateSetter<PlayerState>,
+    setDealer: StateSetter<PlayerState>,
+    setTriggerLuckycharm: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    setOverlayText?: StateSetter<string | null>
+) => {
+    setTriggerLuckycharm(p => p + 1);
+    await wait(2500); // Wait for animation
+
+    if (user === 'PLAYER') {
+        setPlayer(p => ({ ...p, luckycharmsUsed: (p.luckycharmsUsed || 0) + 1 }));
+        if (setOverlayText) {
+            setOverlayText('🍀 LUCK CHARMED 🍀\nHope you will get better items');
+            setTimeout(() => setOverlayText(null), 2500);
+        }
+        addLog("YOU ACTIVATED LUCKY CHARM: Next shipment improved", 'safe');
+    } else {
+        setDealer(d => ({ ...d, luckycharmsUsed: (d.luckycharmsUsed || 0) + 1 }));
+        addLog("DEALER ACTIVATED LUCKY CHARM: Next shipment improved", 'dealer');
+    }
+
+    await wait(800);
+};
+
+export const handleFlashbang = async (
+    user: TurnOwner,
+    setPlayer: StateSetter<PlayerState>,
+    setDealer: StateSetter<PlayerState>,
+    setTriggerFlashbang: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    setOverlayText?: StateSetter<string | null>,
+    setShowFlashbang?: StateSetter<boolean>
+) => {
+    setTriggerFlashbang(p => p + 1);
+    await wait(1500); // Wait for animation fuse cooking
+
+    // Detonate!
+    if (setShowFlashbang) setShowFlashbang(true);
+
+    await wait(400); // White screen peak
+
+    if (user === 'PLAYER') {
+        setDealer(d => ({ ...d, isFlashbanged: true }));
+        if (setOverlayText) {
+            setOverlayText('💥 FLASHBANGED 💥\nOpponent cannot use items next turn');
+            setTimeout(() => setOverlayText(null), 2500);
+        }
+        addLog("YOU FLASHBANGED THE DEALER: Items blocked on their next turn", 'safe');
+    } else {
+        setPlayer(p => ({ ...p, isFlashbanged: true }));
+        if (setOverlayText) {
+            setOverlayText('💥 BLINDED! 💥\nYou cannot use items next turn');
+            setTimeout(() => setOverlayText(null), 2500);
+        }
+        addLog("DEALER FLASHBANGED YOU: Items blocked on your next turn", 'danger');
+    }
+
+    await wait(1800); // Let the screen blind fade out
+    if (setShowFlashbang) setShowFlashbang(false);
+};
+
+const getFriendlyItemName = (item: ItemType): string => {
+    const names: Record<ItemType, string> = {
+        'BEER': 'Beer',
+        'CIGS': 'Cigarettes',
+        'GLASS': 'Magnifying Glass',
+        'CUFFS': 'Handcuffs',
+        'SAW': 'Hand Saw',
+        'PHONE': 'Burner Phone',
+        'INVERTER': 'Polarity Inverter',
+        'ADRENALINE': 'Adrenaline',
+        'CHOKE': 'Choke Mod',
+        'REMOTE': 'Remote Control',
+        'BIG_INVERTER': 'Big Inverter',
+        'CONTRACT': 'Blood Contract',
+        'LUCKYCHARM': 'Lucky Charm',
+        'FLASHBANG': 'Flashbang',
+        'CRUSHER': 'Item Crusher',
+        'TOTEM': 'Totem of Undying'
+    };
+    return names[item] || item;
+};
+
+export const handleCrusher = async (
+    user: TurnOwner,
+    player: PlayerState,
+    dealer: PlayerState,
+    setPlayer: StateSetter<PlayerState>,
+    setDealer: StateSetter<PlayerState>,
+    setTriggerCrusher: StateSetter<number>,
+    addLog: (text: string, type: LogEntry['type']) => void,
+    setOverlayText?: StateSetter<string | null>
+) => {
+    // 1. Trigger animation
+    setTriggerCrusher(p => p + 1);
+
+    // 2. Wait for impact (1.3s in animation)
+    await wait(1300);
+
+    const target = user === 'PLAYER' ? dealer : player;
+    const targetSetter = user === 'PLAYER' ? setDealer : setPlayer;
+
+    if (target.items.length === 0) {
+        if (setOverlayText) {
+            setOverlayText(user === 'PLAYER' ? "Dealer's inventory is empty!" : "Your inventory is empty!");
+            setTimeout(() => setOverlayText(null), 2000);
+        }
+        addLog(user === 'PLAYER' ? "YOU USED CRUSHER: Opponent has no items to destroy!" : "DEALER USED CRUSHER: You have no items to destroy!", 'safe');
+        await wait(900); // Wait for remainder of 2.2s animation
+        return;
+    }
+
+    // Determine the item to destroy based on the fresh copy of target items
+    const randomIndex = Math.floor(Math.random() * target.items.length);
+    const itemToDestroy = target.items[randomIndex];
+    const friendlyName = getFriendlyItemName(itemToDestroy);
+
+    // Remove the item from the state safely by value-matching (find the first index of this item)
+    targetSetter(prev => {
+        const idx = prev.items.indexOf(itemToDestroy);
+        if (idx === -1) return prev; // If not found, fallback safely
+        const newItems = [...prev.items];
+        newItems.splice(idx, 1);
+        return { ...prev, items: newItems };
+    });
+
+    if (setOverlayText) {
+        const ownerName = user === 'PLAYER' ? "Dealer's" : "Player's";
+        setOverlayText(`DESTROYED_ITEM::${itemToDestroy}::${ownerName}::${friendlyName}`);
+        setTimeout(() => setOverlayText(null), 4000);
+    }
+
+    if (user === 'PLAYER') {
+        addLog(`YOU CRUSHED DEALER'S ITEM: Destroyed 1 ${friendlyName}`, 'safe');
+    } else {
+        addLog(`DEALER CRUSHED YOUR ITEM: Destroyed 1 ${friendlyName}`, 'danger');
+    }
+
+    await wait(900); // Wait for remainder of 2.2s animation
+};
+
+

@@ -172,6 +172,14 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             else if (items.itemPhone.visible) activeItem = items.itemPhone;
             else if (items.itemInverter.visible) activeItem = items.itemInverter;
             else if (items.itemAdrenaline.visible) activeItem = items.itemAdrenaline;
+            else if (items.itemRemote.visible) activeItem = items.itemRemote;
+            else if (items.itemBigInverter.visible) activeItem = items.itemBigInverter;
+            else if (items.itemContract.visible) activeItem = items.itemContract;
+            else if (items.itemLuckycharm.visible) activeItem = items.itemLuckycharm;
+            else if (items.itemFlashbang.visible) activeItem = items.itemFlashbang;
+            else if (items.itemCrusher.visible) activeItem = items.itemCrusher;
+            else if (items.itemTotem.visible) activeItem = items.itemTotem;
+            else if (items.itemMirror.visible) activeItem = items.itemMirror;
 
             if (activeItem) {
                 items.itemLight.position.copy(activeItem.position);
@@ -202,11 +210,14 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         if (scene.userData.lastHeal === undefined) scene.userData.lastHeal = animState.triggerHeal;
         if (scene.userData.lastSaw === undefined) scene.userData.lastSaw = animState.triggerSparks;
         if (scene.userData.lastCuff === undefined) scene.userData.lastCuff = animState.triggerCuff;
+        if (scene.userData.lastTotem === undefined) scene.userData.lastTotem = animState.triggerTotem || 0;
+        if (scene.userData.lastMirror === undefined) scene.userData.lastMirror = animState.triggerMirror || 0;
         if (scene.userData.lastRack === undefined) scene.userData.lastRack = animState.triggerRack;
         if (scene.userData.lastGlass === undefined) scene.userData.lastGlass = animState.triggerGlass;
         if (scene.userData.lastPhone === undefined) scene.userData.lastPhone = animState.triggerPhone;
         if (scene.userData.lastInverter === undefined) scene.userData.lastInverter = animState.triggerInverter;
         if (scene.userData.lastAdrenaline === undefined) scene.userData.lastAdrenaline = animState.triggerAdrenaline;
+        if (scene.userData.lastLuckycharm === undefined) scene.userData.lastLuckycharm = animState.triggerLuckycharm;
 
         // GLASS ANIMATION
         if (animState.triggerGlass < scene.userData.lastGlass) scene.userData.lastGlass = animState.triggerGlass;
@@ -810,6 +821,297 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             items.itemContract.visible = false;
         }
 
+        // LUCKYCHARM ANIMATION
+        if (animState.triggerLuckycharm < (scene.userData.lastLuckycharm || 0)) scene.userData.lastLuckycharm = animState.triggerLuckycharm;
+        if (animState.triggerLuckycharm > (scene.userData.lastLuckycharm || 0)) {
+            scene.userData.lastLuckycharm = animState.triggerLuckycharm;
+            scene.userData.luckycharmStart = time;
+            items.itemLuckycharm.visible = true;
+            audioManager.playSound('luckycharm');
+        }
+        const lcTime = time - (scene.userData.luckycharmStart || -999);
+        if (lcTime < 2.5) {
+            items.itemLuckycharm.visible = true;
+            items.itemLuckycharm.scale.setScalar(2.0);
+            if (isPlayerTurn) {
+                if (lcTime < 0.6) {
+                    const p = lcTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemLuckycharm.position.set(0, -3 + ease * 4.5, 6);
+                    items.itemLuckycharm.rotation.y = lcTime * 15; // Spin up
+                } else if (lcTime < 2.0) {
+                    const pulseY = 1.5 + Math.sin(lcTime * 10) * 0.1;
+                    items.itemLuckycharm.position.set(0, pulseY, 6);
+                    items.itemLuckycharm.rotation.y += 0.05;
+                } else {
+                    items.itemLuckycharm.visible = false;
+                }
+            } else {
+                if (lcTime < 0.6) {
+                    const p = lcTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemLuckycharm.position.set(3 * (1 - ease), -1 + ease * 3.6, -4.0);
+                    items.itemLuckycharm.rotation.y = lcTime * 10;
+                } else if (lcTime < 1.8) {
+                    items.itemLuckycharm.position.set(0, 2.6 + Math.sin(lcTime * 5) * 0.15, -4.0);
+                    items.itemLuckycharm.rotation.y += 0.05;
+                } else {
+                    const p = (lcTime - 1.8) / 0.5;
+                    items.itemLuckycharm.position.y = 2.6 - p * 6;
+                    items.itemLuckycharm.position.x = -p * 3;
+                    if (lcTime > 2.2) items.itemLuckycharm.visible = false;
+                }
+            }
+        } else {
+            items.itemLuckycharm.visible = false;
+        }
+
+        // FLASHBANG ANIMATION
+        if (animState.triggerFlashbang < (scene.userData.lastFlashbang || 0)) scene.userData.lastFlashbang = animState.triggerFlashbang;
+        if (animState.triggerFlashbang > (scene.userData.lastFlashbang || 0)) {
+            scene.userData.lastFlashbang = animState.triggerFlashbang;
+            scene.userData.flashbangStart = time;
+            scene.userData.flashbangDetonated = false;
+            items.itemFlashbang.visible = true;
+            items.itemFlashbang.rotation.set(0, 0, 0);
+        }
+        const fbTime = time - (scene.userData.flashbangStart || -999);
+        if (fbTime < 2.5) {
+            items.itemFlashbang.visible = fbTime < 1.5; // Explodes and disappears at 1.5s
+            items.itemFlashbang.scale.setScalar(2.0);
+
+            // Detonate screen shake and play sound at 1.5s
+            if (fbTime >= 1.5 && !scene.userData.flashbangDetonated) {
+                scene.userData.flashbangDetonated = true;
+                scene.userData.cameraShake = 1.8;
+                audioManager.playSound('flashbang');
+            }
+
+            if (isPlayerTurn) {
+                if (fbTime < 0.6) {
+                    const p = fbTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemFlashbang.position.set(0, -3 + ease * 4.5, 6.0);
+                    items.itemFlashbang.rotation.y = fbTime * 15;
+                    items.itemFlashbang.rotation.x = 0;
+                    items.itemFlashbang.rotation.z = 0;
+                } else if (fbTime < 1.5) {
+                    // Cook/shake in front of camera
+                    const shakeX = Math.sin(fbTime * 50) * 0.03;
+                    const shakeY = Math.cos(fbTime * 45) * 0.03;
+                    items.itemFlashbang.position.set(shakeX, 1.5 + shakeY, 6.0);
+                    items.itemFlashbang.rotation.y += 0.1;
+                    items.itemFlashbang.rotation.x = 0;
+                    items.itemFlashbang.rotation.z = 0;
+                }
+            } else {
+                // Dealer turn
+                if (fbTime < 0.6) {
+                    const p = fbTime / 0.6;
+                    const ease = easeOutBack(p);
+                    items.itemFlashbang.position.set(3 * (1 - ease), -1 + ease * 3.6, -4.0);
+                    items.itemFlashbang.rotation.y = fbTime * 10;
+                    items.itemFlashbang.rotation.x = 0;
+                    items.itemFlashbang.rotation.z = 0;
+                } else if (fbTime < 1.5) {
+                    const shakeX = Math.sin(fbTime * 50) * 0.03;
+                    items.itemFlashbang.position.set(shakeX, 2.6, -4.0);
+                    items.itemFlashbang.rotation.y += 0.1;
+                    items.itemFlashbang.rotation.x = 0;
+                    items.itemFlashbang.rotation.z = 0;
+                }
+            }
+        } else {
+            items.itemFlashbang.visible = false;
+        }
+
+        // CRUSHER ANIMATION
+        if (animState.triggerCrusher < (scene.userData.lastCrusher || 0)) scene.userData.lastCrusher = animState.triggerCrusher;
+        if (animState.triggerCrusher > (scene.userData.lastCrusher || 0)) {
+            scene.userData.lastCrusher = animState.triggerCrusher;
+            scene.userData.crusherStart = time;
+            scene.userData.crusherSlammed = false;
+            items.itemCrusher.visible = true;
+            items.itemCrusher.rotation.set(0, 0, 0);
+        }
+        const crusherTime = time - (scene.userData.crusherStart || -999);
+        if (crusherTime < 2.2) {
+            items.itemCrusher.visible = true;
+
+            // Handle positions and movements
+            if (isPlayerTurn) {
+                // Player crushes Dealer's item. Hammer slams down on Dealer's side.
+                if (crusherTime < 0.8) {
+                    // Wind up: rise up and tilt back
+                    const p = crusherTime / 0.8;
+                    const ease = easeOutBack(p);
+                    items.itemCrusher.position.set(0, -3 + ease * 7.5, -3.0 - p * 3.0); // Rise and pull back
+                    items.itemCrusher.rotation.x = -p * 1.5; // Tilt back
+                    items.itemCrusher.rotation.y = 0;
+                    items.itemCrusher.rotation.z = 0;
+                } else if (crusherTime < 1.1) {
+                    // Hover and shake before slamming
+                    const shakeX = Math.sin(crusherTime * 60) * 0.05;
+                    const shakeY = Math.cos(crusherTime * 50) * 0.05;
+                    items.itemCrusher.position.set(shakeX, 4.5 + shakeY, -6.0);
+                    items.itemCrusher.rotation.x = -1.5;
+                } else if (crusherTime < 1.35) {
+                    // Fast slam down!
+                    const p = (crusherTime - 1.1) / 0.25;
+                    const curY = 4.5 - p * 4.4;
+                    const curZ = -6.0 - p * 1.5;
+                    items.itemCrusher.position.set(0, curY, curZ);
+                    items.itemCrusher.rotation.x = -1.5 + p * 2.0; // Rotate forward to hit flat
+
+                    // Detonate slam at impact point (t = 1.3s or p = 0.8)
+                    if (crusherTime >= 1.3 && !scene.userData.crusherSlammed) {
+                        scene.userData.crusherSlammed = true;
+                        scene.userData.cameraShake = 2.2;
+                        audioManager.playSound('crusher');
+                    }
+                } else {
+                    // Stay down on the table, then fade out (slowly sink)
+                    const p = (crusherTime - 1.35) / 0.85;
+                    items.itemCrusher.position.set(0, 0.1 - p * 4.0, -7.5);
+                    items.itemCrusher.rotation.x = 0.5;
+                }
+            } else {
+                // Dealer crushes Player's item. Hammer slams down on Player's side.
+                if (crusherTime < 0.8) {
+                    // Wind up: rise up and tilt back
+                    const p = crusherTime / 0.8;
+                    const ease = easeOutBack(p);
+                    items.itemCrusher.position.set(0, -3 + ease * 6.5, 2.0 + p * 2.5); // Rise and pull back towards player camera
+                    items.itemCrusher.rotation.x = p * 1.5; // Tilt back
+                    items.itemCrusher.rotation.y = Math.PI; // Face the camera
+                    items.itemCrusher.rotation.z = 0;
+                } else if (crusherTime < 1.1) {
+                    // Hover and shake
+                    const shakeX = Math.sin(crusherTime * 60) * 0.05;
+                    const shakeY = Math.cos(crusherTime * 50) * 0.05;
+                    items.itemCrusher.position.set(shakeX, 3.5 + shakeY, 4.5);
+                    items.itemCrusher.rotation.x = 1.5;
+                    items.itemCrusher.rotation.y = Math.PI;
+                } else if (crusherTime < 1.35) {
+                    // Fast slam down!
+                    const p = (crusherTime - 1.1) / 0.25;
+                    const curY = 3.5 - p * 4.8;
+                    const curZ = 4.5 + p * 1.2;
+                    items.itemCrusher.position.set(0, curY, curZ);
+                    items.itemCrusher.rotation.x = 1.5 - p * 2.0;
+                    items.itemCrusher.rotation.y = Math.PI;
+
+                    if (crusherTime >= 1.3 && !scene.userData.crusherSlammed) {
+                        scene.userData.crusherSlammed = true;
+                        scene.userData.cameraShake = 2.2;
+                        audioManager.playSound('crusher');
+                    }
+                } else {
+                    const p = (crusherTime - 1.35) / 0.85;
+                    items.itemCrusher.position.set(0, -1.3 - p * 4.0, 5.7);
+                    items.itemCrusher.rotation.x = -0.5;
+                    items.itemCrusher.rotation.y = Math.PI;
+                }
+            }
+        } else {
+            items.itemCrusher.visible = false;
+        }
+
+        // TOTEM ANIMATION
+        const totemTriggerVal = animState.triggerTotem || 0;
+        if (totemTriggerVal < (scene.userData.lastTotem || 0)) scene.userData.lastTotem = totemTriggerVal;
+        if (totemTriggerVal > (scene.userData.lastTotem || 0)) {
+            scene.userData.lastTotem = totemTriggerVal;
+            scene.userData.totemStart = time;
+            items.itemTotem.visible = true;
+            items.itemTotem.rotation.set(0, 0, 0);
+            items.itemTotem.scale.setScalar(0.01);
+        }
+        const totemTime = time - (scene.userData.totemStart || -999);
+        if (totemTime < 2.8) {
+            items.itemTotem.visible = true;
+            items.itemTotem.rotation.y = time * 6.5;
+
+            const isPlayerTarget = animState.totemTarget === 'PLAYER';
+
+            if (isPlayerTarget) {
+                if (totemTime < 0.6) {
+                    const p = totemTime / 0.6;
+                    const scale = p * 3.2;
+                    items.itemTotem.position.set(0, -1.2 + p * 3.2, 3.5);
+                    items.itemTotem.scale.setScalar(scale);
+                } else if (totemTime < 1.8) {
+                    const hover = Math.sin(time * 10) * 0.12;
+                    const shakeX = (Math.random() - 0.5) * 0.04;
+                    const shakeY = (Math.random() - 0.5) * 0.04;
+                    items.itemTotem.position.set(shakeX, 2.0 + hover + shakeY, 3.5);
+                    items.itemTotem.scale.setScalar(3.2 + Math.sin(time * 18) * 0.15);
+                } else {
+                    const p = (totemTime - 1.8) / 1.0;
+                    items.itemTotem.position.set(0, 2.0 - p * 3.0, 3.5);
+                    items.itemTotem.scale.setScalar(Math.max(0.001, 3.2 * (1 - p)));
+                }
+            } else {
+                if (totemTime < 0.6) {
+                    const p = totemTime / 0.6;
+                    const scale = p * 3.2;
+                    items.itemTotem.position.set(0, -1.2 + p * 3.2, -3.5);
+                    items.itemTotem.scale.setScalar(scale);
+                } else if (totemTime < 1.8) {
+                    const hover = Math.sin(time * 10) * 0.12;
+                    const shakeX = (Math.random() - 0.5) * 0.04;
+                    const shakeY = (Math.random() - 0.5) * 0.04;
+                    items.itemTotem.position.set(shakeX, 2.0 + hover + shakeY, -3.5);
+                    items.itemTotem.scale.setScalar(3.2 + Math.sin(time * 18) * 0.15);
+                } else {
+                    const p = (totemTime - 1.8) / 1.0;
+                    items.itemTotem.position.set(0, 2.0 - p * 3.0, -3.5);
+                    items.itemTotem.scale.setScalar(Math.max(0.001, 3.2 * (1 - p)));
+                }
+            }
+        } else {
+            items.itemTotem.visible = false;
+        }
+
+        // MIRROR ANIMATION
+        const mirrorTriggerVal = animState.triggerMirror || 0;
+        if (mirrorTriggerVal < (scene.userData.lastMirror || 0)) scene.userData.lastMirror = mirrorTriggerVal;
+        if (mirrorTriggerVal > (scene.userData.lastMirror || 0)) {
+            scene.userData.lastMirror = mirrorTriggerVal;
+            scene.userData.mirrorStart = time;
+            items.itemMirror.visible = true;
+            items.itemMirror.rotation.set(0, 0, 0);
+            items.itemMirror.scale.setScalar(0.01);
+        }
+        const mirrorTime = time - (scene.userData.mirrorStart || -999);
+        if (mirrorTime < 2.5) {
+            items.itemMirror.visible = true;
+            items.itemMirror.rotation.y = time * 8.0;
+            items.itemMirror.rotation.x = Math.sin(time * 4.0) * 0.3;
+            
+            const isPlayerTarget = isPlayerTurn;
+            const targetZ = isPlayerTarget ? 3.5 : -3.5;
+            
+            if (mirrorTime < 0.6) {
+                const p = mirrorTime / 0.6;
+                const scale = p * 3.2;
+                items.itemMirror.position.set(0, -1.2 + p * 3.2, targetZ);
+                items.itemMirror.scale.setScalar(scale);
+            } else if (mirrorTime < 1.7) {
+                const hover = Math.sin(time * 10) * 0.12;
+                const shakeX = (Math.random() - 0.5) * 0.04;
+                const shakeY = (Math.random() - 0.5) * 0.04;
+                items.itemMirror.position.set(shakeX, 2.0 + hover + shakeY, targetZ);
+                items.itemMirror.scale.setScalar(3.2 + Math.sin(time * 18) * 0.15);
+            } else {
+                const p = (mirrorTime - 1.7) / 0.8;
+                items.itemMirror.position.set(0, 2.0 - p * 3.0, targetZ);
+                items.itemMirror.scale.setScalar(Math.max(0.001, 3.2 * (1 - p)));
+            }
+        } else {
+            items.itemMirror.visible = false;
+        }
+
         // CHOKE ANIMATION (Attach Sequence)
         if (animState.triggerChoke < (scene.userData.lastChoke || 0)) scene.userData.lastChoke = animState.triggerChoke;
         if (animState.triggerChoke > (scene.userData.lastChoke || 0)) {
@@ -901,6 +1203,18 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
         if (!animState.isSawing && scene.userData.lastSaw === animState.triggerSparks) {
             items.itemSaw.visible = false;
+        }
+        if (scene.userData.luckycharmStart && (now - scene.userData.luckycharmStart) > cleanupThreshold) {
+            items.itemLuckycharm.visible = false;
+        }
+        if (scene.userData.flashbangStart && (now - scene.userData.flashbangStart) > cleanupThreshold) {
+            items.itemFlashbang.visible = false;
+        }
+        if (scene.userData.crusherStart && (now - scene.userData.crusherStart) > cleanupThreshold) {
+            items.itemCrusher.visible = false;
+        }
+        if (scene.userData.mirrorStart && (now - scene.userData.mirrorStart) > cleanupThreshold) {
+            items.itemMirror.visible = false;
         }
 
         updateItemLight();

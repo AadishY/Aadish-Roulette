@@ -18,7 +18,12 @@ const ITEM_NAMES: Record<ItemType, string> = {
     'CHOKE': 'CHOKE MOD',
     'REMOTE': 'REMOTE',
     'BIG_INVERTER': 'BIG INVERTER',
-    'CONTRACT': 'BLOOD CONTRACT'
+    'CONTRACT': 'BLOOD CONTRACT',
+    'LUCKYCHARM': 'LUCKY CHARM',
+    'FLASHBANG': 'FLASHBANG',
+    'CRUSHER': 'CRUSHER',
+    'TOTEM': 'TOTEM OF UNDYING',
+    'MIRROR': 'MIRROR'
 };
 
 const ITEM_COLORS: Record<ItemType, string> = {
@@ -33,7 +38,12 @@ const ITEM_COLORS: Record<ItemType, string> = {
     'CHOKE': 'text-yellow-700 border-yellow-700/50 bg-yellow-950/30',
     'REMOTE': 'text-red-600 border-red-600/50 bg-red-950/30',
     'BIG_INVERTER': 'text-orange-500 border-orange-500/50 bg-orange-950/30',
-    'CONTRACT': 'text-red-700 border-red-700/50 bg-red-950/30'
+    'CONTRACT': 'text-red-700 border-red-700/50 bg-red-950/30',
+    'LUCKYCHARM': 'text-emerald-500 border-emerald-500/50 bg-emerald-950/30',
+    'FLASHBANG': 'text-zinc-300 border-zinc-300/50 bg-zinc-900/30',
+    'CRUSHER': 'text-amber-600 border-amber-500/55 bg-amber-950/35',
+    'TOTEM': 'text-amber-400 border-amber-400/50 bg-amber-950/30',
+    'MIRROR': 'text-indigo-400 border-indigo-400/50 bg-indigo-950/30'
 };
 
 export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
@@ -116,6 +126,10 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                                         {item === 'REMOTE' && <Icons.Remote size={56} />}
                                         {item === 'BIG_INVERTER' && <Icons.BigInverter size={56} />}
                                         {item === 'CONTRACT' && <Icons.Contract size={56} />}
+                                        {item === 'LUCKYCHARM' && <Icons.Luckycharm size={56} />}
+                                        {item === 'FLASHBANG' && <Icons.Flashbang size={56} />}
+                                        {item === 'CRUSHER' && <Icons.Crusher size={56} />}
+                                        {item === 'TOTEM' && <Icons.Totem size={56} />}
                                     </div>
 
                                     {/* Text Label */}

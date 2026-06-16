@@ -375,3 +375,299 @@ export const createContract = (): THREE.Group => {
 
     return group;
 };
+
+export const createLuckycharm = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Hanger Ring (Gold Torus)
+    const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        metalness: 0.9,
+        roughness: 0.1
+    });
+    const ringGeo = new THREE.TorusGeometry(0.12, 0.03, 8, 24);
+    const ring = new THREE.Mesh(ringGeo, goldMat);
+    ring.position.set(0, 0.45, 0);
+    group.add(ring);
+
+    // Stem (Gold/Green Cylinder link)
+    const stemGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.25, 8);
+    const stem = new THREE.Mesh(stemGeo, goldMat);
+    stem.position.set(0, 0.3, 0);
+    group.add(stem);
+
+    // Clover Leaves Group
+    const cloverGroup = new THREE.Group();
+    const leafMat = new THREE.MeshStandardMaterial({
+        color: 0x00cc44, // Vibrant emerald green
+        emissive: 0x003311, // Green glow
+        roughness: 0.2,
+        metalness: 0.1
+    });
+
+    const leafGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.05, 16);
+
+    // 4 Leaves laid flat
+    const leaf1 = new THREE.Mesh(leafGeo, leafMat);
+    leaf1.rotation.x = Math.PI / 2;
+    leaf1.position.set(0, 0.16, 0);
+    cloverGroup.add(leaf1);
+
+    const leaf2 = new THREE.Mesh(leafGeo, leafMat);
+    leaf2.rotation.x = Math.PI / 2;
+    leaf2.position.set(0, -0.16, 0);
+    cloverGroup.add(leaf2);
+
+    const leaf3 = new THREE.Mesh(leafGeo, leafMat);
+    leaf3.rotation.x = Math.PI / 2;
+    leaf3.position.set(-0.16, 0, 0);
+    cloverGroup.add(leaf3);
+
+    const leaf4 = new THREE.Mesh(leafGeo, leafMat);
+    leaf4.rotation.x = Math.PI / 2;
+    leaf4.position.set(0.16, 0, 0);
+    cloverGroup.add(leaf4);
+
+    // Little gold core sphere at center
+    const coreGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    const core = new THREE.Mesh(coreGeo, goldMat);
+    cloverGroup.add(core);
+
+    cloverGroup.position.set(0, 0, 0);
+    group.add(cloverGroup);
+
+    group.name = 'ITEM_LUCKYCHARM';
+
+    // Scale it to match other items
+    group.scale.setScalar(2.0);
+
+    return group;
+};
+
+export const createFlashbang = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Materials
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x242424, metalness: 0.8, roughness: 0.6 }); // Matte dark grey tactical body
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0x0066cc, metalness: 0.3, roughness: 0.4 }); // Blue band
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x999999, metalness: 0.9, roughness: 0.2 }); // Silver fuse head
+    const leverMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.7, roughness: 0.5 }); // Safety lever
+
+    // Canister Body
+    const bodyGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.65, 16);
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    body.receiveShadow = true;
+    group.add(body);
+
+    // Blue Band (middle stripe)
+    const stripeGeo = new THREE.CylinderGeometry(0.185, 0.185, 0.15, 16);
+    const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+    stripe.position.y = 0.05;
+    group.add(stripe);
+
+    // Fuse Head / Cap
+    const capGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.15, 12);
+    const cap = new THREE.Mesh(capGeo, metalMat);
+    cap.position.y = 0.4;
+    group.add(cap);
+
+    // Safety Pin Lever (spoon)
+    const leverGeo = new THREE.BoxGeometry(0.03, 0.35, 0.06);
+    const lever = new THREE.Mesh(leverGeo, leverMat);
+    lever.position.set(0.08, 0.35, 0);
+    lever.rotation.z = -0.12;
+    group.add(lever);
+
+    // Pull Ring
+    const ringGeo = new THREE.TorusGeometry(0.08, 0.015, 8, 16);
+    const ring = new THREE.Mesh(ringGeo, metalMat);
+    ring.position.set(-0.12, 0.42, 0);
+    ring.rotation.y = Math.PI / 2;
+    group.add(ring);
+
+    group.name = 'ITEM_FLASHBANG';
+
+    // Scale it to match other items
+    group.scale.setScalar(2.0);
+
+    return group;
+};
+
+export const createCrusher = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Materials
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8, metalness: 0.1 }); // Dark wood handle
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.3, metalness: 0.85 }); // Dark iron hammer head
+    const accentMat = new THREE.MeshStandardMaterial({ color: 0xb5a642, roughness: 0.4, metalness: 0.9 }); // Brass reinforcement rings
+
+    // Wooden Handle (Cylinder along Y axis)
+    const handleGeo = new THREE.CylinderGeometry(0.035, 0.035, 1.1, 16);
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.y = 0.0;
+    handle.castShadow = true;
+    handle.receiveShadow = true;
+    group.add(handle);
+
+    // Brass Pommel (grip cap at bottom)
+    const pommelGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.08, 12);
+    const pommel = new THREE.Mesh(pommelGeo, accentMat);
+    pommel.position.y = -0.55;
+    group.add(pommel);
+
+    // Hammer Head block (horizontal along Z axis, sitting on top of the handle)
+    const headGeo = new THREE.BoxGeometry(0.24, 0.24, 0.55);
+    const head = new THREE.Mesh(headGeo, metalMat);
+    head.position.y = 0.55;
+    head.castShadow = true;
+    head.receiveShadow = true;
+    group.add(head);
+
+    // Left strike plate
+    const strikeLGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.04, 16);
+    const strikeL = new THREE.Mesh(strikeLGeo, metalMat);
+    strikeL.position.set(0, 0.55, -0.295);
+    strikeL.rotation.x = Math.PI / 2;
+    group.add(strikeL);
+
+    // Right strike plate
+    const strikeRGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.04, 16);
+    const strikeR = new THREE.Mesh(strikeRGeo, metalMat);
+    strikeR.position.set(0, 0.55, 0.295);
+    strikeR.rotation.x = Math.PI / 2;
+    group.add(strikeR);
+
+    // Brass collar reinforcement (under the head)
+    const collarGeo = new THREE.CylinderGeometry(0.045, 0.04, 0.12, 12);
+    const collar = new THREE.Mesh(collarGeo, accentMat);
+    collar.position.y = 0.43;
+    group.add(collar);
+
+    group.name = 'ITEM_CRUSHER';
+    
+    // Scale to make it look appropriately large
+    group.scale.setScalar(2.2);
+
+    return group;
+};
+
+export const createTotem = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Materials
+    const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xffb700, // Golden yellow
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    const wingMat = new THREE.MeshStandardMaterial({
+        color: 0xffd700, // Lighter gold/yellow for contrast
+        roughness: 0.3,
+        metalness: 0.7
+    });
+    const eyeMat = new THREE.MeshStandardMaterial({
+        color: 0x00ff66, // Minecraft green emerald eyes
+        emissive: 0x003311,
+        roughness: 0.1
+    });
+
+    // 1. Main Body (Box)
+    const bodyGeo = new THREE.BoxGeometry(0.22, 0.34, 0.14);
+    const body = new THREE.Mesh(bodyGeo, goldMat);
+    body.position.y = 0.0;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    group.add(body);
+
+    // 2. Head (Box on top of body)
+    const headGeo = new THREE.BoxGeometry(0.24, 0.24, 0.16);
+    const head = new THREE.Mesh(headGeo, goldMat);
+    head.position.y = 0.29;
+    head.castShadow = true;
+    group.add(head);
+
+    // 3. Nose (Minecraft villager nose style)
+    const noseGeo = new THREE.BoxGeometry(0.06, 0.11, 0.06);
+    const nose = new THREE.Mesh(noseGeo, goldMat);
+    nose.position.set(0, 0.27, 0.11);
+    group.add(nose);
+
+    // 4. Left Eye (Emerald green box)
+    const eyeLGeo = new THREE.BoxGeometry(0.06, 0.06, 0.04);
+    const eyeL = new THREE.Mesh(eyeLGeo, eyeMat);
+    eyeL.position.set(-0.07, 0.31, 0.095);
+    group.add(eyeL);
+
+    // 5. Right Eye
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.07;
+    group.add(eyeR);
+
+    // 6. Left Arm/Wing (Sticks out from side, bent down/back slightly)
+    const wingLGeo = new THREE.BoxGeometry(0.1, 0.22, 0.08);
+    const wingL = new THREE.Mesh(wingLGeo, wingMat);
+    wingL.position.set(-0.16, 0.08, 0.02);
+    wingL.rotation.z = 0.25; // angled outward
+    wingL.rotation.y = -0.15;
+    group.add(wingL);
+
+    // 7. Right Arm/Wing
+    const wingRGeo = new THREE.BoxGeometry(0.1, 0.22, 0.08);
+    const wingR = new THREE.Mesh(wingRGeo, wingMat);
+    wingR.position.set(0.16, 0.08, 0.02);
+    wingR.rotation.z = -0.25;
+    wingR.rotation.y = 0.15;
+    group.add(wingR);
+
+    // 8. Lower Base/Skirt (Minecraft totem bottom flange)
+    const skirtGeo = new THREE.BoxGeometry(0.26, 0.08, 0.16);
+    const skirt = new THREE.Mesh(skirtGeo, goldMat);
+    skirt.position.y = -0.21;
+    group.add(skirt);
+
+    group.name = 'ITEM_TOTEM';
+
+    // Scale it to be visible on the table/hand
+    group.scale.setScalar(2.0);
+
+    return group;
+};
+
+export const createMirror = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7, metalness: 0.5 });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.2, metalness: 0.9 });
+    const glassMat = new THREE.MeshStandardMaterial({ 
+        color: 0x88ccff, 
+        roughness: 0.05, 
+        metalness: 0.95,
+        emissive: 0x112233
+    });
+
+    const handleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 12);
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.y = -0.25;
+    handle.castShadow = true;
+    group.add(handle);
+
+    const frameGeo = new THREE.TorusGeometry(0.18, 0.02, 8, 24);
+    const frame = new THREE.Mesh(frameGeo, frameMat);
+    frame.position.y = 0.0;
+    frame.castShadow = true;
+    group.add(frame);
+
+    const glassGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.015, 24);
+    const glass = new THREE.Mesh(glassGeo, glassMat);
+    glass.rotation.x = Math.PI / 2;
+    glass.position.y = 0.0;
+    group.add(glass);
+
+    group.name = 'ITEM_MIRROR';
+    group.scale.setScalar(2.0);
+
+    return group;
+};
+
+

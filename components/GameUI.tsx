@@ -23,6 +23,7 @@ interface GameUIProps {
     overlayColor: 'none' | 'red' | 'green' | 'scan';
     showBlood: boolean;
     showFlash: boolean;
+    showFlashbang?: boolean; // Added for flashbang white-out
     showLootOverlay: boolean;
     triggerHeal: number;
     triggerDrink: number;
@@ -74,8 +75,9 @@ export const GameUI: React.FC<GameUIProps> = ({
     logs,
     overlayText,
     overlayColor,
-    showBlood,
     showFlash,
+    showBlood,
+    showFlashbang = false,
     showLootOverlay,
     triggerHeal,
     triggerDrink,
@@ -196,6 +198,7 @@ export const GameUI: React.FC<GameUIProps> = ({
             <div className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.6)_100%)] mix-blend-multiply" />
 
             {showFlash && <div className="absolute inset-0 z-50 flash-screen" />}
+            {showFlashbang && <div className="absolute inset-0 z-50 flashbang-screen" />}
             {smokeActive && <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]" />}
             {drinkActive && <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px]" />}
             {showBlood && (
@@ -326,9 +329,40 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     </div>
                                 )}
                             </div>
+                        ) : overlayText.startsWith('DESTROYED_ITEM::') ? (
+                            (() => {
+                                const [_, itemType, ownerName, friendlyName] = overlayText.split('::');
+                                const IconComponent = Icons[itemType as keyof typeof Icons] || Icons.Crusher;
+                                return (
+                                    <div className="flex flex-col items-center text-center bg-black/95 px-10 py-6 border-y-2 border-red-500/35 backdrop-blur-md rounded-xl pop-in max-w-lg shadow-[0_0_50px_rgba(239,68,68,0.25)] border-red-650">
+                                        <div className="text-red-500 animate-pulse mb-3 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                                            <IconComponent size={64} />
+                                        </div>
+                                        <div className="text-lg md:text-4xl font-black tracking-[0.15em] text-stone-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] uppercase italic leading-none">
+                                            🔨 CRUSHED 🔨
+                                        </div>
+                                        <div className="text-xs md:text-lg font-bold tracking-[0.1em] text-stone-300 mt-3 uppercase not-italic">
+                                            Destroyed {ownerName} <span className="text-red-400 font-extrabold">{friendlyName}</span>!
+                                        </div>
+                                    </div>
+                                );
+                            })()
                         ) : (
-                            <div className="text-lg md:text-5xl font-black tracking-[0.2em] text-stone-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] pop-in text-center bg-black/90 px-8 py-4 border-y-2 border-stone-100/20 backdrop-blur-md rounded-sm uppercase italic">
-                                <RenderColoredText text={overlayText} />
+                            <div className="flex flex-col items-center text-center bg-black/90 px-8 py-4 border-y-2 border-stone-100/20 backdrop-blur-md rounded-sm pop-in">
+                                {overlayText.includes('\n') ? (
+                                    <>
+                                        <div className="text-lg md:text-5xl font-black tracking-[0.2em] text-stone-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] uppercase italic">
+                                            <RenderColoredText text={overlayText.split('\n')[0]} />
+                                        </div>
+                                        <div className="text-xs md:text-lg font-bold tracking-[0.15em] text-stone-400 mt-2 uppercase not-italic">
+                                            <RenderColoredText text={overlayText.split('\n')[1]} />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-lg md:text-5xl font-black tracking-[0.2em] text-stone-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] uppercase italic">
+                                        <RenderColoredText text={overlayText} />
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -368,12 +402,14 @@ export const GameUI: React.FC<GameUIProps> = ({
                                 ) : (
                                     dealer.items.map((item, idx) => {
                                         const isAdrenaline = item === 'ADRENALINE';
+                                        const isTotemLocked = item === 'TOTEM';
+                                        const isStealLocked = isAdrenaline || isTotemLocked;
                                         return (
                                             <button
                                                 key={idx}
-                                                onClick={() => !isAdrenaline && onStealItem && onStealItem(idx)}
-                                                disabled={isAdrenaline}
-                                                className={`group relative flex flex-col items-center justify-center aspect-[5/7] rounded-2xl border transition-all duration-700 overflow-hidden ${isAdrenaline
+                                                onClick={() => !isStealLocked && onStealItem && onStealItem(idx)}
+                                                disabled={isStealLocked}
+                                                className={`group relative flex flex-col items-center justify-center aspect-[5/7] rounded-2xl border transition-all duration-700 overflow-hidden ${isStealLocked
                                                     ? 'bg-black/80 border-white/5 cursor-not-allowed grayscale-[0.8] opacity-60'
                                                     : 'bg-stone-900/60 border-white/10 hover:border-red-500 hover:bg-red-500/10 hover:shadow-[0_0_40px_rgba(239,68,68,0.2)] hover:-translate-y-2 active:scale-95 active:translate-y-0'
                                                     }`}
@@ -384,9 +420,13 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                 {/* Card BG Deco */}
                                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_center,rgba(255,100,100,0.1),transparent_70%)]" />
 
-                                                {isAdrenaline ? (
+                                                {isStealLocked ? (
                                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-20">
-                                                        <Icons.Adrenaline size={48} className="text-stone-700 mb-2 opacity-30" />
+                                                        {item === 'ADRENALINE' ? (
+                                                            <Icons.Adrenaline size={48} className="text-stone-700 mb-2 opacity-30" />
+                                                        ) : (
+                                                            <Icons.Totem size={48} className="text-stone-700 mb-2 opacity-30" />
+                                                        )}
                                                         <span className="text-[10px] font-black tracking-widest text-red-900 border border-red-900/40 px-2 py-1 rounded bg-black/80 rotate-12">LOCKED</span>
                                                     </div>
                                                 ) : (
@@ -400,7 +440,13 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                                                 item === 'INVERTER' ? 'text-green-400' :
                                                                                     item === 'CHOKE' ? 'text-stone-300' :
                                                                                         item === 'REMOTE' ? 'text-red-500' :
-                                                                                            item === 'BIG_INVERTER' ? 'text-orange-500' : 'text-stone-300'
+                                                                                            item === 'BIG_INVERTER' ? 'text-orange-500' :
+                                                                                                item === 'CONTRACT' ? 'text-red-700' :
+                                                                                                    item === 'LUCKYCHARM' ? 'text-emerald-500' :
+                                                                                                        item === 'FLASHBANG' ? 'text-zinc-300' :
+                                                                                                            item === 'CRUSHER' ? 'text-amber-600' :
+                                                                                                                item === 'TOTEM' ? 'text-amber-400' :
+                                                                                                                    item === 'MIRROR' ? 'text-indigo-400' : 'text-stone-300'
                                                             }`}>
                                                             {item === 'BEER' && <Icons.Beer size={56} />}
                                                             {item === 'CIGS' && <Icons.Cigs size={56} />}
@@ -412,6 +458,12 @@ export const GameUI: React.FC<GameUIProps> = ({
                                                             {item === 'CHOKE' && <Icons.Choke size={56} />}
                                                             {item === 'REMOTE' && <Icons.Remote size={56} />}
                                                             {item === 'BIG_INVERTER' && <Icons.BigInverter size={56} />}
+                                                            {item === 'CONTRACT' && <Icons.Contract size={56} />}
+                                                            {item === 'LUCKYCHARM' && <Icons.Luckycharm size={56} />}
+                                                            {item === 'FLASHBANG' && <Icons.Flashbang size={56} />}
+                                                            {item === 'CRUSHER' && <Icons.Crusher size={56} />}
+                                                            {item === 'TOTEM' && <Icons.Totem size={56} />}
+                                                            {item === 'MIRROR' && <Icons.Mirror size={56} />}
                                                         </div>
                                                         <span className="text-[10px] md:text-sm font-black text-stone-200 tracking-[0.2em] uppercase group-hover:text-white transition-colors">
                                                             {item.replace('_', ' ')}

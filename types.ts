@@ -1,5 +1,5 @@
 
-export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER' | 'CONTRACT';
+export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER' | 'CONTRACT' | 'LUCKYCHARM' | 'FLASHBANG' | 'CRUSHER' | 'TOTEM' | 'MIRROR';
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
 export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI' | 'DEALER_GUN'; // Added DEALER_GUN
@@ -70,6 +70,10 @@ export interface PlayerState {
   isSawedActive: boolean;
   isAdrenalineActive?: boolean; // Added
   isChokeActive?: boolean; // Added for Choke
+  luckycharmsUsed?: number; // Added
+  isFlashbanged?: boolean; // Added
+  lastTurnItemsUsed?: ItemType[];
+  currentTurnItemsUsed?: ItemType[];
 }
 
 export interface LogEntry {
@@ -93,6 +97,12 @@ export interface AnimationState {
   triggerRemote: number; // Remote
   triggerBigInverter: number; // Big Inverter
   triggerContract: number; // Blood Contract
+  triggerLuckycharm: number; // Luckycharm
+  triggerFlashbang: number; // Flashbang
+  triggerCrusher: number; // Crusher
+  triggerTotem: number; // Totem
+  triggerMirror: number; // Mirror
+  totemTarget?: TurnOwner | null; // Totem target
   isSawing: boolean; // Continuous saw state
   ejectedShellColor: 'red' | 'blue' | 'red+red' | 'red+blue' | 'blue+red' | 'blue+blue';
   muzzleFlashIntensity: number;
@@ -161,6 +171,11 @@ export interface SceneContext {
     itemRemote: THREE.Group;
     itemBigInverter: THREE.Group;
     itemContract: THREE.Group;
+    itemLuckycharm: THREE.Group;
+    itemFlashbang: THREE.Group;
+    itemCrusher: THREE.Group;
+    itemTotem: THREE.Group;
+    itemMirror: THREE.Group;
     itemLight: THREE.PointLight; // Light for illuminating items during animations
   };
 }

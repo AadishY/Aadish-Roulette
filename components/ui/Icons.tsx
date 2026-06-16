@@ -1,5 +1,5 @@
 import React from 'react';
-import { Beer, Link, Cigarette, Search, Zap, Crosshair, ShieldAlert, Heart, RefreshCcw, Smartphone, Syringe } from 'lucide-react';
+import { Beer, Link, Cigarette, Search, Zap, Crosshair, ShieldAlert, Heart, RefreshCcw, Smartphone, Syringe, Hammer } from 'lucide-react';
 
 export const ChainsawIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
   <svg
@@ -135,6 +135,101 @@ export const ShotgunShellIcon = ({ className, size = 24 }: { className?: string;
   </svg>
 );
 
+export const CloverIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {/* Stem */}
+    <path d="M12 17c0 2 1 4 3 5" />
+    {/* Four leaves */}
+    <path d="M12 12c-2-2-4-2-4 0 0 1.5 2 2 4 0z" fill="currentColor" fillOpacity="0.2" />
+    <path d="M12 12c2-2 4-2 4 0 0 1.5-2 2-4 0z" fill="currentColor" fillOpacity="0.2" />
+    <path d="M12 12c-2 2-2 4 0 4 1.5 0 2-2 0-4z" fill="currentColor" fillOpacity="0.2" />
+    <path d="M12 12c2 2 2 4 0 4-1.5 0-2-2 0-4z" fill="currentColor" fillOpacity="0.2" />
+  </svg>
+);
+
+export const FlashbangIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <rect x="8" y="7" width="8" height="14" rx="2" fill="currentColor" fillOpacity="0.2" />
+    <rect x="10" y="3" width="4" height="4" rx="0.5" />
+    <circle cx="7" cy="4" r="2" />
+    <path d="M14 5h2v6" />
+    <circle cx="10" cy="11" r="0.5" fill="currentColor" />
+    <circle cx="14" cy="11" r="0.5" fill="currentColor" />
+    <circle cx="10" cy="15" r="0.5" fill="currentColor" />
+    <circle cx="14" cy="15" r="0.5" fill="currentColor" />
+  </svg>
+);
+
+export const TotemIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {/* Totem of Undying boxy shape */}
+    {/* Head */}
+    <rect x="8" y="2" width="8" height="6" rx="1" fill="currentColor" fillOpacity="0.35" />
+    {/* Nose */}
+    <rect x="11" y="5" width="2" height="3" rx="0.5" fill="currentColor" />
+    {/* Eyes (Green emeralds) */}
+    <rect x="9.5" y="4" width="1.5" height="1" fill="#00ff66" stroke="none" />
+    <rect x="13" y="4" width="1.5" height="1" fill="#00ff66" stroke="none" />
+    {/* Body */}
+    <rect x="9" y="8" width="6" height="8" rx="1" fill="currentColor" fillOpacity="0.25" />
+    {/* Wings / Arms */}
+    <path d="M9 10H5v2l4 1" fill="currentColor" fillOpacity="0.45" />
+    <path d="M15 10h4v2l-4 1" fill="currentColor" fillOpacity="0.45" />
+    {/* Bottom Base */}
+    <rect x="7" y="16" width="10" height="2" rx="0.5" fill="currentColor" />
+  </svg>
+);
+
+export const MirrorIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <ellipse cx="12" cy="9" rx="6" ry="7" fill="currentColor" fillOpacity="0.2" />
+    <path d="M10 5.5c2.5-1 4.5 1 5 3.5" strokeWidth="1.5" strokeOpacity="0.6" />
+    <path d="M12 16v6" strokeWidth="2.5" />
+    <path d="M10 22h4" />
+    <path d="M9 16c1.5.5 4.5.5 6 0" />
+  </svg>
+);
+
 export const Icons = {
   Beer,
   Cuffs: Link,
@@ -153,5 +248,11 @@ export const Icons = {
   Remote: RemoteIcon,
   BigInverter: BigInverterIcon,
   Contract: ContractIcon,
+  Luckycharm: CloverIcon,
+  Flashbang: FlashbangIcon,
+  Crusher: Hammer,
+  Totem: TotemIcon,
+  Mirror: MirrorIcon,
   Shell: ShotgunShellIcon
 };
+

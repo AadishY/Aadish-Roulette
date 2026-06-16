@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { SceneContext } from '../../types';
 import { getDeviceType } from '../gameUtils';
-import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline, createRemote, createBigInverter, createContract } from '../threeHelpers';
+import { setupLighting, createTable, createGunModel, createDealerModel, createPlayerAvatar, createProjectiles, createEnvironment, createDust, createBeerCan, createCigarette, createSaw, createHandcuffs, createMagnifyingGlass, createPhone, createInverter, createAdrenaline, createRemote, createBigInverter, createContract, createLuckycharm, createFlashbang, createCrusher, createTotem, createMirror } from '../threeHelpers';
 
 
 export const cleanScene = (scene: THREE.Scene) => {
@@ -180,12 +180,17 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     const itemRemote = createRemote(); itemRemote.visible = false; scene.add(itemRemote);
     const itemBigInverter = createBigInverter(); itemBigInverter.visible = false; scene.add(itemBigInverter);
     const itemContract = createContract(); itemContract.visible = false; scene.add(itemContract);
+    const itemLuckycharm = createLuckycharm(); itemLuckycharm.visible = false; scene.add(itemLuckycharm);
+    const itemFlashbang = createFlashbang(); itemFlashbang.visible = false; scene.add(itemFlashbang);
+    const itemCrusher = createCrusher(); itemCrusher.visible = false; scene.add(itemCrusher);
+    const itemTotem = createTotem(); itemTotem.visible = false; scene.add(itemTotem);
+    const itemMirror = createMirror(); itemMirror.visible = false; scene.add(itemMirror);
 
     const itemLight = new THREE.PointLight(0xffffee, 0, 25);
     itemLight.position.set(0, 5, -12);
     scene.add(itemLight);
 
-    const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemContract, itemLight };
+    const itemsGroup = { itemBeer, itemCigs, itemSaw, itemCuffs, itemGlass, itemPhone, itemInverter, itemAdrenaline, itemRemote, itemBigInverter, itemContract, itemLuckycharm, itemFlashbang, itemCrusher, itemTotem, itemMirror, itemLight };
 
 
     // Multiplayer vs Singleplayer representation

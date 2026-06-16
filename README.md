@@ -51,6 +51,11 @@
 | ⚡ | **Big Inverter** | Inverts the polarity of ALL remaining shells currently loaded in the magazine. |
 | 🥋 | **Choke** | Chokes the shotgun to fire a double-barrel volley, shooting the current and the next shell simultaneously. Normalizes split damage on split shells, or double damage if both are live. |
 | 🩸 | **Blood Contract** | Sacrifice 1 HP to gain 2 high-tier loot items from a high-tier distribution pool. (Player-only item). |
+| 🍀 | **Lucky Charm** | Boosts next shipment items luck based on current HP (survival items if HP <= 2, offensive items if HP > 2). Stacks on multiple uses. |
+| 💥 | **Flashbang** | Blinds the opponent, preventing them from deploying any items on their next turn. |
+| 🔨 | **Crusher** | Slam down a giant hammer to destroy 1 random item from your opponent's inventory. |
+| 🌟 | **Totem of Undying** | [PASSIVE] Survive at 1 HP when HP drops to 0. Auto-triggers on lethal damage. UNSTEALABLE. Max 1 totem. |
+| 🪞 | **Mirror** | Copy all item effects used by the opponent on their immediate previous turn. Sequential activation. |
 
 ---
 
@@ -86,16 +91,21 @@ Contracts are calculated first. If the contract test succeeds, it is drawn; othe
 | Item | Normal Mode (Total Probability) | Hard Mode (Total Probability) |
 | :--- | :---: | :---: |
 | **Blood Contract** | **10.0%** (10% first test) | **7.0%** (7% first test) |
-| **Beer** | **13.5%** | **16.74%** |
-| **Cigarettes** | **11.7%** | **4.65%** |
-| **Magnifying Glass** | **9.0%** | **9.30%** |
-| **Handcuffs** | **9.0%** | **9.30%** |
-| **Burner Phone** | **10.8%** | **14.88%** |
-| **Hand Saw** | **9.0%** | **9.30%** |
-| **Inverter** | **9.0%** | **8.37%** |
-| **Adrenaline** | **7.2%** | **13.02%** *(incl. 5% fallback)* |
-| **Choke** | **5.4%** | **3.72%** |
-| **Big Inverter** | **5.4%** | **3.72%** |
+| **Beer** | **9.9%** | **13.95%** |
+| **Cigarettes** | **9.9%** | **3.72%** |
+| **Magnifying Glass** | **7.2%** | **7.44%** |
+| **Handcuffs** | **8.1%** | **8.37%** |
+| **Burner Phone** | **9.0%** | **8.37%** |
+| **Hand Saw** | **8.1%** | **9.30%** |
+| **Inverter** | **8.1%** | **8.37%** |
+| **Adrenaline** | **7.2%** | **8.37%** |
+| **Choke** | **4.5%** | **4.65%** |
+| **Big Inverter** | **4.5%** | **4.65%** |
+| **Lucky Charm** | **3.6%** | **3.72%** |
+| **Flashbang** | **3.6%** | **3.72%** |
+| **Crusher** | **1.8%** | **2.79%** |
+| **Mirror** | **1.8%** | **2.79%** |
+| **Totem of Undying** | **2.7%** | **2.79%** |
 
 *Note: Dealer cannot draw a Blood Contract.*
 
@@ -106,8 +116,9 @@ In Hard Mode, the dealer draws items tailored dynamically to their current HP le
 
 #### 1. Survival Panic Mode (Dealer HP <= 2)
 Dealer focuses purely on healing, turn-skipping, and emergency damage:
-- 🚬 **Cigarettes (Heal)**: **40.0%**
-- 🍺 **Beer (Eject shell)**: **20.0%**
+- 🚬 **Cigarettes (Heal)**: **30.0%**
+- 🍺 **Beer (Eject shell)**: **15.0%**
+- 🌟 **Totem of Undying (Passive)**: **15.0%**
 - 💉 **Adrenaline (Steal item)**: **10.0%**
 - 🔗 **Handcuffs (Skip player)**: **10.0%**
 - ✂️ **Hand Saw (Damage)**: **10.0%**

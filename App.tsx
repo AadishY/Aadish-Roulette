@@ -490,6 +490,7 @@ export default function App() {
         overlayColor={spGame.overlayColor}
         showBlood={spGame.showBlood}
         showFlash={spGame.showFlash}
+        showFlashbang={spGame.showFlashbang}
         showLootOverlay={spGame.showLootOverlay}
         receivedItems={spGame.receivedItems as any}
         triggerHeal={spGame.animState.triggerHeal}

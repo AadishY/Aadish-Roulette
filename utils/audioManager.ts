@@ -9,6 +9,7 @@ class AudioManager {
     public musicVolume: number = 0.5;
     public sfxVolume: number = 0.7;
     private initialized: boolean = false;
+    private activeDimmingCount: number = 0;
 
     constructor() {
         this.loadAssets();
@@ -38,6 +39,11 @@ class AudioManager {
             choke: '/sound/AnimationSounds/Choke.mp3',
             remote: '/sound/AnimationSounds/remote.mp3',
             contract: '/sound/AnimationSounds/BloodContract.mp3',
+            luckycharm: '/sound/AnimationSounds/luckcharm.mp3',
+            flashbang: '/sound/AnimationSounds/flashbang.mp3',
+            crusher: '/sound/crusher.mp3',
+            totem: '/sound/AnimationSounds/Totem.mp3',
+            mirror: '/sound/AnimationSounds/mirror.mp3',
         };
         const musicFiles = {
             menu: '/sound/menu.mp3',
@@ -59,6 +65,14 @@ class AudioManager {
             audio.loop = (key !== 'endscreen');
             this.music[key] = audio;
         }
+    }
+
+    private applyMusicVolume() {
+        if (!this.currentMusic || !this.music[this.currentMusic]) return;
+        const targetVol = this.activeDimmingCount > 0 
+            ? this.musicVolume * 0.35 // Dim music to 35% of its set volume
+            : this.musicVolume;
+        this.music[this.currentMusic].volume = targetVol;
     }
 
     public getAudioLoadingProgress(): number {
@@ -107,7 +121,7 @@ class AudioManager {
                 // Restore music
                 if (this.currentMusic && this.music[this.currentMusic]) {
                     const music = this.music[this.currentMusic];
-                    music.volume = this.musicVolume;
+                    this.applyMusicVolume();
                     music.play().catch(() => { });
                 }
             } else {
@@ -137,10 +151,16 @@ class AudioManager {
         };
         const boost = boostMap[key] || 1.0;
 
-        // Handle aliases
-        if (key === 'click' && sound.src.includes('grab1.ogg') === false) {
-            // We need to support alias or just manually map 'click' to 'grab' asset in loadAssets?
-            // Easier: just map it in loadAssets.
+        // Check if this sound should dim the background music
+        const shouldDim = [
+            'dropping', 'checkhandcuffs', 'handcuffed', 'adrenaline', 
+            'beer', 'cig', 'glass', 'inverter', 'big_inverter', 
+            'phone', 'saw', 'choke', 'remote', 'contract', 'luckycharm', 'flashbang', 'crusher', 'totem', 'mirror'
+        ].includes(key);
+
+        if (shouldDim) {
+            this.activeDimmingCount++;
+            this.applyMusicVolume();
         }
 
         let finalVolume = this.sfxVolume * boost;
@@ -155,6 +175,10 @@ class AudioManager {
         const playPromise = sound.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
+                if (shouldDim) {
+                    this.activeDimmingCount = Math.max(0, this.activeDimmingCount - 1);
+                    this.applyMusicVolume();
+                }
                 // Auto-play was prevented. This happens if playSound is called before any user interaction.
                 // We silently ignore it to avoid console spam.
                 if (error.name !== 'NotAllowedError') {
@@ -168,6 +192,10 @@ class AudioManager {
             sound.pause();
             sound.src = '';
             sound.onended = null;
+            if (shouldDim) {
+                this.activeDimmingCount = Math.max(0, this.activeDimmingCount - 1);
+                this.applyMusicVolume();
+            }
         };
     }
 
@@ -196,7 +224,7 @@ class AudioManager {
         const newMusic = this.music[key];
 
         if (newMusic) {
-            newMusic.volume = this.musicVolume;
+            this.applyMusicVolume();
             newMusic.currentTime = 0;
 
             const playPromise = newMusic.play();
@@ -216,10 +244,7 @@ class AudioManager {
     public updateVolumes(settings: GameSettings) {
         this.musicVolume = settings.musicVolume ?? 0.5;
         this.sfxVolume = settings.sfxVolume ?? 0.7;
-
-        if (this.currentMusic && this.music[this.currentMusic]) {
-            this.music[this.currentMusic].volume = this.musicVolume;
-        }
+        this.applyMusicVolume();
     }
 
     public stopMusic() {

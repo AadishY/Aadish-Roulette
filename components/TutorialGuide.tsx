@@ -278,6 +278,46 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             color="text-red-700"
                             effect="→ SACRIFICE HP FOR LOOT"
                         />
+
+                        <ItemCard
+                            icon={<Icons.Luckycharm size={20} />}
+                            name="LUCKY CHARM"
+                            description="Boosts next shipment items luck. Stacks on multiple uses."
+                            color="text-emerald-500"
+                            effect="→ BOOST SHIPMENT LUCK"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Flashbang size={20} />}
+                            name="FLASHBANG"
+                            description="Blinds the opponent, preventing them from deploying any items on their next turn."
+                            color="text-zinc-300"
+                            effect="→ BLOCK OPPONENT ITEMS"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Crusher size={20} />}
+                            name="ITEM CRUSHER"
+                            description="Slam down a giant hammer to destroy 1 random item from your opponent's inventory."
+                            color="text-amber-600"
+                            effect="→ DESTROY ENEMY ITEM"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Totem size={20} />}
+                            name="TOTEM OF UNDYING"
+                            description="[PASSIVE] Survive at 1 HP when HP drops to 0. Auto-triggers on lethal damage. UNSTEALABLE. Max 1 totem."
+                            color="text-amber-400"
+                            effect="→ AUTO-SURVIVE AT 1 HP"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Mirror size={20} />}
+                            name="MIRROR"
+                            description="Copy the effects of all items used by the opponent on their immediate previous turn. Sequential activation."
+                            color="text-indigo-400"
+                            effect="→ DUPLICATE PREVIOUS EFFECTS"
+                        />
                     </div>
                 </div>
             )
@@ -311,37 +351,37 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                     <tbody className="divide-y divide-stone-850 text-stone-300 font-mono">
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans">Cigarettes (Heal)</td>
-                                            <td className="p-1.5 text-center">13.0%</td>
-                                            <td className="p-1.5 text-center text-red-400">5.0%</td>
+                                            <td className="p-1.5 text-center">11.0%</td>
+                                            <td className="p-1.5 text-center text-red-400">4.0%</td>
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans">Beer (Rack Shell)</td>
-                                            <td className="p-1.5 text-center">15.0%</td>
-                                            <td className="p-1.5 text-center text-green-450">18.0%</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-1.5 pl-2 font-sans">Handcuffs (Skip Turn)</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-1.5 pl-2 font-sans">Hand Saw (2x DMG)</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-1.5 pl-2 font-sans">Magnifying Glass (Reveal)</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-1.5 pl-2 font-sans">Burner Phone (Future peek)</td>
                                             <td className="p-1.5 text-center">12.0%</td>
                                             <td className="p-1.5 text-center text-green-450">16.0%</td>
                                         </tr>
                                         <tr>
-                                            <td className="p-1.5 pl-2 font-sans">Polarity Inverter (Swap)</td>
+                                            <td className="p-1.5 pl-2 font-sans">Handcuffs (Skip Turn)</td>
+                                            <td className="p-1.5 text-center">9.0%</td>
+                                            <td className="p-1.5 text-center">9.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans">Hand Saw (2x DMG)</td>
+                                            <td className="p-1.5 text-center">9.0%</td>
                                             <td className="p-1.5 text-center">10.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans">Magnifying Glass (Reveal)</td>
+                                            <td className="p-1.5 text-center">8.0%</td>
+                                            <td className="p-1.5 text-center">8.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans">Burner Phone (Future peek)</td>
+                                            <td className="p-1.5 text-center">10.0%</td>
+                                            <td className="p-1.5 text-center text-green-450">10.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans">Polarity Inverter (Swap)</td>
+                                            <td className="p-1.5 text-center">9.0%</td>
                                             <td className="p-1.5 text-center">9.0%</td>
                                         </tr>
                                         <tr>
@@ -351,18 +391,43 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans">Choke Mod (Double shot)</td>
-                                            <td className="p-1.5 text-center">6.0%</td>
-                                            <td className="p-1.5 text-center text-red-400">4.0%</td>
+                                            <td className="p-1.5 text-center">5.0%</td>
+                                            <td className="p-1.5 text-center text-red-400">5.0%</td>
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans">Big Inverter (All invert)</td>
-                                            <td className="p-1.5 text-center">6.0%</td>
-                                            <td className="p-1.5 text-center text-red-400">4.0%</td>
+                                            <td className="p-1.5 text-center">5.0%</td>
+                                            <td className="p-1.5 text-center text-red-400">5.0%</td>
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans">Blood Contract (Loot)</td>
                                             <td className="p-1.5 text-center">10.0%</td>
                                             <td className="p-1.5 text-center text-red-400">7.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans">Lucky Charm (Luck boost)</td>
+                                            <td className="p-1.5 text-center">4.0%</td>
+                                            <td className="p-1.5 text-center">4.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans">Flashbang (Blind opponent)</td>
+                                            <td className="p-1.5 text-center">4.0%</td>
+                                            <td className="p-1.5 text-center">4.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans text-amber-500 font-bold">Item Crusher (Destroy)</td>
+                                            <td className="p-1.5 text-center text-amber-500 font-bold">2.0%</td>
+                                            <td className="p-1.5 text-center text-amber-500 font-bold">3.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans text-indigo-400 font-bold">Mirror (Duplicate Turn)</td>
+                                            <td className="p-1.5 text-center text-indigo-400 font-bold">2.0%</td>
+                                            <td className="p-1.5 text-center text-indigo-400 font-bold">3.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans text-amber-400 font-bold">Totem of Undying (Passive)</td>
+                                            <td className="p-1.5 text-center text-amber-400 font-bold">3.0%</td>
+                                            <td className="p-1.5 text-center text-amber-400 font-bold">3.0%</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -566,9 +631,6 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                     🧪 EXPERIMENTAL GEAR (IN PIPELINE)
                                 </h4>
                                 <div className="space-y-2 text-stone-400 text-xs">
-                                    <div>
-                                        <span className="font-bold text-stone-200">🍀 LUCKY CHARM:</span> Improves the probability of receiving highly needed items in the next shipment.
-                                    </div>
                                     <div>
                                         <span className="font-bold text-stone-200">🎰 JACKPOT:</span> Grants temporary absolute immunity from the next 3 shell discharges (self-inflicted or enemy fired).
                                     </div>

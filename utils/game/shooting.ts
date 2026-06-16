@@ -83,6 +83,24 @@ export const performShot = async (
         willHit = anyLive;
     }
 
+    // Pre-calculate damage and totem save to prevent double falling animation
+    let damage = isLive ? 1 : 0;
+    if (isChoked && currentShellIndex + 1 < chamber.length) {
+        const shell1 = chamber[currentShellIndex];
+        const shell2 = chamber[currentShellIndex + 1];
+        const live1 = shell1 === 'LIVE';
+        const live2 = shell2 === 'LIVE';
+        let chokeDamage = (live1 && live2) ? 2 : ((live1 || live2) ? 1 : 0);
+        if (isSawed && chokeDamage > 0) chokeDamage *= 2;
+        damage = chokeDamage;
+    } else {
+        if (isLive && isSawed) damage = 2;
+    }
+
+    const isLethal = willHit && damage >= (target === 'PLAYER' ? player.hp : dealer.hp);
+    const targetHasTotem = target === 'PLAYER' ? player.items.includes('TOTEM') : dealer.items.includes('TOTEM');
+    const isSavedByTotem = isLethal && targetHasTotem;
+
     setTimeout(() => {
         if (anyLive) audioManager.playSound('liveshell');
         else audioManager.playSound('blankshell');
@@ -103,17 +121,27 @@ export const performShot = async (
 
     if (willHit && target === 'PLAYER') {
         // INSTANT HIT - Player knocked down
-        setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: true }));
-        setOverlayColor('red');
-        setShowBlood(true);
-        setTimeout(() => {
-            setAnim(prev => ({ ...prev, playerHit: false }));
-            setShowBlood(false);
-            setOverlayColor('none');
+        if (isSavedByTotem) {
+            setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: false }));
+            setOverlayColor('red');
+            setShowBlood(true);
             setTimeout(() => {
-                setAnim(prev => ({ ...prev, playerRecovering: false }));
-            }, 2000);
-        }, 2500);
+                setShowBlood(false);
+                setOverlayColor('none');
+            }, 2500);
+        } else {
+            setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: true }));
+            setOverlayColor('red');
+            setShowBlood(true);
+            setTimeout(() => {
+                setAnim(prev => ({ ...prev, playerHit: false }));
+                setShowBlood(false);
+                setOverlayColor('none');
+                setTimeout(() => {
+                    setAnim(prev => ({ ...prev, playerRecovering: false }));
+                }, 2000);
+            }, 2500);
+        }
     }
 
     if (anyLive) {
@@ -126,7 +154,7 @@ export const performShot = async (
 
     setOverlayText(shell);
 
-    let damage = isLive ? 1 : 0;
+    damage = isLive ? 1 : 0;
     // (Variables isSawed/isChoked already declared above)
 
     // --- CHOKE LOGIC ---
@@ -243,66 +271,132 @@ export const performShot = async (
     let gameOver = false;
     if (damage > 0) {
         if (target === 'PLAYER') {
-            const newHp = Math.max(0, player.hp - damage);
-            setPlayer(p => ({ ...p, hp: newHp }));
+            let newHp = Math.max(0, player.hp - damage);
+            const hasTotem = player.items.includes('TOTEM');
 
-            if (newHp <= 0) {
-                if (gameState.isHardMode && handleHardModeRoundEnd) {
-                    addLog('ROUND LOST', 'danger');
-                    handleHardModeRoundEnd('DEALER');
-                    setIsProcessing(false);
-                    return;
-                }
-                if (gameState.isMultiplayer && handleMPRoundEnd) {
-                    addLog('ROUND LOST', 'danger');
-                    handleMPRoundEnd('DEALER');
-                    setIsProcessing(false);
-                    return;
-                }
-                setGameState(prev => ({ ...prev, winner: 'DEALER', phase: 'GAME_OVER' }));
-                if (matchStats?.current) matchStats.current.result = 'LOSS';
-                gameOver = true;
-                addLog('YOU DIED.', 'danger');
-            } else {
+            if (newHp <= 0 && hasTotem) {
+                newHp = 1;
+                setPlayer(p => {
+                    const idx = p.items.indexOf('TOTEM');
+                    const newItems = [...p.items];
+                    if (idx !== -1) newItems.splice(idx, 1);
+                    return { ...p, hp: 1, items: newItems };
+                });
+
+                // Trigger Totem VFX & SFX
+                setOverlayText('✨ TOTEM ACTIVATED ✨\nSurvives at 1 HP!');
+                setAnim(prev => ({
+                    ...prev,
+                    triggerTotem: (prev.triggerTotem || 0) + 1,
+                    totemTarget: 'PLAYER'
+                }));
+                audioManager.playSound('totem');
+                addLog("PLAYER'S TOTEM ACTIVATED: Survived lethal damage at 1 HP!", 'safe');
+
+                // Wait for Totem animation to play out
+                await wait(3000);
+                setOverlayText(null);
+
+                // Hurt and recovery animation
                 setOverlayColor('red');
-                setAnim(prev => ({ ...prev, playerHit: true }));
-                await wait(1800);
                 setAnim(prev => ({ ...prev, playerHit: false, playerRecovering: true }));
-                await wait(1500);
+                await wait(2200);
                 setAnim(prev => ({ ...prev, playerRecovering: false }));
                 setOverlayColor('none');
+            } else {
+                setPlayer(p => ({ ...p, hp: newHp }));
+
+                if (newHp <= 0) {
+                    if (gameState.isHardMode && handleHardModeRoundEnd) {
+                        addLog('ROUND LOST', 'danger');
+                        handleHardModeRoundEnd('DEALER');
+                        setIsProcessing(false);
+                        return;
+                    }
+                    if (gameState.isMultiplayer && handleMPRoundEnd) {
+                        addLog('ROUND LOST', 'danger');
+                        handleMPRoundEnd('DEALER');
+                        setIsProcessing(false);
+                        return;
+                    }
+                    setGameState(prev => ({ ...prev, winner: 'DEALER', phase: 'GAME_OVER' }));
+                    if (matchStats?.current) matchStats.current.result = 'LOSS';
+                    gameOver = true;
+                    addLog('YOU DIED.', 'danger');
+                } else {
+                    setOverlayColor('red');
+                    setAnim(prev => ({ ...prev, playerHit: true }));
+                    await wait(1800);
+                    setAnim(prev => ({ ...prev, playerHit: false, playerRecovering: true }));
+                    await wait(1500);
+                    setAnim(prev => ({ ...prev, playerRecovering: false }));
+                    setOverlayColor('none');
+                }
             }
         } else {
-            const newHp = Math.max(0, dealer.hp - damage);
-            setDealer(p => ({ ...p, hp: newHp }));
+            let newHp = Math.max(0, dealer.hp - damage);
+            const hasTotem = dealer.items.includes('TOTEM');
 
-            if (newHp <= 0) {
-                if (gameState.isHardMode && handleHardModeRoundEnd) {
-                    addLog('ROUND WON', 'safe');
-                    handleHardModeRoundEnd('PLAYER');
-                    setIsProcessing(false);
-                    return;
-                }
-                if (gameState.isMultiplayer && handleMPRoundEnd) {
-                    addLog('ROUND WON', 'safe');
-                    handleMPRoundEnd('PLAYER');
-                    setIsProcessing(false);
-                    return;
-                }
-                setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
-                if (matchStats?.current) matchStats.current.result = 'WIN';
-                gameOver = true;
-                addLog(`${opponentName.toUpperCase()} ELIMINATED.`, 'safe');
-            } else {
+            if (newHp <= 0 && hasTotem) {
+                newHp = 1;
+                setDealer(d => {
+                    const idx = d.items.indexOf('TOTEM');
+                    const newItems = [...d.items];
+                    if (idx !== -1) newItems.splice(idx, 1);
+                    return { ...d, hp: 1, items: newItems };
+                });
+
+                // Trigger Totem VFX & SFX
+                setOverlayText('✨ TOTEM ACTIVATED ✨\nDealer survives at 1 HP!');
+                setAnim(prev => ({
+                    ...prev,
+                    triggerTotem: (prev.triggerTotem || 0) + 1,
+                    totemTarget: 'DEALER'
+                }));
+                audioManager.playSound('totem');
+                addLog("DEALER'S TOTEM ACTIVATED: Survived lethal damage at 1 HP!", 'safe');
+
+                // Wait for Totem animation
+                await wait(3000);
+                setOverlayText(null);
+
+                // Hurt and recovery
                 setOverlayColor('green');
-                setAnim(prev => ({ ...prev, dealerHit: true, dealerDropping: true }));
-                await wait(1200);
-                setAnim(prev => ({ ...prev, dealerHit: false, dealerRecovering: true }));
-                await wait(1200);
-                setAnim(prev => ({ ...prev, dealerDropping: false }));
-                await wait(1000);
+                setAnim(prev => ({ ...prev, dealerHit: false, dealerRecovering: true, dealerDropping: false }));
+                await wait(2200);
                 setAnim(prev => ({ ...prev, dealerRecovering: false }));
                 setOverlayColor('none');
+            } else {
+                setDealer(d => ({ ...d, hp: newHp }));
+
+                if (newHp <= 0) {
+                    if (gameState.isHardMode && handleHardModeRoundEnd) {
+                        addLog('ROUND WON', 'safe');
+                        handleHardModeRoundEnd('PLAYER');
+                        setIsProcessing(false);
+                        return;
+                    }
+                    if (gameState.isMultiplayer && handleMPRoundEnd) {
+                        addLog('ROUND WON', 'safe');
+                        handleMPRoundEnd('PLAYER');
+                        setIsProcessing(false);
+                        return;
+                    }
+                    setGameState(prev => ({ ...prev, winner: 'PLAYER', phase: 'GAME_OVER' }));
+                    if (matchStats?.current) matchStats.current.result = 'WIN';
+                    gameOver = true;
+                    addLog(`${opponentName.toUpperCase()} ELIMINATED.`, 'safe');
+                } else {
+                    setOverlayColor('green');
+                    setAnim(prev => ({ ...prev, dealerHit: true, dealerDropping: true }));
+                    await wait(1200);
+                    setAnim(prev => ({ ...prev, dealerHit: false, dealerRecovering: true }));
+                    await wait(1200);
+                    setAnim(prev => ({ ...prev, dealerDropping: false }));
+                    await wait(1000);
+                    setAnim(prev => ({ ...prev, dealerRecovering: false }));
+                    setOverlayColor('none');
+                }
             }
         }
     }
@@ -383,6 +477,11 @@ export const performShot = async (
     // Original code: setCameraView(nextOwner === 'PLAYER' ? 'PLAYER' : 'PLAYER'); 
     // Yes, originally it forced PLAYER view even if dealer turn, maybe because DealerAI handles view switching? 
     // Or maybe it's a bug/feature. I'll keep it as is.
+
+    if (turnChanged) {
+        if (shooter === 'PLAYER') setPlayer(p => ({ ...p, isFlashbanged: false }));
+        else setDealer(d => ({ ...d, isFlashbanged: false }));
+    }
 
     setIsProcessing(false);
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameState, PlayerState, ShellType, ItemType, TurnOwner, AimTarget, CameraView, AnimationState } from '../types';
 import { wait } from '../utils/gameUtils';
+import { MAX_ITEMS } from '../constants';
 
 interface DealerAIProps {
     gameState: GameState;
@@ -130,10 +131,12 @@ export const useDealerAI = ({
 
                     const unknownLiveProb = (visibleLive / (visibleLive + visibleBlank)) || 0;
 
+                    const isFlashbanged = dealerRef.current.isFlashbanged;
                     let itemToUse: ItemType | null = null;
 
-                    // --- HARD MODE LOGIC (GOD TIER) ---
-                    if (gameStateRef.current.isHardMode) {
+                    if (!isFlashbanged) {
+                        // --- HARD MODE LOGIC (GOD TIER) ---
+                        if (gameStateRef.current.isHardMode) {
                         // 0. SUPERNATURAL INTUITION (The Dealer can smell the gunpowder)
                         if (!currentKnown && Math.random() < 0.60) {
                             const actual = chamber[currentIdx];
@@ -204,15 +207,60 @@ export const useDealerAI = ({
                         else if (!currentKnown && dealerRef.current.items.includes('GLASS') && !itemToUse) itemToUse = 'GLASS';
                         else if (dealerRef.current.items.includes('PHONE') && totalRemaining > 1 && !itemToUse) itemToUse = 'PHONE';
 
-                        // 8. THEFT (Adrenaline)
+                        // 8. MIRROR LOGIC
+                        else if (dealerRef.current.items.includes('MIRROR') && !itemToUse) {
+                            const playerUsedItems = (playerRef.current.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
+                            if (playerUsedItems.length > 0) {
+                                let isSmart = false;
+                                for (const pItem of playerUsedItems) {
+                                    if (pItem === 'CIGS' && dealerRef.current.hp < dealerRef.current.maxHp) isSmart = true;
+                                    if (pItem === 'SAW' && currentKnown === 'LIVE') isSmart = true;
+                                    if (pItem === 'CUFFS' && !playerRef.current.isHandcuffed) isSmart = true;
+                                    if (pItem === 'GLASS' && !currentKnown) isSmart = true;
+                                    if (pItem === 'INVERTER' && currentKnown === 'BLANK') isSmart = true;
+                                    if (pItem === 'BIG_INVERTER' && totalRemaining >= 3) isSmart = true;
+                                    if (pItem === 'PHONE' && totalRemaining > 1) isSmart = true;
+                                    if (pItem === 'REMOTE' && totalRemaining >= 2) isSmart = true;
+                                    if (pItem === 'CHOKE' && totalRemaining >= 2) isSmart = true;
+                                    if (pItem === 'CONTRACT' && dealerRef.current.hp >= 2 && dealerRef.current.items.length <= 6) isSmart = true;
+                                    if (pItem === 'FLASHBANG' && !playerRef.current.isFlashbanged) isSmart = true;
+                                    if (pItem === 'CRUSHER' && playerRef.current.items.length > 0) isSmart = true;
+                                    if (pItem === 'LUCKYCHARM' || pItem === 'BEER') isSmart = true;
+                                }
+                                if (isSmart) {
+                                    itemToUse = 'MIRROR';
+                                }
+                            }
+                        }
+
+                        // 9. THEFT (Adrenaline)
                         else if (dealerRef.current.items.includes('ADRENALINE') && playerRef.current.items.length > 0 && !itemToUse) {
-                            const targets = ['SAW', 'INVERTER', 'CUFFS', 'CHOKE', 'REMOTE', 'CIGS'];
+                            const targets = ['SAW', 'INVERTER', 'CUFFS', 'MIRROR', 'CHOKE', 'REMOTE', 'CIGS'];
                             if (playerRef.current.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
                         }
 
                         // 9. BEER / CYCLE
                         else if (dealerRef.current.items.includes('BEER') && !itemToUse) {
                             if (currentKnown === 'BLANK' || unknownLiveProb < 0.4) itemToUse = 'BEER';
+                        }
+
+                        // 10. LUCKY CHARM
+                        else if (dealerRef.current.items.includes('LUCKYCHARM') && !itemToUse) {
+                            itemToUse = 'LUCKYCHARM';
+                        }
+                        // 11. FLASHBANG (Hard Mode Strategy)
+                        else if (dealerRef.current.items.includes('FLASHBANG') && !playerRef.current.isFlashbanged && !itemToUse) {
+                            const playerHasThreat = playerRef.current.items.some(i => ['SAW', 'CUFFS', 'CHOKE', 'ADRENALINE', 'CONTRACT', 'TOTEM'].includes(i));
+                            if (playerHasThreat || Math.random() < 0.4) {
+                                itemToUse = 'FLASHBANG';
+                            }
+                        }
+                        // 12. CRUSHER (Hard Mode Strategy)
+                        else if (dealerRef.current.items.includes('CRUSHER') && playerRef.current.items.length > 0 && !itemToUse) {
+                            const playerHasThreat = playerRef.current.items.some(i => ['SAW', 'CUFFS', 'CHOKE', 'ADRENALINE', 'CONTRACT', 'BIG_INVERTER', 'FLASHBANG', 'TOTEM'].includes(i));
+                            if (playerHasThreat || Math.random() < 0.6) {
+                                itemToUse = 'CRUSHER';
+                            }
                         }
                     }
                     else {
@@ -224,8 +272,14 @@ export const useDealerAI = ({
                             itemToUse = 'CONTRACT';
                         }
                         else if (dealerRef.current.items.includes('ADRENALINE') && playerRef.current.items.length > 0 && !itemToUse && Math.random() > 0.2) {
-                            const threats = ['SAW', 'CUFFS', 'INVERTER', 'CHOKE', 'CIGS'];
+                            const threats = ['SAW', 'CUFFS', 'INVERTER', 'CHOKE', 'CIGS', 'MIRROR'];
                             if (playerRef.current.items.some(i => threats.includes(i))) itemToUse = 'ADRENALINE';
+                        }
+                        else if (dealerRef.current.items.includes('MIRROR') && !itemToUse && Math.random() > 0.3) {
+                            const playerUsedItems = (playerRef.current.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
+                            if (playerUsedItems.length > 0) {
+                                itemToUse = 'MIRROR';
+                            }
                         }
                         else if (dealerRef.current.items.includes('INVERTER') && !itemToUse && currentKnown === 'BLANK') {
                             itemToUse = 'INVERTER';
@@ -257,7 +311,19 @@ export const useDealerAI = ({
                         else if (dealerRef.current.items.includes('CHOKE') && !dealerRef.current.isChokeActive && !itemToUse && totalRemaining >= 2) {
                             if (Math.random() < 0.5) itemToUse = 'CHOKE';
                         }
+                        else if (dealerRef.current.items.includes('LUCKYCHARM') && !itemToUse) {
+                            itemToUse = 'LUCKYCHARM';
+                        }
+                        // 11. FLASHBANG (Normal Mode Strategy)
+                        else if (dealerRef.current.items.includes('FLASHBANG') && !playerRef.current.isFlashbanged && !itemToUse && Math.random() > 0.3) {
+                            itemToUse = 'FLASHBANG';
+                        }
+                        // 12. CRUSHER (Normal Mode Strategy)
+                        else if (dealerRef.current.items.includes('CRUSHER') && playerRef.current.items.length > 0 && !itemToUse && Math.random() > 0.4) {
+                            itemToUse = 'CRUSHER';
+                        }
                     }
+                    } // End of if (!isFlashbanged)
 
                     // --- EXECUTION ---
                     if (itemToUse) {
@@ -288,55 +354,65 @@ export const useDealerAI = ({
                                 await processItemEffectRef.current('DEALER', 'ADRENALINE');
                                 await wait(1500);
 
-                                // Simulate Steal
-                                let stealIdx = -1;
-                                const priorities: ItemType[] = gameStateRef.current.isHardMode
-                                    ? ['SAW', 'INVERTER', 'CUFFS', 'CHOKE', 'REMOTE', 'CIGS', 'PHONE', 'GLASS', 'BEER', 'CONTRACT']
-                                    : ['SAW', 'INVERTER', 'CUFFS', 'CHOKE', 'CIGS', 'PHONE', 'GLASS', 'BEER', 'REMOTE', 'CONTRACT'];
+                                 // Simulate Steal
+                                 let stealIdx = -1;
+                                 const priorities: ItemType[] = gameStateRef.current.isHardMode
+                                     ? ['SAW', 'INVERTER', 'CUFFS', 'MIRROR', 'CHOKE', 'REMOTE', 'CIGS', 'PHONE', 'GLASS', 'BEER', 'CONTRACT']
+                                     : ['SAW', 'INVERTER', 'CUFFS', 'MIRROR', 'CHOKE', 'CIGS', 'PHONE', 'GLASS', 'BEER', 'REMOTE', 'CONTRACT'];
 
-                                let activePriorities = priorities;
-                                if (dealerRef.current.hp < 2) activePriorities = ['CIGS', 'ADRENALINE', ...priorities];
+                                 const activePriorities = (dealerRef.current.hp < 2 
+                                     ? ['CIGS', ...priorities] 
+                                     : priorities
+                                 ).filter(i => i !== 'TOTEM' && i !== 'ADRENALINE');
 
-                                for (const pItem of activePriorities) {
-                                    const pIdx = playerRef.current.items.indexOf(pItem as ItemType);
-                                    if (pIdx !== -1) {
-                                        stealIdx = pIdx;
-                                        break;
-                                    }
-                                }
-                                if (stealIdx === -1 && playerRef.current.items.length > 0) stealIdx = 0;
+                                 for (const pItem of activePriorities) {
+                                     const pIdx = playerRef.current.items.indexOf(pItem as ItemType);
+                                     if (pIdx !== -1) {
+                                         stealIdx = pIdx;
+                                         break;
+                                     }
+                                 }
+                                 if (stealIdx === -1 && playerRef.current.items.length > 0) {
+                                     stealIdx = playerRef.current.items.findIndex(i => i !== 'TOTEM' && i !== 'ADRENALINE');
+                                 }
 
-                                if (stealIdx !== -1) {
-                                    const stolen = playerRef.current.items[stealIdx];
-                                    setPlayer(p => {
-                                        const ni = [...p.items];
-                                        ni.splice(stealIdx, 1);
-                                        return { ...p, items: ni };
-                                    });
-                                    if (setOverlayText) {
-                                        setOverlayText(`DEALER STOLE ${stolen}`);
-                                        setTimeout(() => setOverlayText?.(null), 1500);
-                                    }
-                                    await wait(1000);
+                                 if (stealIdx !== -1) {
+                                     const stolen = playerRef.current.items[stealIdx];
+                                     setPlayer(p => {
+                                         const ni = [...p.items];
+                                         ni.splice(stealIdx, 1);
+                                         return { ...p, items: ni };
+                                     });
+                                     if (setOverlayText) {
+                                         setOverlayText(`DEALER STOLE ${stolen}`);
+                                         setTimeout(() => setOverlayText?.(null), 1500);
+                                     }
+                                     await wait(1000);
 
-                                    if (stolen === 'ADRENALINE') {
-                                        setDealer(d => ({ ...d, items: [...d.items, 'ADRENALINE'] }));
-                                    } else if (stolen === 'CONTRACT' && dealerRef.current.hp <= 1) {
-                                        // Safety check: Stash stolen CONTRACT instead of using it and self-eliminating
-                                        setDealer(d => ({ ...d, items: [...d.items, 'CONTRACT'] }));
-                                        if (setOverlayText) {
-                                            setOverlayText("DEALER STOLE CONTRACT (STASHED)");
-                                            setTimeout(() => setOverlayText?.(null), 1500);
-                                        }
-                                    } else {
-                                        if (stolen === 'GLASS') aiMemory.current.set(currentIdx, chamber[currentIdx]);
-                                        if (stolen === 'INVERTER') {
-                                            const actual = chamber[currentIdx];
-                                            aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
-                                        }
-                                        await processItemEffectRef.current('DEALER', stolen);
-                                    }
-                                } else {
+                                     if (stolen === 'ADRENALINE') {
+                                         setDealer(d => ({ ...d, items: [...d.items, 'ADRENALINE'] }));
+                                     } else if (stolen === 'TOTEM') {
+                                         setDealer(d => ({ ...d, items: [...d.items, 'TOTEM'].slice(0, MAX_ITEMS) as ItemType[] }));
+                                         if (setOverlayText) {
+                                             setOverlayText("DEALER STOLE TOTEM (STASHED)");
+                                             setTimeout(() => setOverlayText?.(null), 1500);
+                                         }
+                                     } else if (stolen === 'CONTRACT' && dealerRef.current.hp <= 1) {
+                                         // Safety check: Stash stolen CONTRACT instead of using it and self-eliminating
+                                         setDealer(d => ({ ...d, items: [...d.items, 'CONTRACT'] }));
+                                         if (setOverlayText) {
+                                             setOverlayText("DEALER STOLE CONTRACT (STASHED)");
+                                             setTimeout(() => setOverlayText?.(null), 1500);
+                                         }
+                                     } else {
+                                         if (stolen === 'GLASS') aiMemory.current.set(currentIdx, chamber[currentIdx]);
+                                         if (stolen === 'INVERTER') {
+                                             const actual = chamber[currentIdx];
+                                             aiMemory.current.set(currentIdx, actual === 'LIVE' ? 'BLANK' : 'LIVE');
+                                         }
+                                         await processItemEffectRef.current('DEALER', stolen);
+                                     }}
+                                else {
                                     if (setOverlayText) {
                                         setOverlayText("NOTHING TO STEAL");
                                         setTimeout(() => setOverlayText?.(null), 1000);

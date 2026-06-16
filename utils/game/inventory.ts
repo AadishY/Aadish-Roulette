@@ -20,29 +20,38 @@ const getRandomItem = (isHardMode: boolean = false, isDealer: boolean = false): 
 
     if (isHardMode) {
         // Hard Mode Distribution
-        if (r < 18) return 'BEER';
-        if (r < 23) return 'CIGS';
-        if (r < 33) return 'GLASS';
-        if (r < 43) return 'CUFFS';
-        if (r < 59) return 'PHONE';
-        if (r < 69) return 'SAW';
-        if (r < 78) return 'INVERTER';
-        if (r < 87) return 'ADRENALINE';
-        if (r < 91) return 'CHOKE';
-        if (r < 95) return 'BIG_INVERTER';
-        return 'ADRENALINE'; // Fallback
+        if (r < 15) return 'BEER';
+        if (r < 19) return 'CIGS';
+        if (r < 27) return 'GLASS';
+        if (r < 36) return 'CUFFS';
+        if (r < 45) return 'PHONE';
+        if (r < 55) return 'SAW';
+        if (r < 64) return 'INVERTER';
+        if (r < 73) return 'ADRENALINE';
+        if (r < 78) return 'CHOKE';
+        if (r < 83) return 'BIG_INVERTER';
+        if (r < 87) return 'LUCKYCHARM';
+        if (r < 91) return 'FLASHBANG';
+        if (r < 94) return 'CRUSHER';
+        if (r < 97) return 'MIRROR';
+        return 'TOTEM'; // Fallback / remaining 3%
     } else {
         // Normal Mode Distribution
-        if (r < 15) return 'BEER';
-        if (r < 28) return 'CIGS';
-        if (r < 38) return 'GLASS';
-        if (r < 48) return 'CUFFS';
-        if (r < 60) return 'PHONE';
-        if (r < 70) return 'SAW';
-        if (r < 80) return 'INVERTER';
-        if (r < 88) return 'ADRENALINE';
-        if (r < 94) return 'CHOKE';
-        return 'BIG_INVERTER';
+        if (r < 11) return 'BEER';
+        if (r < 22) return 'CIGS';
+        if (r < 30) return 'GLASS';
+        if (r < 39) return 'CUFFS';
+        if (r < 49) return 'PHONE';
+        if (r < 58) return 'SAW';
+        if (r < 67) return 'INVERTER';
+        if (r < 75) return 'ADRENALINE';
+        if (r < 80) return 'CHOKE';
+        if (r < 85) return 'BIG_INVERTER';
+        if (r < 89) return 'LUCKYCHARM';
+        if (r < 93) return 'FLASHBANG';
+        if (r < 95) return 'CRUSHER';
+        if (r < 97) return 'MIRROR';
+        return 'TOTEM'; // Fallback / remaining 3%
     }
 };
 
@@ -55,8 +64,9 @@ const getDealerCheatingItem = (hp: number): ItemType => {
     // He wants to SURVIVE.
     // Contract is suicide here, avoid it.
     if (hp <= 2) {
-        if (r < 0.40) return 'CIGS';        // 40% Heal
-        if (r < 0.60) return 'BEER';        // 20% Skip current shell
+        if (r < 0.30) return 'CIGS';        // 30% Heal
+        if (r < 0.45) return 'BEER';        // 15% Skip current shell
+        if (r < 0.60) return 'TOTEM';       // 15% Survive lethal
         if (r < 0.70) return 'ADRENALINE';  // 10% Steal Cigs
         if (r < 0.80) return 'CUFFS';       // 10% Stop player
         if (r < 0.90) return 'SAW';         // 10% Desperation Damage
@@ -107,7 +117,10 @@ export const generateLootBatch = (
     isHardMode: boolean, 
     forDealer: boolean, 
     dealerHp: number,
-    existingItems: ItemType[] = []
+    existingItems: ItemType[] = [],
+    luckycharmsUsed: number = 0,
+    userHp: number = 4,
+    userMaxHp: number = 4
 ): ItemType[] => {
     const batch: ItemType[] = [];
     const counts: Record<string, number> = {};
@@ -120,7 +133,30 @@ export const generateLootBatch = (
         do {
             let candidate: ItemType;
 
-            if (forDealer && isHardMode) {
+            const isCharmed = luckycharmsUsed > 0 && Math.random() < (1 - Math.pow(0.4, luckycharmsUsed));
+
+            if (isCharmed) {
+                // Determine curated needed items pool based on HP
+                if (userHp <= 2) {
+                    // Critical health: Cigs (45% weight), Cuffs (25%), Glass (15%), Inverter (15%)
+                    const roll = Math.random() * 100;
+                    if (roll < 45) candidate = 'CIGS';
+                    else if (roll < 70) candidate = 'CUFFS';
+                    else if (roll < 85) candidate = 'GLASS';
+                    else candidate = 'INVERTER';
+                } else {
+                    // High health: Saw (35% weight), Choke (25%), Contract (15%), Inverter (15%), Glass (10%)
+                    const roll = Math.random() * 100;
+                    if (roll < 35) candidate = 'SAW';
+                    else if (roll < 60) candidate = 'CHOKE';
+                    else if (roll < 75) {
+                        // Prevent dealer from getting Contract
+                        candidate = forDealer ? 'SAW' : 'CONTRACT';
+                    }
+                    else if (roll < 90) candidate = 'INVERTER';
+                    else candidate = 'GLASS';
+                }
+            } else if (forDealer && isHardMode) {
                 // CHEATING LOGIC FOR DEALER IN HARD MODE
                 candidate = getDealerCheatingItem(dealerHp);
             } else {
@@ -128,12 +164,18 @@ export const generateLootBatch = (
                 candidate = getRandomItem(isHardMode, forDealer);
             }
 
+            if (candidate === 'TOTEM' && (existingItems.includes('TOTEM') || batch.includes('TOTEM'))) {
+                tries++;
+                continue; // Skip this candidate and try again
+            }
+
             const currentCount = counts[candidate] || 0;
             const inventoryCount = existingItems.filter(x => x === candidate).length;
 
             // Probabilistic penalty: if already in batch or existing inventory, 80% chance to reroll
+            // Bypassed for Charmed items to guarantee needed drops.
             const isDuplicate = currentCount > 0 || inventoryCount > 0;
-            if (isDuplicate && Math.random() < 0.80 && tries < 20) {
+            if (!isCharmed && isDuplicate && Math.random() < 0.80 && tries < 20) {
                 tries++;
                 continue;
             }
@@ -145,9 +187,14 @@ export const generateLootBatch = (
         } while (!item && tries < 25);
 
         // Fallback if random keeps giving same item
-        if (!item) {
-            if (forDealer && isHardMode) item = getDealerCheatingItem(dealerHp);
-            else item = getRandomItem(isHardMode, forDealer);
+        if (!item || (item === 'TOTEM' && (existingItems.includes('TOTEM') || batch.includes('TOTEM')))) {
+            let fbTries = 0;
+            do {
+                if (forDealer && isHardMode) item = getDealerCheatingItem(dealerHp);
+                else item = getRandomItem(isHardMode, forDealer);
+                fbTries++;
+            } while (item === 'TOTEM' && fbTries < 20);
+            if (item === 'TOTEM') item = 'BEER'; // absolute fallback
         }
 
         batch.push(item);
@@ -168,7 +215,12 @@ export const distributeItems = async (
     pItemsOverride?: ItemType[],
     dItemsOverride?: ItemType[],
     playerItems: ItemType[] = [],
-    dealerItems: ItemType[] = []
+    dealerItems: ItemType[] = [],
+    playerLuckycharms: number = 0,
+    dealerLuckycharms: number = 0,
+    playerHp: number = 4,
+    playerMaxHp: number = 4,
+    dealerMaxHp: number = 4
 ) => {
     // If forceClear, ensure items are cleared FIRST before anything else
     if (forceClear) {
@@ -198,7 +250,11 @@ export const distributeItems = async (
     }
 
     const generateLoot = (forDealer: boolean, currentItems: ItemType[]) => {
-        return generateLootBatch(amount, gameState.isHardMode, forDealer, dealerHp, currentItems);
+        if (forDealer) {
+            return generateLootBatch(amount, gameState.isHardMode, true, dealerHp, currentItems, dealerLuckycharms, dealerHp, dealerMaxHp);
+        } else {
+            return generateLootBatch(amount, gameState.isHardMode, false, dealerHp, currentItems, playerLuckycharms, playerHp, playerMaxHp);
+        }
     };
 
     // Generate loot pools separately
@@ -224,11 +280,11 @@ export const distributeItems = async (
     // Apply items to inventories - player gets pNew, dealer gets dNew
     setPlayer(p => {
         const baseItems = forceClear ? [] : p.items;
-        return { ...p, items: [...baseItems, ...pNew].slice(0, MAX_ITEMS) };
+        return { ...p, items: [...baseItems, ...pNew].slice(0, MAX_ITEMS), luckycharmsUsed: 0 };
     });
     setDealer(d => {
         const baseItems = forceClear ? [] : d.items;
-        return { ...d, items: [...baseItems, ...dNew].slice(0, MAX_ITEMS) };
+        return { ...d, items: [...baseItems, ...dNew].slice(0, MAX_ITEMS), luckycharmsUsed: 0 };
     });
 
     // Clean up overlay

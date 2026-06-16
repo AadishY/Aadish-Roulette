@@ -34,6 +34,9 @@ export const useGameLogic = () => {
     items: [],
     isHandcuffed: false,
     isSawedActive: false,
+    luckycharmsUsed: 0,
+    lastTurnItemsUsed: [],
+    currentTurnItemsUsed: [],
   });
 
   const [dealer, setDealer] = useState<PlayerState>({
@@ -42,11 +45,15 @@ export const useGameLogic = () => {
     items: [],
     isHandcuffed: false,
     isSawedActive: false,
+    luckycharmsUsed: 0,
+    lastTurnItemsUsed: [],
+    currentTurnItemsUsed: [],
   });
 
   const gameStateRef = useRef(gameState);
   const playerRef = useRef(player);
   const dealerRef = useRef(dealer);
+  const prevTurnOwnerRef = useRef<TurnOwner>(gameState.turnOwner);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -59,6 +66,33 @@ export const useGameLogic = () => {
   useEffect(() => {
     dealerRef.current = dealer;
   }, [dealer]);
+
+  useEffect(() => {
+    if (gameState.phase === 'LOAD' || gameState.phase === 'LOOTING' || gameState.phase === 'GAME_OVER') {
+      setPlayer(p => ({ ...p, lastTurnItemsUsed: [], currentTurnItemsUsed: [] }));
+      setDealer(d => ({ ...d, lastTurnItemsUsed: [], currentTurnItemsUsed: [] }));
+      prevTurnOwnerRef.current = gameState.turnOwner;
+      return;
+    }
+
+    if (gameState.turnOwner !== prevTurnOwnerRef.current) {
+      const prevOwner = prevTurnOwnerRef.current;
+      if (prevOwner === 'PLAYER') {
+        setPlayer(p => ({
+          ...p,
+          lastTurnItemsUsed: p.currentTurnItemsUsed || [],
+          currentTurnItemsUsed: []
+        }));
+      } else {
+        setDealer(d => ({
+          ...d,
+          lastTurnItemsUsed: d.currentTurnItemsUsed || [],
+          currentTurnItemsUsed: []
+        }));
+      }
+      prevTurnOwnerRef.current = gameState.turnOwner;
+    }
+  }, [gameState.turnOwner, gameState.phase]);
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [knownShell, setKnownShell] = useState<ShellType | null>(null);
@@ -92,6 +126,12 @@ export const useGameLogic = () => {
     triggerRemote: 0,
     triggerBigInverter: 0,
     triggerContract: 0,
+    triggerLuckycharm: 0,
+    triggerFlashbang: 0,
+    triggerCrusher: 0,
+    triggerTotem: 0,
+    triggerMirror: 0,
+    totemTarget: null,
     isSawing: false,
     ejectedShellColor: 'red',
     muzzleFlashIntensity: 0,
@@ -119,6 +159,7 @@ export const useGameLogic = () => {
   const [overlayText, setOverlayText] = useState<string | null>(null);
   const [showBlood, setShowBlood] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
+  const [showFlashbang, setShowFlashbang] = useState(false);
 
   const [receivedItems, setReceivedItems] = useState<ItemType[]>([]);
   const [showLootOverlay, setShowLootOverlay] = useState(false);
@@ -170,15 +211,15 @@ export const useGameLogic = () => {
       isHardMode: false, // Reset to normal on full reset
       hardModeState: undefined
     });
-    setPlayer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false });
-    setDealer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false });
+    setPlayer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
+    setDealer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
     setLogs([]);
     setKnownShell(null);
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
       dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
-      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0, triggerLuckycharm: 0, triggerTotem: 0, triggerMirror: 0, totemTarget: null
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -218,15 +259,15 @@ export const useGameLogic = () => {
     // HP from override or settings
     const initialHp = hpOverride || (mpSettings?.hp) || 2;
 
-    setPlayer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false });
-    setDealer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false });
+    setPlayer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
+    setDealer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
     setLogs([]);
     setKnownShell(null);
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
       dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
-      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0, triggerLuckycharm: 0, triggerTotem: 0, triggerMirror: 0, totemTarget: null
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -352,12 +393,12 @@ export const useGameLogic = () => {
 
     // Reset HP only if it's a NEW Stage (resetItems=true usually implies new stage in this logic flow)
     if (resetItems) {
-      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp }));
-      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp }));
+      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp, luckycharmsUsed: 0, isFlashbanged: false }));
+      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp, luckycharmsUsed: 0, isFlashbanged: false }));
     } else {
       // Just reset status effects
-      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, isChokeActive: false }));
-      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, isChokeActive: false }));
+      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, isChokeActive: false, isFlashbanged: false }));
+      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, isChokeActive: false, isFlashbanged: false }));
     }
 
     setIsProcessing(true);
@@ -407,7 +448,12 @@ export const useGameLogic = () => {
       resetItems, effectiveState, setPlayer, setDealer, setGameState,
       setReceivedItems, setShowLootOverlay, dealerRef.current.hp,
       pItemsOverride, dItemsOverride,
-      player.items, dealer.items
+      player.items, dealer.items,
+      playerRef.current.luckycharmsUsed || 0,
+      dealerRef.current.luckycharmsUsed || 0,
+      playerRef.current.hp,
+      playerRef.current.maxHp,
+      dealerRef.current.maxHp
     );
 
     const nextTurn = turnOwnerOverride || 'PLAYER';
@@ -537,7 +583,12 @@ export const useGameLogic = () => {
       forceClear, gameStateRef.current, setPlayer, setDealer, setGameState,
       setReceivedItems, setShowLootOverlay, dealerRef.current.hp,
       undefined, undefined,
-      player.items, dealer.items
+      player.items, dealer.items,
+      playerRef.current.luckycharmsUsed || 0,
+      dealerRef.current.luckycharmsUsed || 0,
+      playerRef.current.hp,
+      playerRef.current.maxHp,
+      dealerRef.current.maxHp
     );
   };
 
@@ -640,6 +691,15 @@ export const useGameLogic = () => {
     // Track Item Usage
     if (user === 'PLAYER') {
       matchStatsRef.current.itemsUsed[item] = (matchStatsRef.current.itemsUsed[item] || 0) + 1;
+      setPlayer(p => ({
+        ...p,
+        currentTurnItemsUsed: [...(p.currentTurnItemsUsed || []), item]
+      }));
+    } else {
+      setDealer(d => ({
+        ...d,
+        currentTurnItemsUsed: [...(d.currentTurnItemsUsed || []), item]
+      }));
     }
 
     let roundEnded = false;
@@ -733,11 +793,79 @@ export const useGameLogic = () => {
 
       case 'CONTRACT':
         await ItemActions.handleContract(
-          user, setPlayer, setDealer,
+          user, player, dealer, setPlayer, setDealer, setGameState, setAnim,
           (v) => setAnim(p => ({ ...p, triggerContract: typeof v === 'function' ? v(p.triggerContract) : v })),
-          addLog, setOverlayText, setOverlayColor
+          addLog, setOverlayText, setOverlayColor,
+          gameState.isHardMode, gameState.isMultiplayer,
+          handleHardModeRoundEnd, handleMPRoundEnd
         );
         break;
+
+      case 'LUCKYCHARM':
+        await ItemActions.handleLuckycharm(
+          user, setPlayer, setDealer,
+          (v) => setAnim(p => ({ ...p, triggerLuckycharm: typeof v === 'function' ? v(p.triggerLuckycharm) : v })),
+          addLog, setOverlayText
+        );
+        break;
+
+      case 'FLASHBANG':
+        await ItemActions.handleFlashbang(
+          user, setPlayer, setDealer,
+          (v) => setAnim(p => ({ ...p, triggerFlashbang: typeof v === 'function' ? v(p.triggerFlashbang) : v })),
+          addLog, setOverlayText, setShowFlashbang
+        );
+        break;
+
+      case 'CRUSHER':
+        await ItemActions.handleCrusher(
+          user, player, dealer, setPlayer, setDealer,
+          (v) => setAnim(p => ({ ...p, triggerCrusher: typeof v === 'function' ? v(p.triggerCrusher) : v })),
+          addLog, setOverlayText
+        );
+        break;
+
+      case 'MIRROR': {
+        audioManager.playSound('mirror');
+        setAnim(p => ({ ...p, triggerMirror: p.triggerMirror + 1 }));
+
+        const opponentState = user === 'PLAYER' ? dealerRef.current : playerRef.current;
+        const copiedItems = (opponentState.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
+        
+        if (copiedItems.length === 0) {
+          addLog(`${userName} COPIED NO EFFECTS WITH MIRROR`, 'info');
+          setOverlayText("🪞 MIRROR: NO EFFECTS TO COPY");
+          await wait(2000);
+          setOverlayText(null);
+        } else {
+          const getFriendlyName = (i: ItemType): string => {
+            const names: Record<ItemType, string> = {
+              'BEER': 'Beer', 'CIGS': 'Cigarettes', 'GLASS': 'Magnifying Glass', 'CUFFS': 'Handcuffs',
+              'SAW': 'Hand Saw', 'PHONE': 'Burner Phone', 'INVERTER': 'Polarity Inverter',
+              'ADRENALINE': 'Adrenaline', 'CHOKE': 'Choke Mod', 'REMOTE': 'Remote Control',
+              'BIG_INVERTER': 'Big Inverter', 'CONTRACT': 'Blood Contract', 'LUCKYCHARM': 'Lucky Charm',
+              'FLASHBANG': 'Flashbang', 'CRUSHER': 'Item Crusher', 'TOTEM': 'Totem of Undying',
+              'MIRROR': 'Mirror'
+            };
+            return names[i] || i;
+          };
+          const friendlyNames = copiedItems.map(getFriendlyName).join(' & ');
+          addLog(`${userName} MIRROR COPIED: ${friendlyNames}`, 'safe');
+          setOverlayText(`🪞 MIRROR DUPLICATED: ${friendlyNames}!`);
+          await wait(2500);
+          setOverlayText(null);
+
+          for (const copiedItem of copiedItems) {
+            if (gameStateRef.current.phase === 'GAME_OVER') break;
+            const itemEndedRound = await processItemEffect(user, copiedItem);
+            if (itemEndedRound) {
+              roundEnded = true;
+            }
+            await wait(1000);
+          }
+        }
+        break;
+      }
     }
 
     // Final synchronization wait - ensures animation is visually complete before proceeding
@@ -808,6 +936,16 @@ export const useGameLogic = () => {
       return;
     }
 
+    if (itemToSteal === 'TOTEM') {
+      if (stealer === 'PLAYER') {
+        addLog("CAN'T STEAL TOTEM!", 'danger');
+        setOverlayText("❌ CAN'T STEAL TOTEM! PICK ANOTHER");
+        await wait(2000);
+        setOverlayText(null);
+      }
+      return;
+    }
+
     setIsProcessing(true);
 
     const newTargetItems = [...target.items];
@@ -827,7 +965,15 @@ export const useGameLogic = () => {
     }
 
     await wait(100);
-    await processItemEffect(stealer, itemToSteal);
+    if (itemToSteal === 'TOTEM') {
+      setUser(prev => ({ ...prev, items: [...prev.items, 'TOTEM' as ItemType].slice(0, MAX_ITEMS) }));
+      addLog(`${stealerName.toUpperCase()} RECEIVES THE TOTEM OF UNDYING`, 'safe');
+      setOverlayText(`🎯 ${stealerName.toUpperCase()} RECEIVES THE TOTEM!`);
+      await wait(1500);
+      setOverlayText(null);
+    } else {
+      await processItemEffect(stealer, itemToSteal);
+    }
 
     await wait(300);
     setIsProcessing(false);
@@ -848,6 +994,7 @@ export const useGameLogic = () => {
     overlayText,
     showBlood,
     showFlash,
+    showFlashbang,
     receivedItems,
     showLootOverlay,
     isProcessing,

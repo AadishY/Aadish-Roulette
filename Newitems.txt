@@ -1,7 +1,41 @@
-1. Luckycharm- Improve probablity of receiving good items that you actually needed in next shipment
-2. JAckpot- Make you immnue to next 3 bullets (still count if bullet is shooted by you or dealer or they are blank)
-3. Silencer. Function: Attaches to the barrel for one shot. If you shoot the opponent and it turns out to be a Blank, you do not lose your turn.
-4. Crusher- destory 1 random item from others inventory
-5. Clone- Copy all items effect use by the dealer on its previous turn
-6. Freeze/Flashbang — Prevents the opponent from using an item on their next turn.
-7. totem- Survive at 1 hp only if damage is of 1hp but items like choke and saw which can trigger 2hp damage will not help and you will die
+Jackpot- Make you immune to next 3 bullets (still count if bullet is shooted by you or dealer or they are blank) like if bullet is shooted by you or by dealer  at yourself it will count, if player shoot it toward dealer not count, if deealer shoot it to himself then no count
+This item is exclusive to player dealer cant steal it or get through shipment
+Saw choke all have no effect, blood contract will -1 health
+there will be 3 mode
+1- Jackpot
+20% chance 3shot immune
+2- Normal Win
+1 shot immune 20% chance
+3- NO win
+Nothing 60%chance
+
+for model create a proper jackpot machine , emerge from table just like other items spin there will be emoji like apple diamond, etc 
+Display A message you win jackpot, normal. lose
+Display  proper message of 3 shot immune or 1 shot immune
+next when you are hitted with  live shot then  -1health then show a message Reverse Cursed Techine again heal that health
+Properly do this even when health is 1 and live shot make it 0
+add a overlay below health bar showing how many shots left before immuninty goes back
+
+
+
+8. DeckCard- Pick a card from 6. Create a proper 6 card model and choosing 1 from it for both player and dealer, all card fom behind should look same after pcikup it should reveal itslef having same face in both side and reveal in centre so that during dealer turn player can also see the card,
+add proper icon and animation with descption and dealer logic
+Sound i will be same for all picking card,
+display proper message which card is picked and whats its power
+it can have these power with these faces
+The Magician Gain random item,
+The Hanged Man Loose 1 health,
+he Hermit skip your turn,
+The Moon grab and item form dealer,
+Judgment increase probability of shoot to be live,
+Wheel of Fortune reshuffle ammo,
+The Sun gain 1 health,
+Death destroy 1 random item from your inventory,
+The Tower destroy 1 random item from dealer.
+The Fool Life Swap Grab phone (here phone can be used even 1 bullet is remaining, but lie prbablity increase if bullet is more than 3 no lie, if 2 bullet is there then 10%chance of lie, if 1 is there then 25%of lie).
+Justice : Instantly swaps your current HP total with the Dealer's HP total. If you are sitting at 1 HP and the Dealer has 4 HP
+
+create those face card design according to above names properly
+select 6 power randomly from above and give user to choose fromit without showing
+
+
