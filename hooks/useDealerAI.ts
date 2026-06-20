@@ -69,6 +69,19 @@ const evaluateCardForDealer = (
             if (dealerHp > playerHp) return -8;
             return 0;
 
+        case 'Temperance': {
+            // Swap items — excellent if player has more items than dealer or better items
+            const dealerCount = dealer.items.length;
+            const playerCount = player.items.length;
+            if (playerCount > dealerCount) return 8;
+            if (playerCount < dealerCount) return -5;
+            const playerHighValue = player.items.filter(i => ['SAW', 'CUFFS', 'TOTEM', 'CONTRACT', 'FLASHBANG'].includes(i)).length;
+            const dealerHighValue = dealer.items.filter(i => ['SAW', 'CUFFS', 'TOTEM', 'CONTRACT', 'FLASHBANG'].includes(i)).length;
+            if (playerHighValue > dealerHighValue) return 6;
+            if (playerHighValue < dealerHighValue) return -3;
+            return 0;
+        }
+
         default:
             return 0;
     }
@@ -232,7 +245,7 @@ export const useDealerAI = ({
                         aiMemory.current.set(currentIdx, knownShellRef.current);
                     }
 
-                    let currentKnown = aiMemory.current.get(currentIdx);
+                    let currentKnown: any = aiMemory.current.get(currentIdx);
 
                     // Count what IS known in memory ahead
                     let knownLiveDelta = 0;
@@ -247,202 +260,227 @@ export const useDealerAI = ({
                     let itemToUse: ItemType | null = null;
 
                     if (!isFlashbanged) {
-                        // --- HARD MODE LOGIC (GOD TIER) ---
-                        if (gameStateRef.current.isHardMode) {
-                        // 0. SUPERNATURAL INTUITION (The Dealer can smell the gunpowder)
-                        if (!currentKnown && Math.random() < 0.60) {
-                            const actual = chamber[currentIdx];
-                            aiMemory.current.set(currentIdx, actual);
-                            currentKnown = actual;
-                        }
-
-                        // 1. SURVIVAL HEAL (Highest Priority)
-                        if (dealerRef.current.hp < dealerRef.current.maxHp && dealerRef.current.items.includes('CIGS')) {
-                            const shouldHeal = dealerRef.current.hp <= 2 || (dealerRef.current.hp < dealerRef.current.maxHp && Math.random() < 0.85);
-                            if (shouldHeal) itemToUse = 'CIGS';
-                        }
-
-                        // 2. SACRIFICE FOR POWER (CONTRACT)
-                        else if (dealerRef.current.hp >= 2 && dealerRef.current.items.length <= 6 && dealerRef.current.items.includes('CONTRACT')) {
-                            itemToUse = 'CONTRACT';
-                        }
-
-                        // 3. KILL CONFIRMATION / BOOSTED DAMAGE (Priority 3)
-                        else if (currentKnown === 'LIVE' && !itemToUse) {
-                            if (dealerRef.current.items.includes('SAW') && !dealerRef.current.isSawedActive) itemToUse = 'SAW';
-                            else if (dealerRef.current.items.includes('CUFFS') && !playerRef.current.isHandcuffed && totalRemaining > 1) itemToUse = 'CUFFS';
-                        }
-                        // Use Cuffs even if shell type is unknown but live probability is decent (>= 50%)
-                        else if (!itemToUse && !currentKnown && unknownLiveProb >= 0.5 && dealerRef.current.items.includes('CUFFS') && !playerRef.current.isHandcuffed && totalRemaining > 1) {
-                            itemToUse = 'CUFFS';
-                        }
-
-                        // 4. CONVERSION (Priority 4)
-                        else if (currentKnown === 'BLANK' && dealerRef.current.items.includes('INVERTER') && !itemToUse) {
-                            itemToUse = 'INVERTER';
-                        }
-                        else if (dealerRef.current.items.includes('BIG_INVERTER') && !itemToUse) {
-                            const remaining = remainingShells.length;
-                            const knownBlanks = remainingShells.filter(s => s === 'BLANK').length;
-                            if (knownBlanks / remaining > 0.5 || (currentKnown === 'BLANK' && remaining >= 2)) {
-                                itemToUse = 'BIG_INVERTER';
+                        // --- NORMAL MODE 10% MISTAKE TRIGGER ---
+                        let skipNormalItems = false;
+                        if (!gameStateRef.current.isHardMode && Math.random() < 0.10) {
+                            // 50% chance to skip items entirely, 50% chance to use a random item
+                            if (Math.random() < 0.5) {
+                                skipNormalItems = true;
+                            } else if (dealerRef.current.items.length > 0) {
+                                const randIdx = Math.floor(Math.random() * dealerRef.current.items.length);
+                                itemToUse = dealerRef.current.items[randIdx];
                             }
                         }
 
-                        // 5. CHAMBER MANIPULATION (Priority 5) - REMOTE
-                        else if (dealerRef.current.items.includes('REMOTE') && totalRemaining >= 2 && !itemToUse) {
-                            const nextKnown = aiMemory.current.get(currentIdx + 1);
-                            if (currentKnown === 'BLANK' && nextKnown === 'LIVE') {
-                                itemToUse = 'REMOTE';
-                            }
-                        }
-
-                        // 6. CHOKE LOGIC
-                        else if (dealerRef.current.items.includes('CHOKE') && !dealerRef.current.isChokeActive && !itemToUse && totalRemaining >= 2) {
-                            const nextKnown = aiMemory.current.get(currentIdx + 1);
-                            const actualNext = chamber[currentIdx + 1];
-
-                            // Supernatural peek for second shell
-                            let shell2 = nextKnown;
-                            if (!shell2 && Math.random() < 0.60) {
-                                  shell2 = actualNext;
-                                  aiMemory.current.set(currentIdx + 1, actualNext);
+                        if (skipNormalItems) {
+                            // Do nothing, itemToUse remains null to skip items this turn
+                        } else if (itemToUse) {
+                            // Keep the random item chosen above
+                        } else if (gameStateRef.current.isHardMode) {
+                            // --- HARD MODE LOGIC (GOD TIER) ---
+                            // 0. SUPERNATURAL INTUITION (The Dealer can smell the gunpowder)
+                            if (!currentKnown && Math.random() < 0.60) {
+                                const actual = chamber[currentIdx];
+                                aiMemory.current.set(currentIdx, actual);
+                                currentKnown = actual;
                             }
 
-                            const shell1 = currentKnown;
-                            if (shell1 === 'LIVE' && shell2 === 'LIVE') itemToUse = 'CHOKE';
-                            else if (shell1 === 'BLANK' && shell2 === 'BLANK' && (dealerRef.current.items.includes('INVERTER') || dealerRef.current.items.includes('BIG_INVERTER'))) itemToUse = 'CHOKE';
-                            else if ((shell1 === 'LIVE' || shell2 === 'LIVE') && dealerRef.current.hp > 1) itemToUse = 'CHOKE';
-                        }
+                            const playerHasActiveTotem = playerRef.current.items.includes('TOTEM') && !playerRef.current.isFlashbanged;
 
-                        else if (!currentKnown && dealerRef.current.items.includes('GLASS') && !itemToUse) itemToUse = 'GLASS';
-                        else if (dealerRef.current.items.includes('PHONE') && totalRemaining > 1 && !itemToUse) itemToUse = 'PHONE';
-                        else if (dealerRef.current.items.includes('DECK_CARD') && !itemToUse) {
-                            if (dealerRef.current.items.length >= 6 || Math.random() < 0.6) {
-                                itemToUse = 'DECK_CARD';
+                            // 1. SURVIVAL HEAL (Highest Priority)
+                            if (dealerRef.current.hp < dealerRef.current.maxHp && dealerRef.current.items.includes('CIGS')) {
+                                const shouldHeal = dealerRef.current.hp <= 2 || (dealerRef.current.hp < dealerRef.current.maxHp && Math.random() < 0.85);
+                                if (shouldHeal) itemToUse = 'CIGS';
                             }
-                        }
-
-                        // 8. MIRROR LOGIC
-                        else if (dealerRef.current.items.includes('MIRROR') && !itemToUse) {
-                            const playerUsedItems = (playerRef.current.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
-                            if (playerUsedItems.length > 0) {
-                                let isSmart = false;
-                                for (const pItem of playerUsedItems) {
-                                    if (pItem === 'CIGS' && dealerRef.current.hp < dealerRef.current.maxHp) isSmart = true;
-                                    if (pItem === 'SAW' && currentKnown === 'LIVE') isSmart = true;
-                                    if (pItem === 'CUFFS' && !playerRef.current.isHandcuffed) isSmart = true;
-                                    if (pItem === 'GLASS' && !currentKnown) isSmart = true;
-                                    if (pItem === 'INVERTER' && currentKnown === 'BLANK') isSmart = true;
-                                    if (pItem === 'BIG_INVERTER' && totalRemaining >= 3) isSmart = true;
-                                    if (pItem === 'PHONE' && totalRemaining > 1) isSmart = true;
-                                    if (pItem === 'REMOTE' && totalRemaining >= 2) isSmart = true;
-                                    if (pItem === 'CHOKE' && totalRemaining >= 2) isSmart = true;
-                                    if (pItem === 'CONTRACT' && dealerRef.current.hp >= 2 && dealerRef.current.items.length <= 6) isSmart = true;
-                                    if (pItem === 'FLASHBANG' && !playerRef.current.isFlashbanged) isSmart = true;
-                                    if (pItem === 'CRUSHER' && playerRef.current.items.length > 0) isSmart = true;
-                                    if (pItem === 'LUCKYCHARM' || pItem === 'BEER') isSmart = true;
+                            // 2. LUCKY CHARM + CONTRACT COMBO (Prioritize Lucky Charm first)
+                            else if (dealerRef.current.items.includes('LUCKYCHARM') && dealerRef.current.items.includes('CONTRACT') && dealerRef.current.hp >= 2 && dealerRef.current.items.length <= 6) {
+                                itemToUse = 'LUCKYCHARM';
+                            }
+                            // 3. SACRIFICE FOR POWER (CONTRACT)
+                            else if (dealerRef.current.hp >= 2 && dealerRef.current.items.length <= 6 && dealerRef.current.items.includes('CONTRACT')) {
+                                itemToUse = 'CONTRACT';
+                            }
+                            // 4. HANDCUFFED + INVERTER + BLANK
+                            else if (playerRef.current.isHandcuffed && dealerRef.current.items.includes('INVERTER') && currentKnown === 'BLANK') {
+                                itemToUse = 'INVERTER';
+                            }
+                            // 5. LIVE SHELL + PLAYER TOTEM -> FLASHBANG/CRUSHER
+                            else if (currentKnown === 'LIVE' && playerHasActiveTotem && dealerRef.current.items.includes('FLASHBANG')) {
+                                itemToUse = 'FLASHBANG';
+                            }
+                            else if (currentKnown === 'LIVE' && playerHasActiveTotem && dealerRef.current.items.includes('CRUSHER')) {
+                                itemToUse = 'CRUSHER';
+                            }
+                            // 6. KILL CONFIRMATION / BOOSTED DAMAGE
+                            else if (currentKnown === 'LIVE') {
+                                if (dealerRef.current.items.includes('SAW') && !dealerRef.current.isSawedActive) itemToUse = 'SAW';
+                                else if (dealerRef.current.items.includes('CUFFS') && !playerRef.current.isHandcuffed && totalRemaining > 1) itemToUse = 'CUFFS';
+                            }
+                            // Use Cuffs even if shell type is unknown but live probability is decent (>= 50%)
+                            else if (unknownLiveProb >= 0.5 && dealerRef.current.items.includes('CUFFS') && !playerRef.current.isHandcuffed && totalRemaining > 1) {
+                                itemToUse = 'CUFFS';
+                            }
+                            // 7. CONVERSION
+                            else if (currentKnown === 'BLANK' && dealerRef.current.items.includes('INVERTER')) {
+                                itemToUse = 'INVERTER';
+                            }
+                            else if (dealerRef.current.items.includes('BIG_INVERTER')) {
+                                const remaining = remainingShells.length;
+                                const knownBlanks = remainingShells.filter(s => s === 'BLANK').length;
+                                if (knownBlanks / remaining > 0.5 || (currentKnown === 'BLANK' && remaining >= 2)) {
+                                    itemToUse = 'BIG_INVERTER';
                                 }
-                                if (isSmart) {
+                            }
+                            // 8. CHAMBER MANIPULATION (Priority 5) - REMOTE
+                            else if (dealerRef.current.items.includes('REMOTE') && totalRemaining >= 2) {
+                                const nextKnown = aiMemory.current.get(currentIdx + 1);
+                                if (currentKnown === 'BLANK' && nextKnown === 'LIVE') {
+                                    itemToUse = 'REMOTE';
+                                }
+                            }
+                            // 9. CHOKE LOGIC
+                            else if (dealerRef.current.items.includes('CHOKE') && !dealerRef.current.isChokeActive && totalRemaining >= 2) {
+                                const nextKnown = aiMemory.current.get(currentIdx + 1);
+                                const actualNext = chamber[currentIdx + 1];
+
+                                // Supernatural peek for second shell
+                                let shell2 = nextKnown;
+                                if (!shell2 && Math.random() < 0.60) {
+                                      shell2 = actualNext;
+                                      aiMemory.current.set(currentIdx + 1, actualNext);
+                                }
+
+                                const shell1 = currentKnown;
+                                if (shell1 === 'LIVE' && shell2 === 'LIVE') itemToUse = 'CHOKE';
+                                else if (shell1 === 'BLANK' && shell2 === 'BLANK' && (dealerRef.current.items.includes('INVERTER') || dealerRef.current.items.includes('BIG_INVERTER'))) itemToUse = 'CHOKE';
+                                else if ((shell1 === 'LIVE' || shell2 === 'LIVE') && dealerRef.current.hp > 1) itemToUse = 'CHOKE';
+                            }
+                            else if (!currentKnown && dealerRef.current.items.includes('GLASS')) itemToUse = 'GLASS';
+                            else if (dealerRef.current.items.includes('PHONE') && totalRemaining > 1) itemToUse = 'PHONE';
+                            else if (dealerRef.current.items.includes('DECK_CARD')) {
+                                if (dealerRef.current.items.length >= 6 || Math.random() < 0.6) {
+                                    itemToUse = 'DECK_CARD';
+                                }
+                            }
+                            // 10. MIRROR LOGIC
+                            else if (dealerRef.current.items.includes('MIRROR')) {
+                                const playerUsedItems = (playerRef.current.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
+                                if (playerUsedItems.length > 0) {
+                                    let isSmart = false;
+                                    for (const pItem of playerUsedItems) {
+                                        if (pItem === 'CIGS' && dealerRef.current.hp < dealerRef.current.maxHp) isSmart = true;
+                                        if (pItem === 'SAW' && currentKnown === 'LIVE') isSmart = true;
+                                        if (pItem === 'CUFFS' && !playerRef.current.isHandcuffed) isSmart = true;
+                                        if (pItem === 'GLASS' && !currentKnown) isSmart = true;
+                                        if (pItem === 'INVERTER' && currentKnown === 'BLANK') isSmart = true;
+                                        if (pItem === 'BIG_INVERTER' && totalRemaining >= 3) isSmart = true;
+                                        if (pItem === 'PHONE' && totalRemaining > 1) isSmart = true;
+                                        if (pItem === 'REMOTE' && totalRemaining >= 2) isSmart = true;
+                                        if (pItem === 'CHOKE' && totalRemaining >= 2) isSmart = true;
+                                        if (pItem === 'CONTRACT' && dealerRef.current.hp >= 2 && dealerRef.current.items.length <= 6) isSmart = true;
+                                        if (pItem === 'FLASHBANG' && !playerRef.current.isFlashbanged) isSmart = true;
+                                        if (pItem === 'CRUSHER' && playerRef.current.items.length > 0) isSmart = true;
+                                        if (pItem === 'LUCKYCHARM' || pItem === 'BEER') isSmart = true;
+                                    }
+                                    if (isSmart) {
+                                        itemToUse = 'MIRROR';
+                                    }
+                                }
+                            }
+                            // 11. THEFT (Adrenaline)
+                            else if (dealerRef.current.items.includes('ADRENALINE') && playerRef.current.items.length > 0) {
+                                const targets = ['SAW', 'INVERTER', 'CUFFS', 'MIRROR', 'CHOKE', 'REMOTE', 'CIGS', 'DECK_CARD'];
+                                if (playerRef.current.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
+                            }
+                            // 12. BEER / CYCLE
+                            else if (dealerRef.current.items.includes('BEER')) {
+                                if (currentKnown === 'BLANK' || unknownLiveProb < 0.4) itemToUse = 'BEER';
+                            }
+                            // 13. LUCKY CHARM
+                            else if (dealerRef.current.items.includes('LUCKYCHARM')) {
+                                itemToUse = 'LUCKYCHARM';
+                            }
+                            // 14. FLASHBANG (Hard Mode Strategy)
+                            else if (dealerRef.current.items.includes('FLASHBANG') && !playerRef.current.isFlashbanged) {
+                                const playerHasTotem = playerRef.current.items.includes('TOTEM');
+                                const playerHasThreat = playerRef.current.items.some(i => ['SAW', 'CUFFS', 'CHOKE', 'ADRENALINE', 'CONTRACT', 'TOTEM'].includes(i));
+                                const liveShotPossible = currentKnown === 'LIVE' || (liveCountReal / totalRemaining) > 0.5;
+                                if ((playerHasTotem && liveShotPossible) || playerHasThreat || Math.random() < 0.4) {
+                                    itemToUse = 'FLASHBANG';
+                                }
+                            }
+                            // 15. CRUSHER (Hard Mode Strategy)
+                            else if (dealerRef.current.items.includes('CRUSHER') && playerRef.current.items.length > 0) {
+                                const playerHasThreat = playerRef.current.items.some(i => ['SAW', 'CUFFS', 'CHOKE', 'ADRENALINE', 'CONTRACT', 'BIG_INVERTER', 'FLASHBANG', 'TOTEM'].includes(i));
+                                if (playerHasThreat || Math.random() < 0.6) {
+                                    itemToUse = 'CRUSHER';
+                                }
+                            }
+                        } else {
+                            // --- NORMAL LOGIC ---
+                            if (dealerRef.current.hp < dealerRef.current.maxHp && dealerRef.current.items.includes('CIGS')) {
+                                if (dealerRef.current.hp <= 2 || Math.random() > 0.4) itemToUse = 'CIGS';
+                            }
+                            else if (dealerRef.current.hp >= 3 && dealerRef.current.items.length <= 5 && dealerRef.current.items.includes('CONTRACT') && Math.random() > 0.5) {
+                                itemToUse = 'CONTRACT';
+                            }
+                            else if (dealerRef.current.items.includes('ADRENALINE') && playerRef.current.items.length > 0 && Math.random() > 0.2) {
+                                const threats = ['SAW', 'CUFFS', 'INVERTER', 'CHOKE', 'CIGS', 'MIRROR', 'DECK_CARD'];
+                                if (playerRef.current.items.some(i => threats.includes(i))) itemToUse = 'ADRENALINE';
+                            }
+                            else if (dealerRef.current.items.includes('MIRROR') && Math.random() > 0.3) {
+                                const playerUsedItems = (playerRef.current.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
+                                if (playerUsedItems.length > 0) {
                                     itemToUse = 'MIRROR';
                                 }
                             }
-                        }
-
-                        // 9. THEFT (Adrenaline)
-                        else if (dealerRef.current.items.includes('ADRENALINE') && playerRef.current.items.length > 0 && !itemToUse) {
-                            const targets = ['SAW', 'INVERTER', 'CUFFS', 'MIRROR', 'CHOKE', 'REMOTE', 'CIGS', 'DECK_CARD'];
-                            if (playerRef.current.items.some(i => targets.includes(i))) itemToUse = 'ADRENALINE';
-                        }
-
-                        // 9. BEER / CYCLE
-                        else if (dealerRef.current.items.includes('BEER') && !itemToUse) {
-                            if (currentKnown === 'BLANK' || unknownLiveProb < 0.4) itemToUse = 'BEER';
-                        }
-
-                        // 10. LUCKY CHARM
-                        else if (dealerRef.current.items.includes('LUCKYCHARM') && !itemToUse) {
-                            itemToUse = 'LUCKYCHARM';
-                        }
-                        // 11. FLASHBANG (Hard Mode Strategy)
-                        else if (dealerRef.current.items.includes('FLASHBANG') && !playerRef.current.isFlashbanged && !itemToUse) {
-                            const playerHasThreat = playerRef.current.items.some(i => ['SAW', 'CUFFS', 'CHOKE', 'ADRENALINE', 'CONTRACT', 'TOTEM'].includes(i));
-                            if (playerHasThreat || Math.random() < 0.4) {
-                                itemToUse = 'FLASHBANG';
+                            else if (dealerRef.current.items.includes('INVERTER') && currentKnown === 'BLANK') {
+                                itemToUse = 'INVERTER';
                             }
-                        }
-                        // 12. CRUSHER (Hard Mode Strategy)
-                        else if (dealerRef.current.items.includes('CRUSHER') && playerRef.current.items.length > 0 && !itemToUse) {
-                            const playerHasThreat = playerRef.current.items.some(i => ['SAW', 'CUFFS', 'CHOKE', 'ADRENALINE', 'CONTRACT', 'BIG_INVERTER', 'FLASHBANG', 'TOTEM'].includes(i));
-                            if (playerHasThreat || Math.random() < 0.6) {
+                            else if (dealerRef.current.items.includes('BIG_INVERTER') && currentKnown === 'BLANK' && totalRemaining >= 3) {
+                                itemToUse = 'BIG_INVERTER';
+                            }
+                            else if (dealerRef.current.items.includes('SAW') && !dealerRef.current.isSawedActive && currentKnown === 'LIVE' && playerRef.current.hp > 1) {
+                                itemToUse = 'SAW';
+                            }
+                            else if (dealerRef.current.items.includes('CUFFS') && !playerRef.current.isHandcuffed && totalRemaining > 1) {
+                                itemToUse = 'CUFFS';
+                            }
+                            else if (dealerRef.current.items.includes('REMOTE') && totalRemaining >= 2 && Math.random() > 0.4) {
+                                const nextKnown = aiMemory.current.get(currentIdx + 1);
+                                if (currentKnown === 'BLANK' && nextKnown === 'LIVE') {
+                                    itemToUse = 'REMOTE';
+                                }
+                            }
+                            else if (!currentKnown && dealerRef.current.items.includes('GLASS') && totalRemaining >= 2) {
+                                itemToUse = 'GLASS';
+                            }
+                            else if (dealerRef.current.items.includes('PHONE') && totalRemaining > 2) {
+                                itemToUse = 'PHONE';
+                            }
+                            else if (dealerRef.current.items.includes('DECK_CARD') && Math.random() < 0.5) {
+                                itemToUse = 'DECK_CARD';
+                            }
+                            else if (dealerRef.current.items.includes('BEER')) {
+                                if (currentKnown === 'BLANK' || (!currentKnown && totalRemaining > 2 && Math.random() > 0.3)) itemToUse = 'BEER';
+                            }
+                            else if (dealerRef.current.items.includes('CHOKE') && !dealerRef.current.isChokeActive && totalRemaining >= 2) {
+                                if (Math.random() < 0.5) itemToUse = 'CHOKE';
+                            }
+                            else if (dealerRef.current.items.includes('LUCKYCHARM')) {
+                                itemToUse = 'LUCKYCHARM';
+                            }
+                            else if (dealerRef.current.items.includes('FLASHBANG') && !playerRef.current.isFlashbanged) {
+                                const playerHasTotem = playerRef.current.items.includes('TOTEM');
+                                if (playerHasTotem || Math.random() > 0.3) {
+                                    itemToUse = 'FLASHBANG';
+                                }
+                            }
+                            else if (dealerRef.current.items.includes('CRUSHER') && playerRef.current.items.length > 0 && Math.random() > 0.4) {
                                 itemToUse = 'CRUSHER';
                             }
                         }
                     }
-                    else {
-                        // --- NORMAL LOGIC ---
-                        if (dealerRef.current.hp < dealerRef.current.maxHp && dealerRef.current.items.includes('CIGS') && !itemToUse) {
-                            if (dealerRef.current.hp <= 2 || Math.random() > 0.4) itemToUse = 'CIGS';
-                        }
-                        else if (dealerRef.current.hp >= 3 && dealerRef.current.items.length <= 5 && dealerRef.current.items.includes('CONTRACT') && !itemToUse && Math.random() > 0.5) {
-                            itemToUse = 'CONTRACT';
-                        }
-                        else if (dealerRef.current.items.includes('ADRENALINE') && playerRef.current.items.length > 0 && !itemToUse && Math.random() > 0.2) {
-                            const threats = ['SAW', 'CUFFS', 'INVERTER', 'CHOKE', 'CIGS', 'MIRROR', 'DECK_CARD'];
-                            if (playerRef.current.items.some(i => threats.includes(i))) itemToUse = 'ADRENALINE';
-                        }
-                        else if (dealerRef.current.items.includes('MIRROR') && !itemToUse && Math.random() > 0.3) {
-                            const playerUsedItems = (playerRef.current.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR');
-                            if (playerUsedItems.length > 0) {
-                                itemToUse = 'MIRROR';
-                            }
-                        }
-                        else if (dealerRef.current.items.includes('INVERTER') && !itemToUse && currentKnown === 'BLANK') {
-                            itemToUse = 'INVERTER';
-                        }
-                        else if (dealerRef.current.items.includes('BIG_INVERTER') && !itemToUse && currentKnown === 'BLANK' && totalRemaining >= 3) {
-                            itemToUse = 'BIG_INVERTER';
-                        }
-                        else if (dealerRef.current.items.includes('SAW') && !dealerRef.current.isSawedActive && !itemToUse && currentKnown === 'LIVE' && playerRef.current.hp > 1) {
-                            itemToUse = 'SAW';
-                        }
-                        else if (dealerRef.current.items.includes('CUFFS') && !playerRef.current.isHandcuffed && !itemToUse && totalRemaining > 1) {
-                            itemToUse = 'CUFFS';
-                        }
-                        else if (dealerRef.current.items.includes('REMOTE') && totalRemaining >= 2 && !itemToUse && Math.random() > 0.4) {
-                            const nextKnown = aiMemory.current.get(currentIdx + 1);
-                            if (currentKnown === 'BLANK' && nextKnown === 'LIVE') {
-                                itemToUse = 'REMOTE';
-                            }
-                        }
-                        else if (!currentKnown && dealerRef.current.items.includes('GLASS') && totalRemaining >= 2 && !itemToUse) {
-                            itemToUse = 'GLASS';
-                        }
-                        else if (dealerRef.current.items.includes('PHONE') && totalRemaining > 2 && !itemToUse) {
-                            itemToUse = 'PHONE';
-                        }
-                        else if (dealerRef.current.items.includes('DECK_CARD') && !itemToUse && Math.random() < 0.5) {
-                            itemToUse = 'DECK_CARD';
-                        }
-                        else if (dealerRef.current.items.includes('BEER') && !itemToUse) {
-                            if (currentKnown === 'BLANK' || (!currentKnown && totalRemaining > 2 && Math.random() > 0.3)) itemToUse = 'BEER';
-                        }
-                        else if (dealerRef.current.items.includes('CHOKE') && !dealerRef.current.isChokeActive && !itemToUse && totalRemaining >= 2) {
-                            if (Math.random() < 0.5) itemToUse = 'CHOKE';
-                        }
-                        else if (dealerRef.current.items.includes('LUCKYCHARM') && !itemToUse) {
-                            itemToUse = 'LUCKYCHARM';
-                        }
-                        // 11. FLASHBANG (Normal Mode Strategy)
-                        else if (dealerRef.current.items.includes('FLASHBANG') && !playerRef.current.isFlashbanged && !itemToUse && Math.random() > 0.3) {
-                            itemToUse = 'FLASHBANG';
-                        }
-                        // 12. CRUSHER (Normal Mode Strategy)
-                        else if (dealerRef.current.items.includes('CRUSHER') && playerRef.current.items.length > 0 && !itemToUse && Math.random() > 0.4) {
-                            itemToUse = 'CRUSHER';
-                        }
-                    }
-                    } // End of if (!isFlashbanged)
 
                     // --- EXECUTION ---
                     if (itemToUse) {
@@ -482,7 +520,7 @@ export const useDealerAI = ({
                                  const activePriorities = (dealerRef.current.hp < 2 
                                      ? ['CIGS', ...priorities] 
                                      : priorities
-                                 ).filter(i => i !== 'TOTEM' && i !== 'ADRENALINE');
+                                 ).filter(i => i !== 'TOTEM' && i !== 'ADRENALINE' && i !== 'JACKPOT');
 
                                  for (const pItem of activePriorities) {
                                      if (pItem === 'MIRROR') {
@@ -496,7 +534,7 @@ export const useDealerAI = ({
                                      }
                                  }
                                  if (stealIdx === -1 && playerRef.current.items.length > 0) {
-                                     stealIdx = playerRef.current.items.findIndex(i => i !== 'TOTEM' && i !== 'ADRENALINE');
+                                     stealIdx = playerRef.current.items.findIndex(i => i !== 'TOTEM' && i !== 'ADRENALINE' && i !== 'JACKPOT');
                                  }
 
                                  if (stealIdx !== -1) {

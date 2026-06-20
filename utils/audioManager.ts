@@ -45,6 +45,9 @@ class AudioManager {
             totem: '/sound/AnimationSounds/Totem.mp3',
             mirror: '/sound/AnimationSounds/mirror.mp3',
             cards: '/sound/AnimationSounds/cards.mp3',
+            slotmachine: '/sound/AnimationSounds/slotmachine.mp3',
+            jackpot: '/sound/AnimationSounds/jackpot.mp3',
+            jackpotloop: '/sound/AnimationSounds/jackpotloop.mp3',
         };
         const musicFiles = {
             menu: '/sound/menu.mp3',
@@ -70,10 +73,13 @@ class AudioManager {
 
     private applyMusicVolume() {
         if (!this.currentMusic || !this.music[this.currentMusic]) return;
-        const targetVol = this.activeDimmingCount > 0 
-            ? this.musicVolume * 0.35 // Dim music to 35% of its set volume
-            : this.musicVolume;
-        this.music[this.currentMusic].volume = targetVol;
+        let scale = 1.0;
+        if (this.isJackpotActive) {
+            scale = 0.05; // Lower it even more, almost mute (5%)
+        } else if (this.activeDimmingCount > 0) {
+            scale = 0.35; // Dim music to 35% of its set volume
+        }
+        this.music[this.currentMusic].volume = this.musicVolume * scale;
     }
 
     public getAudioLoadingProgress(): number {
@@ -156,7 +162,8 @@ class AudioManager {
         const shouldDim = [
             'dropping', 'checkhandcuffs', 'handcuffed', 'adrenaline', 
             'beer', 'cig', 'glass', 'inverter', 'big_inverter', 
-            'phone', 'saw', 'choke', 'remote', 'contract', 'luckycharm', 'flashbang', 'crusher', 'totem', 'mirror'
+            'phone', 'saw', 'choke', 'remote', 'contract', 'luckycharm', 'flashbang', 'crusher', 'totem', 'mirror',
+            'slotmachine'
         ].includes(key);
 
         if (shouldDim) {
@@ -254,6 +261,66 @@ class AudioManager {
             this.music[this.currentMusic].currentTime = 0;
         }
         this.currentMusic = null;
+    }
+
+    private jackpotIntroAudio: HTMLAudioElement | null = null;
+    private jackpotLoopAudio: HTMLAudioElement | null = null;
+    private isJackpotActive: boolean = false;
+
+    public playJackpotIntro() {
+        this.stopJackpotMusic();
+
+        const intro = this.sounds['jackpot'];
+        if (!intro) return;
+
+        this.isJackpotActive = true;
+        this.applyMusicVolume();
+
+        this.jackpotIntroAudio = intro.cloneNode() as HTMLAudioElement;
+        this.jackpotIntroAudio.volume = this.sfxVolume;
+        this.jackpotIntroAudio.onended = () => {
+            this.playJackpotLoop();
+        };
+        this.jackpotIntroAudio.play().catch(e => {
+            console.warn("Jackpot intro blocked", e);
+        });
+    }
+
+    public playJackpotLoop() {
+        if (this.jackpotIntroAudio) {
+            this.jackpotIntroAudio.onended = null;
+            this.jackpotIntroAudio.pause();
+            this.jackpotIntroAudio = null;
+        }
+
+        const loop = this.sounds['jackpotloop'];
+        if (!loop) {
+            this.isJackpotActive = false;
+            this.applyMusicVolume();
+            return;
+        }
+
+        this.isJackpotActive = true;
+        this.applyMusicVolume();
+
+        this.jackpotLoopAudio = loop.cloneNode() as HTMLAudioElement;
+        this.jackpotLoopAudio.loop = true;
+        this.jackpotLoopAudio.volume = this.sfxVolume;
+        this.jackpotLoopAudio.play().catch(e => console.warn("Jackpot loop blocked", e));
+    }
+
+    public stopJackpotMusic() {
+        if (this.jackpotIntroAudio) {
+            this.jackpotIntroAudio.onended = null;
+            this.jackpotIntroAudio.pause();
+            this.jackpotIntroAudio = null;
+        }
+        if (this.jackpotLoopAudio) {
+            this.jackpotLoopAudio.pause();
+            this.jackpotLoopAudio = null;
+        }
+        this.isJackpotActive = false;
+        this.applyMusicVolume();
     }
 }
 

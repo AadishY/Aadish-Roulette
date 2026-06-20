@@ -668,7 +668,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                                     </li>
                                     <li className="flex items-start gap-2.5">
                                         <span className="px-1.5 py-0.5 bg-green-950/50 border border-green-800/40 text-green-400 text-[8px] font-black rounded-md uppercase tracking-widest shrink-0 select-none">ADDED</span>
-                                        <span className="leading-relaxed">New items: Choke, Remote, Big Inverter, Contract, Lucky Charm, Flashbang, Crusher, Totem, and Mirror.</span>
+                                        <span className="leading-relaxed">New items: Lucky Charm, Flashbang, Crusher, Totem, Mirror and Tarot Cards.</span>
                                     </li>
                                     <li className="flex items-start gap-2.5">
                                         <span className="px-1.5 py-0.5 bg-amber-950/50 border border-amber-800/40 text-amber-400 text-[8px] font-black rounded-md uppercase tracking-widest shrink-0 select-none">UPDATED</span>

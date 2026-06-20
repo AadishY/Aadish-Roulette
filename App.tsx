@@ -508,9 +508,7 @@ export default function App() {
           if (toMenu) {
             // @ts-ignore
             setAppState('LOADING_GAME');
-            setTimeout(() => {
-              handleMainMenu();
-            }, 100);
+            spGame.resetGame(true);
           } else {
             // @ts-ignore
             setAppState('LOADING_SP');
@@ -599,9 +597,7 @@ export default function App() {
             if (appState === 'GAME' && spGame.gameState.phase !== 'INTRO' && spGame.gameState.phase !== 'BOOT') {
               // @ts-ignore
               setAppState('LOADING_GAME');
-              setTimeout(() => {
-                handleMainMenu();
-              }, 100);
+              spGame.resetGame(true);
             }
           }}
           showExitToMenu={appState === 'GAME' && spGame.gameState.phase !== 'INTRO' && spGame.gameState.phase !== 'BOOT'}
@@ -624,6 +620,7 @@ export default function App() {
           setGameState={spGame.setGameState}
           selectTarotCard={spGame.selectTarotCard}
           setCameraView={spGame.setCameraView}
+          processItemEffect={spGame.processItemEffect}
         />
       )}
     </div>

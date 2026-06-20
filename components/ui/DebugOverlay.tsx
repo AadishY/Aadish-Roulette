@@ -13,6 +13,7 @@ interface DebugOverlayProps {
     selectTarotCard?: (index: number) => Promise<void>;
     setCameraView?: (view: any) => void;
     onClose?: () => void;
+    processItemEffect?: (user: TurnOwner, item: ItemType) => Promise<boolean>;
 }
 
 export const DebugOverlay: React.FC<DebugOverlayProps> = ({
@@ -24,7 +25,8 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
     setGameState,
     selectTarotCard,
     setCameraView,
-    onClose
+    onClose,
+    processItemEffect
 }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState<'chamber' | 'items' | 'status' | 'tarot'>('chamber');
@@ -236,7 +238,7 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
                     onClick={() => setActiveTab('tarot')}
                     className={`flex-1 py-1 md:py-2 text-center font-bold tracking-wider text-[7.5px] md:text-[9px] uppercase cursor-pointer transition-all border-b-2 ${activeTab === 'tarot' ? 'text-red-500 border-red-600 bg-red-950/10' : 'text-stone-500 border-transparent hover:text-stone-300'}`}
                 >
-                    Tarot
+                    Item Power
                 </button>
             </div>
 
@@ -434,6 +436,8 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
                                     <Award size={9} className="md:w-[11px] md:h-[11px]" /> Win Dealer / Opponent
                                 </button>
                             </div>
+
+
                         </div>
 
                         <div className="text-[7px] md:text-[8px] text-stone-600 uppercase font-bold tracking-widest pt-1.5 md:pt-2 border-t border-stone-900 text-center">
@@ -442,16 +446,58 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
                     </div>
                 )}
 
-                {/* TAB 4: TAROT */}
+                {/* TAB 4: ITEM POWER */}
                 {activeTab === 'tarot' && (
                     <div className="space-y-2 md:space-y-3">
+                        {/* Jackpot Cheats */}
+                        <div className="space-y-1.5 md:space-y-2 pb-2 border-b border-stone-900">
+                            <span className="font-extrabold tracking-widest text-stone-500 uppercase text-[7px] md:text-[8.5px] block">Jackpot Cheats</span>
+                            <div className="grid grid-cols-3 gap-1 md:gap-1.5 mb-1.5">
+                                <button
+                                    onClick={() => {
+                                        (window as any).__debugJackpotForcedOutcome = 'JACKPOT';
+                                    }}
+                                    className="py-1 bg-yellow-950/40 border border-yellow-800/40 text-yellow-400 rounded hover:bg-yellow-900/30 cursor-pointer font-bold uppercase text-[7px] md:text-[8px]"
+                                >
+                                    Force Win
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        (window as any).__debugJackpotForcedOutcome = 'NORMAL';
+                                    }}
+                                    className="py-1 bg-blue-950/40 border border-blue-800/40 text-blue-400 rounded hover:bg-blue-900/30 cursor-pointer font-bold uppercase text-[7px] md:text-[8px]"
+                                >
+                                    Force Normal
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        (window as any).__debugJackpotForcedOutcome = 'LOSE';
+                                    }}
+                                    className="py-1 bg-red-950/40 border border-red-800/40 text-red-400 rounded hover:bg-red-900/30 cursor-pointer font-bold uppercase text-[7px] md:text-[8px]"
+                                >
+                                    Force Lose
+                                </button>
+                            </div>
+                            {processItemEffect && (
+                                <button
+                                    onClick={() => {
+                                        if (setCameraView) setCameraView('TABLE');
+                                        processItemEffect('PLAYER', 'JACKPOT');
+                                    }}
+                                    className="w-full py-1 bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 hover:bg-emerald-900/30 cursor-pointer font-bold uppercase text-[7px] md:text-[8px] text-center"
+                                >
+                                    🎰 Trigger Jackpot Power
+                                </button>
+                            )}
+                        </div>
+
                         <span className="font-extrabold tracking-widest text-stone-500 uppercase text-[7.5px] md:text-[9px] block">Trigger Tarot Power</span>
                         
                         <div className="grid grid-cols-2 gap-1 md:gap-1.5 max-h-[18vh] md:max-h-60 overflow-y-auto pr-0.5 custom-scrollbar p-0.5">
                             {[
                                 'The Magician', 'The Hanged Man', 'The Hermit', 'The Moon', 
                                 'Judgment', 'Wheel of Fortune', 'The Sun', 'Death', 
-                                'The Tower', 'The Fool', 'Justice'
+                                'The Tower', 'The Fool', 'Justice', 'Temperance'
                             ].map((cardName) => (
                                 <button
                                     key={cardName}

@@ -176,10 +176,10 @@ export const GameUI: React.FC<GameUIProps> = ({
 
     return (
         <>
-            {/* Falling Shells Background - Rendered only when active to free WebGL context and improve memory/performance */}
+            {/* Falling Shells Background - Pauses drawing when inactive to free GPU and improve performance, while keeping context alive to avoid context recreation lag/errors */}
             <div className={`absolute inset-0 bg-black transition-opacity ${gameState.phase === 'BOOT' || gameState.phase === 'INTRO' ? 'opacity-100 duration-1000' : 'opacity-0 duration-0 pointer-events-none'}`}>
-                {(gameState.phase === 'INTRO' || gameState.phase === 'BOOT') && !settings.ultraPerformance && (
-                    <ShellBackground active={true} />
+                {!settings.ultraPerformance && (
+                    <ShellBackground active={gameState.phase === 'INTRO' || gameState.phase === 'BOOT'} />
                 )}
             </div>
 

@@ -164,7 +164,8 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
 
             const animate = (time: number) => {
                 if (!activeRef.current) {
-                    setTimeout(() => { frameId = requestAnimationFrame(animate); }, 500);
+                    frameId = requestAnimationFrame(animate);
+                    lastTime = time;
                     return;
                 }
                 frameId = requestAnimationFrame(animate);
@@ -239,7 +240,9 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
             if (resizeObserver) resizeObserver.disconnect();
             if (sceneRef.current) {
                 sceneRef.current.disposables.forEach(d => d.dispose());
+                const gl = sceneRef.current.renderer.getContext();
                 sceneRef.current.renderer.dispose();
+                gl?.getExtension('WEBGL_lose_context')?.loseContext();
                 sceneRef.current = null;
             }
             container.innerHTML = '';

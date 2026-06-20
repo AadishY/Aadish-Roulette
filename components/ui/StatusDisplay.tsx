@@ -55,6 +55,12 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                             );
                         })}
                     </div>
+                    {player.jackpotImmunityShots !== undefined && player.jackpotImmunityShots > 0 && (
+                        <div className="mt-2.5 flex items-center gap-1.5 bg-yellow-950/50 border border-yellow-500/30 px-2.5 py-1 rounded-lg text-[9px] md:text-[11px] font-black text-yellow-400 tracking-wider uppercase animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.25)]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-ping" />
+                            <span>JACKPOT: {player.jackpotImmunityShots} SHOTS LEFT</span>
+                        </div>
+                    )}
                 </div>
 
                 {gameState.isHardMode && gameState.hardModeState && (
@@ -160,6 +166,7 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                                 {item === 'TOTEM' && <Icons.Totem size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-amber-500/80 animate-pulse" />}
                                 {item === 'MIRROR' && <Icons.Mirror size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-indigo-400" />}
                                 {item === 'DECK_CARD' && <Icons.DeckCard size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-purple-400" />}
+                                {item === 'JACKPOT' && <Icons.Jackpot size={20} className="w-2.5 h-2.5 md:w-5 md:h-5 text-yellow-500/80" />}
                             </div>
                         </div>
                     ))}

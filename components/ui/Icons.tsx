@@ -1,5 +1,5 @@
 import React from 'react';
-import { Beer, Link, Cigarette, Search, Zap, Crosshair, ShieldAlert, Heart, RefreshCcw, Smartphone, Syringe, Hammer } from 'lucide-react';
+import { Beer, Link, Cigarette, Search, Zap, Crosshair, ShieldAlert, Heart, RefreshCcw, Smartphone, Syringe, Hammer, Coins } from 'lucide-react';
 
 export const ChainsawIcon = ({ className, size = 24 }: { className?: string; size?: number }) => (
   <svg
@@ -242,14 +242,22 @@ export const DeckCardIcon = ({ className, size = 24 }: { className?: string; siz
     strokeLinejoin="round"
     className={className}
   >
-    <rect x="3" y="6" width="11" height="15" rx="1.5" transform="rotate(-10 3 6)" fill="currentColor" fillOpacity="0.1" />
-    <rect x="6" y="4" width="11" height="15" rx="1.5" transform="rotate(-5 6 4)" fill="currentColor" fillOpacity="0.15" />
-    <rect x="9" y="3" width="11" height="15" rx="1.5" fill="currentColor" fillOpacity="0.2" />
-    <path d="M14.5 7.5l.8 1.8 1.9.3-1.4 1.3.3 1.9-1.6-1-1.6 1 .3-1.9-1.4-1.3 1.9-.3z" strokeWidth="1" />
+    {/* Tarot Card main border */}
+    <rect x="5" y="2" width="14" height="20" rx="2" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="2" />
+    {/* Inner dashed frame decoration */}
+    <rect x="7" y="4" width="10" height="16" rx="1" stroke="currentColor" strokeWidth="1" strokeDasharray="1.5 1.5" fill="none" opacity="0.6" />
+    {/* Center Crescent Moon symbol */}
+    <path d="M11 8a4 4 0 0 1 4 4 4 4 0 0 1-4 4 4.5 4.5 0 0 0 2.2-7.8A4 4 0 0 1 11 8z" fill="currentColor" stroke="none" />
+    {/* Small stars */}
+    <circle cx="15" cy="7" r="0.6" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="15" r="0.6" fill="currentColor" stroke="none" />
+    {/* Mystical crosshair details */}
+    <path d="M12 5v1M12 18v1M7 12h1M16 12h1" strokeWidth="1" opacity="0.5" />
   </svg>
 );
 
 export const Icons = {
+  // CamelCase keys (used by original components)
   Beer,
   Cuffs: Link,
   Cigs: Cigarette,
@@ -273,6 +281,29 @@ export const Icons = {
   Totem: TotemIcon,
   Mirror: MirrorIcon,
   DeckCard: DeckCardIcon,
-  Shell: ShotgunShellIcon
+  Shell: ShotgunShellIcon,
+  Jackpot: Coins,
+
+  // Uppercase ItemType keys (used by dynamic lookup screens)
+  BEER: Beer,
+  CUFFS: Link,
+  CIGS: Cigarette,
+  GLASS: Search,
+  SAW: ChainsawIcon,
+  PHONE: Smartphone,
+  INVERTER: Zap,
+  ADRENALINE: Syringe,
+  CHOKE: ChokeIcon,
+  REMOTE: RemoteIcon,
+  BIG_INVERTER: BigInverterIcon,
+  CONTRACT: ContractIcon,
+  LUCKYCHARM: CloverIcon,
+  FLASHBANG: FlashbangIcon,
+  CRUSHER: Hammer,
+  TOTEM: TotemIcon,
+  MIRROR: MirrorIcon,
+  DECK_CARD: DeckCardIcon,
+  SHELL: ShotgunShellIcon,
+  JACKPOT: Coins
 };
 

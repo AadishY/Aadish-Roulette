@@ -98,7 +98,8 @@ export const performShot = async (
     }
 
     const isLethal = willHit && damage >= (target === 'PLAYER' ? player.hp : dealer.hp);
-    const targetHasTotem = target === 'PLAYER' ? player.items.includes('TOTEM') : dealer.items.includes('TOTEM');
+    const targetIsFlashbanged = target === 'PLAYER' ? player.isFlashbanged : dealer.isFlashbanged;
+    const targetHasTotem = (target === 'PLAYER' ? player.items.includes('TOTEM') : dealer.items.includes('TOTEM')) && !targetIsFlashbanged;
     const isSavedByTotem = isLethal && targetHasTotem;
 
     setTimeout(() => {
@@ -278,42 +279,84 @@ export const performShot = async (
 
     // Handle Damage & Win Check
     let gameOver = false;
+
+    // Decrement player jackpot immunity if target of the shot is PLAYER and it was a BLANK shot (damage === 0)
+    if (damage === 0 && target === 'PLAYER' && player.jackpotImmunityShots !== undefined && player.jackpotImmunityShots > 0) {
+        const nextImmunity = Math.max(0, player.jackpotImmunityShots - processedShells);
+        setPlayer(p => ({ ...p, jackpotImmunityShots: nextImmunity }));
+        if (nextImmunity <= 0) {
+            audioManager.stopJackpotMusic();
+        }
+    }
+
     if (damage > 0) {
         if (target === 'PLAYER') {
-            let newHp = Math.max(0, player.hp - damage);
-            const hasTotem = player.items.includes('TOTEM');
+            const hasJackpot = player.jackpotImmunityShots !== undefined && player.jackpotImmunityShots > 0;
+            const nextImmunity = Math.max(0, (player.jackpotImmunityShots || 0) - processedShells);
 
-            if (newHp <= 0 && hasTotem) {
-                newHp = 1;
-                setPlayer(p => {
-                    const idx = p.items.indexOf('TOTEM');
-                    const newItems = [...p.items];
-                    if (idx !== -1) newItems.splice(idx, 1);
-                    return { ...p, hp: 1, items: newItems };
-                });
+            if (hasJackpot) {
+                // Decrement jackpot shots
+                setPlayer(p => ({ ...p, jackpotImmunityShots: nextImmunity }));
+                if (nextImmunity <= 0) {
+                    audioManager.stopJackpotMusic();
+                }
 
-                // Trigger Totem VFX & SFX
-                setOverlayText('✨ TOTEM ACTIVATED ✨\nSurvives at 1 HP!');
-                setAnim(prev => ({
-                    ...prev,
-                    triggerTotem: (prev.triggerTotem || 0) + 1,
-                    totemTarget: 'PLAYER'
-                }));
-                audioManager.playSound('totem');
-                addLog("PLAYER'S TOTEM ACTIVATED: Survived lethal damage at 1 HP!", 'safe');
+                // RCT Sequence
+                const originalHp = player.hp;
+                const tempHp = Math.max(0, originalHp - damage);
 
-                // Wait for Totem animation to play out
-                await wait(3000);
-                setOverlayText(null);
-
-                // Hurt and recovery animation
+                setPlayer(p => ({ ...p, hp: tempHp }));
                 setOverlayColor('red');
+                setOverlayText('✨ REVERSE CURSED TECHNIQUE ✨');
+                setAnim(prev => ({ ...prev, playerHit: true, playerRecovering: false }));
+
+                await wait(1800);
+
+                setPlayer(p => ({ ...p, hp: originalHp }));
+                setOverlayText('✨ RCT: HEALED! ✨');
+                setOverlayColor('green');
+
                 setAnim(prev => ({ ...prev, playerHit: false, playerRecovering: true }));
-                await wait(2200);
+                await wait(1500);
                 setAnim(prev => ({ ...prev, playerRecovering: false }));
                 setOverlayColor('none');
+                setOverlayText(null);
             } else {
-                setPlayer(p => ({ ...p, hp: newHp }));
+                let newHp = Math.max(0, player.hp - damage);
+                const hasTotem = player.items.includes('TOTEM') && !player.isFlashbanged;
+
+                if (newHp <= 0 && hasTotem) {
+                    newHp = 1;
+                    setPlayer(p => {
+                        const idx = p.items.indexOf('TOTEM');
+                        const newItems = [...p.items];
+                        if (idx !== -1) newItems.splice(idx, 1);
+                        return { ...p, hp: 1, items: newItems };
+                    });
+
+                    // Trigger Totem VFX & SFX
+                    setOverlayText('✨ TOTEM ACTIVATED ✨\nSurvives at 1 HP!');
+                    setAnim(prev => ({
+                        ...prev,
+                        triggerTotem: (prev.triggerTotem || 0) + 1,
+                        totemTarget: 'PLAYER'
+                    }));
+                    audioManager.playSound('totem');
+                    addLog("PLAYER'S TOTEM ACTIVATED: Survived lethal damage at 1 HP!", 'safe');
+
+                    // Wait for Totem animation to play out
+                    await wait(3000);
+                    setOverlayText(null);
+
+                    // Hurt and recovery animation
+                    setOverlayColor('red');
+                    setAnim(prev => ({ ...prev, playerHit: false, playerRecovering: true }));
+                    await wait(2200);
+                    setAnim(prev => ({ ...prev, playerRecovering: false }));
+                    setOverlayColor('none');
+                } else {
+                    setPlayer(p => ({ ...p, hp: newHp }));
+                }
 
                 if (newHp <= 0) {
                     if (gameState.isHardMode && handleHardModeRoundEnd) {
@@ -344,7 +387,7 @@ export const performShot = async (
             }
         } else {
             let newHp = Math.max(0, dealer.hp - damage);
-            const hasTotem = dealer.items.includes('TOTEM');
+            const hasTotem = dealer.items.includes('TOTEM') && !dealer.isFlashbanged;
 
             if (newHp <= 0 && hasTotem) {
                 newHp = 1;

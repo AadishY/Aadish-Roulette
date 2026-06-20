@@ -798,6 +798,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         // BLOOD CONTRACT ANIMATION
+        if (scene.userData.lastContract === undefined) scene.userData.lastContract = animState.triggerContract || 0;
         if (animState.triggerContract < (scene.userData.lastContract || 0)) scene.userData.lastContract = animState.triggerContract;
         if (animState.triggerContract > (scene.userData.lastContract || 0)) {
             scene.userData.lastContract = animState.triggerContract;
@@ -843,6 +844,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         // LUCKYCHARM ANIMATION
+        if (scene.userData.lastLuckycharm === undefined) scene.userData.lastLuckycharm = animState.triggerLuckycharm || 0;
         if (animState.triggerLuckycharm < (scene.userData.lastLuckycharm || 0)) scene.userData.lastLuckycharm = animState.triggerLuckycharm;
         if (animState.triggerLuckycharm > (scene.userData.lastLuckycharm || 0)) {
             scene.userData.lastLuckycharm = animState.triggerLuckycharm;
@@ -888,6 +890,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         // FLASHBANG ANIMATION
+        if (scene.userData.lastFlashbang === undefined) scene.userData.lastFlashbang = animState.triggerFlashbang || 0;
         if (animState.triggerFlashbang < (scene.userData.lastFlashbang || 0)) scene.userData.lastFlashbang = animState.triggerFlashbang;
         if (animState.triggerFlashbang > (scene.userData.lastFlashbang || 0)) {
             scene.userData.lastFlashbang = animState.triggerFlashbang;
@@ -947,6 +950,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         // CRUSHER ANIMATION
+        if (scene.userData.lastCrusher === undefined) scene.userData.lastCrusher = animState.triggerCrusher || 0;
         if (animState.triggerCrusher < (scene.userData.lastCrusher || 0)) scene.userData.lastCrusher = animState.triggerCrusher;
         if (animState.triggerCrusher > (scene.userData.lastCrusher || 0)) {
             scene.userData.lastCrusher = animState.triggerCrusher;
@@ -1096,6 +1100,7 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
 
         // MIRROR ANIMATION
         const mirrorTriggerVal = animState.triggerMirror || 0;
+        if (scene.userData.lastMirror === undefined) scene.userData.lastMirror = mirrorTriggerVal;
         if (mirrorTriggerVal < (scene.userData.lastMirror || 0)) scene.userData.lastMirror = mirrorTriggerVal;
         if (mirrorTriggerVal > (scene.userData.lastMirror || 0)) {
             scene.userData.lastMirror = mirrorTriggerVal;
@@ -1131,6 +1136,120 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
             }
         } else {
             items.itemMirror.visible = false;
+        }
+
+        // JACKPOT ANIMATION
+        const jackpotTriggerVal = animState.triggerJackpot || 0;
+        if (scene.userData.lastJackpot === undefined) scene.userData.lastJackpot = jackpotTriggerVal;
+        if (jackpotTriggerVal < (scene.userData.lastJackpot || 0)) scene.userData.lastJackpot = jackpotTriggerVal;
+        if (jackpotTriggerVal > (scene.userData.lastJackpot || 0)) {
+            scene.userData.lastJackpot = jackpotTriggerVal;
+            scene.userData.jackpotStart = time;
+            items.itemJackpot.visible = true;
+            items.itemJackpot.position.set(0, -1.2, 5.2);
+            // Reset lever arm position
+            if (items.itemJackpot.userData.arm) {
+                items.itemJackpot.userData.arm.rotation.z = Math.PI / 6;
+            }
+        }
+
+        const jackpotTime = time - (scene.userData.jackpotStart || -999);
+        if (jackpotTime < 4.0) {
+            items.itemJackpot.visible = true;
+            
+            const isPlayerTarget = isPlayerTurn;
+            const targetZ = isPlayerTarget ? 5.2 : -2.2;
+            
+            // Rise up
+            if (jackpotTime < 0.6) {
+                const p = jackpotTime / 0.6;
+                items.itemJackpot.position.set(0, -1.2 + p * 3.2, targetZ); // rises to y = 2.0
+            } 
+            // Pull lever and spin reels
+            else if (jackpotTime < 3.2) {
+                const hover = Math.sin(time * 8) * 0.08;
+                items.itemJackpot.position.set(0, 2.0 + hover, targetZ);
+                
+                // Pull lever arm between 0.6 and 1.2
+                if (jackpotTime >= 0.6 && jackpotTime < 1.2) {
+                    const p = (jackpotTime - 0.6) / 0.6;
+                    const angle = Math.PI / 6 + Math.sin(p * Math.PI) * (Math.PI / 3);
+                    if (items.itemJackpot.userData.arm) {
+                        items.itemJackpot.userData.arm.rotation.z = angle;
+                    }
+                } else {
+                    if (items.itemJackpot.userData.arm) {
+                        items.itemJackpot.userData.arm.rotation.z = Math.PI / 6;
+                    }
+                }
+
+                // Spin reels between 0.8 and 2.5
+                if (jackpotTime >= 0.8 && jackpotTime < 2.5) {
+                    const seed = Math.floor(time * 25);
+                    const pool = ['🍎', '💎', '🍒', '🔔', '🍋', '⭐', '🍀'];
+                    const r1 = pool[(seed + 1) % pool.length];
+                    const r2 = pool[(seed + 3) % pool.length];
+                    const r3 = pool[(seed + 5) % pool.length];
+                    
+                    const ud = items.itemJackpot.userData;
+                    if (ud.canvas && ud.ctx && ud.texture) {
+                        ud.ctx.fillStyle = '#0a0a0a';
+                        ud.ctx.fillRect(0, 0, 256, 128);
+                        ud.ctx.strokeStyle = '#d4af37';
+                        ud.ctx.lineWidth = 4;
+                        ud.ctx.strokeRect(2, 2, 252, 124);
+                        ud.ctx.beginPath();
+                        ud.ctx.moveTo(85, 0); ud.ctx.lineTo(85, 128);
+                        ud.ctx.moveTo(170, 0); ud.ctx.lineTo(170, 128);
+                        ud.ctx.stroke();
+
+                        ud.ctx.font = '42px sans-serif';
+                        ud.ctx.textAlign = 'center';
+                        ud.ctx.textBaseline = 'middle';
+                        ud.ctx.fillText(r1, 42, 64);
+                        ud.ctx.fillText(r2, 128, 64);
+                        ud.ctx.fillText(r3, 213, 64);
+                        ud.texture.needsUpdate = true;
+                    }
+                } 
+                // Stop reels on final result
+                else if (jackpotTime >= 2.5) {
+                    let finalReels = ['🍒', '🍒', '🍋']; // Default normal
+                    if (animState.jackpotResult === 'JACKPOT') {
+                        finalReels = ['💎', '💎', '💎'];
+                    } else if (animState.jackpotResult === 'LOSE') {
+                        finalReels = ['🍎', '🍋', '🔔'];
+                    }
+                    
+                    const ud = items.itemJackpot.userData;
+                    if (ud.canvas && ud.ctx && ud.texture) {
+                        ud.ctx.fillStyle = '#0a0a0a';
+                        ud.ctx.fillRect(0, 0, 256, 128);
+                        ud.ctx.strokeStyle = '#d4af37';
+                        ud.ctx.lineWidth = 4;
+                        ud.ctx.strokeRect(2, 2, 252, 124);
+                        ud.ctx.beginPath();
+                        ud.ctx.moveTo(85, 0); ud.ctx.lineTo(85, 128);
+                        ud.ctx.moveTo(170, 0); ud.ctx.lineTo(170, 128);
+                        ud.ctx.stroke();
+
+                        ud.ctx.font = '42px sans-serif';
+                        ud.ctx.textAlign = 'center';
+                        ud.ctx.textBaseline = 'middle';
+                        ud.ctx.fillText(finalReels[0], 42, 64);
+                        ud.ctx.fillText(finalReels[1], 128, 64);
+                        ud.ctx.fillText(finalReels[2], 213, 64);
+                        ud.texture.needsUpdate = true;
+                    }
+                }
+            } 
+            // Descend back down
+            else {
+                const p = (jackpotTime - 3.2) / 0.8;
+                items.itemJackpot.position.set(0, 2.0 - p * 3.2, targetZ);
+            }
+        } else {
+            items.itemJackpot.visible = false;
         }
 
         // CHOKE ANIMATION (Attach Sequence)

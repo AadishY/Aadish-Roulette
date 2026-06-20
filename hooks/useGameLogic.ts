@@ -132,6 +132,8 @@ export const useGameLogic = () => {
     triggerTotem: 0,
     triggerMirror: 0,
     triggerDeckCard: 0,
+    triggerJackpot: 0,
+    jackpotResult: null,
     totemTarget: null,
     isSawing: false,
     ejectedShellColor: 'red',
@@ -212,15 +214,17 @@ export const useGameLogic = () => {
       isHardMode: false, // Reset to normal on full reset
       hardModeState: undefined
     });
-    setPlayer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
-    setDealer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
+    audioManager.stopJackpotMusic();
+    setPlayer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false, jackpotImmunityShots: 0 });
+    setDealer({ hp: MAX_HP, maxHp: MAX_HP, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false, jackpotImmunityShots: 0 });
     setLogs([]);
     setKnownShell(null);
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
       dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
-      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0, triggerLuckycharm: 0, triggerTotem: 0, triggerMirror: 0, triggerDeckCard: 0, totemTarget: null
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0, triggerLuckycharm: 0, triggerTotem: 0, triggerMirror: 0, triggerDeckCard: 0, totemTarget: null,
+      triggerFlashbang: 0, triggerCrusher: 0, triggerJackpot: 0, jackpotResult: null
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -260,15 +264,16 @@ export const useGameLogic = () => {
     // HP from override or settings
     const initialHp = hpOverride || (mpSettings?.hp) || 2;
 
-    setPlayer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
-    setDealer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false });
+    setPlayer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false, jackpotImmunityShots: 0 });
+    setDealer({ hp: initialHp, maxHp: initialHp, items: [], isHandcuffed: false, isSawedActive: false, luckycharmsUsed: 0, isFlashbanged: false, jackpotImmunityShots: 0 });
     setLogs([]);
     setKnownShell(null);
     setAnim({
       triggerRecoil: 0, triggerRack: 0, triggerSparks: 0, triggerHeal: 0, triggerDrink: 0, triggerCuff: 0,
       isSawing: false, ejectedShellColor: 'red', muzzleFlashIntensity: 0, isLiveShot: false,
       dealerHit: false, dealerDropping: false, playerHit: false, playerRecovering: false, dealerRecovering: false,
-      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0, triggerLuckycharm: 0, triggerTotem: 0, triggerMirror: 0, triggerDeckCard: 0, totemTarget: null
+      triggerAdrenaline: 0, triggerChoke: 0, triggerPhone: 0, triggerInverter: 0, triggerRemote: 0, triggerBigInverter: 0, triggerContract: 0, triggerLuckycharm: 0, triggerTotem: 0, triggerMirror: 0, triggerDeckCard: 0, totemTarget: null,
+      triggerFlashbang: 0, triggerCrusher: 0, triggerJackpot: 0, jackpotResult: null
     });
     setCameraView('PLAYER');
     setShowBlood(false);
@@ -379,6 +384,7 @@ export const useGameLogic = () => {
       // In HM, roundsSurvived could track match rounds
     }
 
+    audioManager.stopJackpotMusic();
     setKnownShell(null);
     setAnim({ dealerDropping: false, playerHit: false });
     setCameraView(turnOwnerOverride || 'PLAYER');
@@ -394,8 +400,8 @@ export const useGameLogic = () => {
 
     // Reset HP only if it's a NEW Stage (resetItems=true usually implies new stage in this logic flow)
     if (resetItems) {
-      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp, luckycharmsUsed: 0, isFlashbanged: false }));
-      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp, luckycharmsUsed: 0, isFlashbanged: false }));
+      setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp, luckycharmsUsed: 0, isFlashbanged: false, jackpotImmunityShots: 0 }));
+      setDealer(d => ({ ...d, isHandcuffed: false, isSawedActive: false, items: [], hp: startingHp, maxHp: startingHp, luckycharmsUsed: 0, isFlashbanged: false, jackpotImmunityShots: 0 }));
     } else {
       // Just reset status effects
       setPlayer(p => ({ ...p, isHandcuffed: false, isSawedActive: false, isChokeActive: false, isFlashbanged: false }));
@@ -826,13 +832,63 @@ export const useGameLogic = () => {
         );
         break;
 
+      case 'JACKPOT': {
+        // Roll the jackpot outcome
+        const rand = Math.random();
+        let outcome: 'JACKPOT' | 'NORMAL' | 'LOSE';
+        
+        // Allow forcing outcomes for debugging
+        if ((window as any).__debugJackpotForcedOutcome) {
+          outcome = (window as any).__debugJackpotForcedOutcome;
+        } else {
+          if (rand < 0.20) {
+            outcome = 'JACKPOT';
+          } else if (rand < 0.40) {
+            outcome = 'NORMAL';
+          } else {
+            outcome = 'LOSE';
+          }
+        }
+
+        // Trigger animation
+        audioManager.playSound('slotmachine');
+        setAnim(p => ({
+          ...p,
+          triggerJackpot: p.triggerJackpot + 1,
+          jackpotResult: outcome
+        }));
+
+        addLog(`${userName} SPUN THE JACKPOT MACHINE`, 'info');
+
+        // Let the spin happen
+        await wait(3500);
+
+        if (outcome === 'JACKPOT') {
+          addLog("JACKPOT WIN! IMMUNE TO NEXT 3 SHOTS", 'safe');
+          setOverlayText("✨ JACKPOT WIN! ✨\n3 SHOT IMMUNITY");
+          setPlayer(p => ({ ...p, jackpotImmunityShots: 3 }));
+          audioManager.playJackpotIntro();
+        } else if (outcome === 'NORMAL') {
+          addLog("NORMAL WIN! IMMUNE TO NEXT 1 SHOT", 'safe');
+          setOverlayText("👍 NORMAL WIN! 👍\n1 SHOT IMMUNITY");
+          setPlayer(p => ({ ...p, jackpotImmunityShots: (p.jackpotImmunityShots || 0) + 1 }));
+        } else {
+          addLog("NO WIN. TRY AGAIN", 'neutral');
+          setOverlayText("❌ LOSE ❌\nBETTER LUCK NEXT TIME");
+        }
+
+        await wait(1500);
+        setOverlayText(null);
+        break;
+      }
+
       case 'MIRROR': {
         audioManager.playSound('mirror');
         setAnim(p => ({ ...p, triggerMirror: p.triggerMirror + 1 }));
         await wait(2200); // Let Mirror animation run first
 
         const opponentState = user === 'PLAYER' ? dealerRef.current : playerRef.current;
-        const copiedItems = (opponentState.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR' && i !== 'ADRENALINE');
+        const copiedItems = (opponentState.lastTurnItemsUsed || []).filter(i => i !== 'MIRROR' && i !== 'ADRENALINE' && (user !== 'DEALER' || i !== 'JACKPOT'));
         
         if (copiedItems.length === 0) {
           addLog(`${userName} COPIED NO EFFECTS WITH MIRROR`, 'info');
@@ -847,7 +903,7 @@ export const useGameLogic = () => {
               'ADRENALINE': 'Adrenaline', 'CHOKE': 'Choke Mod', 'REMOTE': 'Remote Control',
               'BIG_INVERTER': 'Big Inverter', 'CONTRACT': 'Blood Contract', 'LUCKYCHARM': 'Lucky Charm',
               'FLASHBANG': 'Flashbang', 'CRUSHER': 'Item Crusher', 'TOTEM': 'Totem of Undying',
-              'MIRROR': 'Mirror', 'DECK_CARD': 'Tarot Card'
+              'MIRROR': 'Mirror', 'DECK_CARD': 'Tarot Card', 'JACKPOT': 'Jackpot Slot Machine'
             };
             return names[i] || i;
           };
@@ -873,7 +929,7 @@ export const useGameLogic = () => {
       case 'DECK_CARD': {
         const allTarotNames: TarotCard['name'][] = [
           'The Magician', 'The Hanged Man', 'The Hermit', 'The Moon', 'Judgment',
-          'Wheel of Fortune', 'The Sun', 'Death', 'The Tower', 'The Fool', 'Justice'
+          'Wheel of Fortune', 'The Sun', 'Death', 'The Tower', 'The Fool', 'Justice', 'Temperance'
         ];
         
         const shuffled = [...allTarotNames].sort(() => Math.random() - 0.5);
@@ -889,7 +945,8 @@ export const useGameLogic = () => {
           'Death': 'Destroy own item',
           'The Tower': 'Destroy opponent item',
           'The Fool': 'Chamber bullet reveal',
-          'Justice': 'Swap HP totals'
+          'Justice': 'Swap HP totals',
+          'Temperance': 'Swap items with opponent'
         };
         const deckCards: TarotCard[] = selectedNames.map(name => ({
           name,
@@ -936,7 +993,7 @@ export const useGameLogic = () => {
 
     // Logic for ADRENALINE (Must have something to steal)
     if (item === 'ADRENALINE') {
-      const stealableItems = dealerRef.current.items.filter(i => i !== 'ADRENALINE' && i !== null);
+      const stealableItems = dealerRef.current.items.filter(i => i !== 'ADRENALINE' && i !== 'JACKPOT' && i !== null);
       if (stealableItems.length === 0) {
         addLog("NOTHING TO STEAL", 'info');
         return;
@@ -985,6 +1042,16 @@ export const useGameLogic = () => {
       if (stealer === 'PLAYER') {
         addLog("CAN'T STEAL TOTEM!", 'danger');
         setOverlayText("❌ CAN'T STEAL TOTEM! PICK ANOTHER");
+        await wait(2000);
+        setOverlayText(null);
+      }
+      return;
+    }
+
+    if (itemToSteal === 'JACKPOT') {
+      if (stealer === 'PLAYER') {
+        addLog("CAN'T STEAL JACKPOT!", 'danger');
+        setOverlayText("❌ CAN'T STEAL JACKPOT! PICK ANOTHER");
         await wait(2000);
         setOverlayText(null);
       }
@@ -1152,7 +1219,7 @@ export const useGameLogic = () => {
         
         const stealableIndices = opponent.items
           .map((item, idx) => ({ item, idx }))
-          .filter(x => x.item !== null && x.item !== 'TOTEM')
+          .filter(x => x.item !== null && x.item !== 'TOTEM' && x.item !== 'JACKPOT')
           .map(x => x.idx);
         
         if (stealableIndices.length > 0) {
@@ -1311,6 +1378,16 @@ export const useGameLogic = () => {
         setDealer(d => ({ ...d, hp: playerHp }));
         addLog(`HP Swapped! Player HP: ${dealerHp}, Dealer HP: ${playerHp}`, 'safe');
         setOverlayText("⚖️ JUSTICE: HP SWAPPED!");
+        break;
+      }
+      
+      case 'Temperance': {
+        const playerItems = [...playerRef.current.items];
+        const dealerItems = [...dealerRef.current.items];
+        setPlayer(p => ({ ...p, items: dealerItems }));
+        setDealer(d => ({ ...d, items: playerItems }));
+        addLog(`Items Swapped! Player gained ${dealerItems.length} items, Dealer gained ${playerItems.length} items.`, 'safe');
+        setOverlayText("🔀 TEMPERANCE: ITEMS SWAPPED!");
         break;
       }
     }

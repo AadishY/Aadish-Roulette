@@ -1,3 +1,6 @@
-Improving Stats and end page 
-Adding Last item
 Multiplayer
+jackpot model Improving
+if ammo is blank and delaer shoot it at player then also 3 shot immunity is being conunted which shouldnt
+Audio sync of jacpot item not working, if round end then in new round sound resets
+
+game polishing and finishing

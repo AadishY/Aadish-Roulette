@@ -18,7 +18,20 @@ interface InventoryProps {
 
 const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameState, cameraView, isProcessing, onUseItem, disabled = false, isGunHeld = false, settings }) => {
     const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
+    const [selectedIdx, setSelectedIdx] = React.useState<number | null>(null);
     const [isMobileView, setIsMobileView] = React.useState(false);
+
+    // Scroll indicators state & ref
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+    const [showLeftMask, setShowLeftMask] = React.useState(false);
+    const [showRightMask, setShowRightMask] = React.useState(false);
+
+    const handleScroll = React.useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setShowLeftMask(el.scrollLeft > 10);
+        setShowRightMask(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+    }, []);
 
     React.useEffect(() => {
         const checkMobile = () => {
@@ -30,12 +43,30 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
     }, []);
 
     React.useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        handleScroll();
+        el.addEventListener('scroll', handleScroll);
+        window.addEventListener('resize', handleScroll);
+        return () => {
+            el.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [player.items.length, handleScroll]);
+
+    // Clear selection on item changes or turn changes
+    React.useEffect(() => {
+        setSelectedIdx(null);
+    }, [player.items.length, gameState.phase]);
+
+    React.useEffect(() => {
         if (hoveredIdx === null || !isMobileView) return;
         
         const handleOutsideClick = (e: TouchEvent | MouseEvent) => {
             const target = e.target as HTMLElement;
             if (target && !target.closest('.group')) {
                 setHoveredIdx(null);
+                setSelectedIdx(null);
             }
         };
 
@@ -78,7 +109,8 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
         'CRUSHER': 'rgba(120, 110, 90, 0.35)',
         'TOTEM': 'rgba(251, 191, 36, 0.4)',
         'MIRROR': 'rgba(129, 140, 248, 0.35)',
-        'DECK_CARD': 'rgba(192, 132, 252, 0.35)'
+        'DECK_CARD': 'rgba(192, 132, 252, 0.35)',
+        'JACKPOT': 'rgba(234, 179, 8, 0.35)'
     };
 
     const BORDER_COLORS: Record<ItemType, string> = {
@@ -99,7 +131,8 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
         'CRUSHER': 'border-stone-500/20 hover:border-stone-500/50',
         'TOTEM': 'border-amber-400/20 hover:border-amber-400/50',
         'MIRROR': 'border-indigo-400/20 hover:border-indigo-400/50',
-        'DECK_CARD': 'border-purple-400/20 hover:border-purple-400/50'
+        'DECK_CARD': 'border-purple-400/20 hover:border-purple-400/50',
+        'JACKPOT': 'border-yellow-500/20 hover:border-yellow-500/50'
     };
 
     const ITEM_NAMES: Record<ItemType, string> = {
@@ -120,7 +153,8 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
         'CRUSHER': 'ITEM CRUSHER',
         'TOTEM': 'TOTEM OF UNDYING',
         'MIRROR': 'MIRROR',
-        'DECK_CARD': 'TAROT CARD DECK'
+        'DECK_CARD': 'TAROT CARD DECK',
+        'JACKPOT': 'JACKPOT SLOT MACHINE'
     };
 
     const ITEM_LABELS: Record<ItemType, string> = {
@@ -141,7 +175,8 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
         'CRUSHER': 'CRUSHER',
         'TOTEM': 'TOTEM',
         'MIRROR': 'MIRROR',
-        'DECK_CARD': 'TAROT'
+        'DECK_CARD': 'TAROT',
+        'JACKPOT': 'JACKPOT'
     };
 
     let containerClass = "relative flex gap-1 md:gap-3 p-2 md:p-4 bg-gradient-to-t from-black/95 to-black/70 border-t border-l border-r border-white/10 backdrop-blur-3xl min-h-[40px] md:min-h-[140px] items-end overflow-x-auto md:overflow-visible max-w-full [&::-webkit-scrollbar]:hidden [scrollbar-width:none] rounded-t-[2rem]";
@@ -157,7 +192,16 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
     const isHoveredCuffDisabled = hoveredItem === 'CUFFS' && dealer.isHandcuffed;
 
     return (
-        <div className="flex-1 flex justify-center gap-1 pointer-events-auto h-full items-end relative">
+        <div className="flex-1 flex justify-center gap-1 pointer-events-auto h-full items-end relative w-full">
+            {/* Left scroll mask */}
+            {showLeftMask && (
+                <div className={`absolute left-0 bottom-0 top-0 w-8 bg-gradient-to-r from-black to-transparent pointer-events-none z-40 transition-opacity duration-300 ${isPotato ? '' : 'rounded-l-[2rem]'}`} />
+            )}
+            {/* Right scroll mask */}
+            {showRightMask && (
+                <div className={`absolute right-0 bottom-0 top-0 w-8 bg-gradient-to-l from-black to-transparent pointer-events-none z-40 transition-opacity duration-300 ${isPotato ? '' : 'rounded-r-[2rem]'}`} />
+            )}
+
             {/* Center-aligned mobile description banner when holding/hovering an item on mobile */}
             {isMobileView && hoveredIdx !== null && hoveredItem && (
                 <div className="absolute bottom-[115%] left-1/2 -translate-x-1/2 w-[92%] max-w-xs bg-black/95 border border-red-500/20 rounded-xl p-3 text-center pointer-events-none z-[120] text-stone-300 shadow-[0_15px_30px_rgba(0,0,0,0.95)] animate-in fade-in slide-in-from-bottom-2 duration-150">
@@ -179,26 +223,29 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                 </div>
             )}
 
-            <div className={containerClass}>
+            <div ref={scrollRef} className={containerClass}>
                 {player.items.map((item, idx) => {
                     const isCuffDisabled = item === 'CUFFS' && dealer.isHandcuffed;
                     const isTotem = item === 'TOTEM';
                     const isUsageDisabled = disabled || gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled || isProcessing || player.isFlashbanged || isTotem;
-                    const isHovered = (hoveredIdx === idx && (!isUsageDisabled || isTotem) && !isMobileView) || (isLongPressing && hoveredIdx === idx);
+                    const isSelected = selectedIdx === idx;
+                    const isHovered = (hoveredIdx === idx && (!isUsageDisabled || isTotem) && !isMobileView) || (isLongPressing && hoveredIdx === idx) || (isMobileView && isSelected);
                     const glowColor = GLOW_COLORS[item];
                     
                     let activeStyle = {};
-                    if (isHovered) {
+                    if (isHovered || isSelected) {
                         if (isPotato) {
                             activeStyle = {};
                         } else if (isBalanced) {
                             activeStyle = {
                                 transform: 'translateY(-16px) scale(1.04) rotate(1.5deg)',
+                                borderColor: '#c084fc'
                             };
                         } else {
                             activeStyle = {
-                                boxShadow: `0 0 25px 3px ${glowColor}`,
+                                boxShadow: `0 0 30px 6px ${glowColor}, inset 0 0 15px rgba(255, 255, 255, 0.2)`,
                                 transform: 'translateY(-16px) scale(1.04) rotate(1.5deg)',
+                                borderColor: '#c084fc'
                             };
                         }
                     }
@@ -208,6 +255,10 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                         btnClass = `w-14 h-18 md:w-22 md:h-30 bg-neutral-900 border ${isCuffDisabled ? 'border-red-900 bg-red-950/30' : 'border-stone-850'} flex flex-col items-center justify-center hover:bg-neutral-850 disabled:opacity-25 disabled:cursor-not-allowed relative overflow-hidden rounded-md`;
                     } else {
                         btnClass = `w-14 h-18 md:w-24 md:h-32 bg-zinc-950/60 border-2 ${isCuffDisabled ? 'border-red-900/50 bg-red-950/10' : BORDER_COLORS[item]} flex flex-col items-center justify-center hover:bg-stone-900/40 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 relative overflow-hidden rounded-xl ${isBalanced ? '' : 'shadow-[0_10px_30px_rgba(0,0,0,0.5)]'}`;
+                    }
+
+                    if (isSelected && !isPotato) {
+                        btnClass += " ring-2 ring-purple-500/90 border-purple-400 animate-[pulse_1.5s_infinite]";
                     }
 
                     return (
@@ -221,7 +272,21 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                             onMouseLeave={() => setHoveredIdx(null)}
                         >
                             <button
-                                onClick={() => onUseItem(idx)}
+                                onClick={() => {
+                                    if (isMobileView) {
+                                        if (selectedIdx === idx) {
+                                            onUseItem(idx);
+                                            setSelectedIdx(null);
+                                            setHoveredIdx(null);
+                                        } else {
+                                            setSelectedIdx(idx);
+                                            setHoveredIdx(idx);
+                                            audioManager.playSound('click');
+                                        }
+                                    } else {
+                                        onUseItem(idx);
+                                    }
+                                }}
                                 onTouchStart={(e) => {
                                     touchStartTime.current = Date.now();
                                     setIsLongPressing(false);
@@ -242,8 +307,15 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                         if (e.cancelable) e.preventDefault();
                                         e.stopPropagation();
                                         if (!isUsageDisabled) {
-                                            onUseItem(idx);
-                                            setHoveredIdx(null);
+                                            if (selectedIdx === idx) {
+                                                onUseItem(idx);
+                                                setSelectedIdx(null);
+                                                setHoveredIdx(null);
+                                            } else {
+                                                setSelectedIdx(idx);
+                                                setHoveredIdx(idx);
+                                                audioManager.playSound('click');
+                                            }
                                         }
                                     }
                                     setIsLongPressing(false);
@@ -288,6 +360,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                                 {item === 'TOTEM' && <Icons.Totem className="text-amber-400 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:scale-110 duration-300" />}
                                 {item === 'MIRROR' && <Icons.Mirror className="text-indigo-400 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:scale-110 duration-300" />}
                                 {item === 'DECK_CARD' && <Icons.DeckCard className="text-purple-400 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:scale-110 duration-300" />}
+                                {item === 'JACKPOT' && <Icons.Jackpot className="text-yellow-500 mb-0 md:mb-2 w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:scale-110 duration-300" />}
 
                                 <span className={`text-[6px] md:text-[8px] text-stone-400 font-black tracking-widest block text-center px-1 truncate w-full relative z-10 transition-colors group-hover:text-white ${isPotato ? '' : 'animate-pulse'}`}>
                                     {ITEM_LABELS[item]}

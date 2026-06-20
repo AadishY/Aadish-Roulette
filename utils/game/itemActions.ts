@@ -610,7 +610,8 @@ const getFriendlyItemName = (item: ItemType): string => {
         'CRUSHER': 'Item Crusher',
         'TOTEM': 'Totem of Undying',
         'MIRROR': 'Mirror',
-        'DECK_CARD': 'Tarot Card'
+        'DECK_CARD': 'Tarot Card',
+        'JACKPOT': 'Jackpot Slot Machine'
     };
     return names[item] || item;
 };

@@ -24,7 +24,8 @@ const ITEM_NAMES: Record<ItemType, string> = {
     'CRUSHER': 'CRUSHER',
     'TOTEM': 'TOTEM OF UNDYING',
     'MIRROR': 'MIRROR',
-    'DECK_CARD': 'TAROT CARD DECK'
+    'DECK_CARD': 'TAROT CARD DECK',
+    'JACKPOT': 'JACKPOT SLOT MACHINE'
 };
 
 const ITEM_COLORS: Record<ItemType, string> = {
@@ -45,7 +46,8 @@ const ITEM_COLORS: Record<ItemType, string> = {
     'CRUSHER': 'text-amber-600 border-amber-500/55 bg-amber-950/35',
     'TOTEM': 'text-amber-400 border-amber-400/50 bg-amber-950/30',
     'MIRROR': 'text-indigo-400 border-indigo-400/50 bg-indigo-950/30',
-    'DECK_CARD': 'text-purple-400 border-purple-400/50 bg-purple-950/30'
+    'DECK_CARD': 'text-purple-400 border-purple-400/50 bg-purple-950/30',
+    'JACKPOT': 'text-yellow-500 border-yellow-500/50 bg-yellow-950/30'
 };
 
 export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
@@ -132,6 +134,9 @@ export const LootOverlay: React.FC<LootOverlayProps> = ({ receivedItems }) => {
                                         {item === 'FLASHBANG' && <Icons.Flashbang size={56} />}
                                         {item === 'CRUSHER' && <Icons.Crusher size={56} />}
                                         {item === 'TOTEM' && <Icons.Totem size={56} />}
+                                        {item === 'MIRROR' && <Icons.Mirror size={56} />}
+                                        {item === 'DECK_CARD' && <Icons.DeckCard size={56} />}
+                                        {item === 'JACKPOT' && <Icons.Jackpot size={56} />}
                                     </div>
 
                                     {/* Text Label */}

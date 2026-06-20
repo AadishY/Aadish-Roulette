@@ -8,84 +8,119 @@ type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 // From useGameLogic
 // Adjusted for Hard Mode support
 export const getRandomItem = (isHardMode: boolean = false, isDealer: boolean = false): ItemType => {
-    // PLAYER SPECIFIC CONTRACT LOGIC
-    // Normal: 9%, Hard: 7%
-    if (!isDealer) {
-        if (isHardMode && Math.random() < 0.07) return 'CONTRACT';
-        if (!isHardMode && Math.random() < 0.09) return 'CONTRACT';
-    }
-
-    // Standard Items - exact flat probability distributions
     const r = Math.random() * 100;
 
     if (isHardMode) {
-        // Hard Mode Distribution (total = 93% since CONTRACT is 7% for player)
-        // Values normalized to 100% for non-contract pool
-        if (r < 15) return 'BEER';           // 15%
-        if (r < 19) return 'CIGS';            // 4%
-        if (r < 27) return 'GLASS';           // 8%
-        if (r < 35) return 'CUFFS';           // 8%
-        if (r < 43) return 'PHONE';           // 8%
-        if (r < 48) return 'SAW';             // 5%
-        if (r < 56) return 'INVERTER';        // 8%
-        if (r < 63) return 'ADRENALINE';      // 7%
-        if (r < 68) return 'CHOKE';           // 5%
-        if (r < 72) return 'BIG_INVERTER';    // 4%
-        if (r < 76) return 'LUCKYCHARM';      // 4%
-        if (r < 81) return 'FLASHBANG';       // 5%
-        if (r < 84) return 'CRUSHER';         // 3%
-        if (r < 88) return 'MIRROR';          // 4%
-        if (r < 92) return 'DECK_CARD';       // 4%
-        return 'TOTEM';                       // 1% (+ remainder)
+        if (!isDealer) {
+            // Player Hard Mode: CONTRACT (7%), BEER (15%), CIGS (4%), GLASS (8%), CUFFS (8%), PHONE (8%), SAW (5%), INVERTER (8%), ADRENALINE (7%), CHOKE (5%), BIG_INVERTER (4%), LUCKYCHARM (4%), FLASHBANG (5%), CRUSHER (3%), MIRROR (4%), DECK_CARD (4%), TOTEM (1%), JACKPOT (1%)
+            if (r < 7) return 'CONTRACT';
+            if (r < 22) return 'BEER';
+            if (r < 26) return 'CIGS';
+            if (r < 34) return 'GLASS';
+            if (r < 42) return 'CUFFS';
+            if (r < 50) return 'PHONE';
+            if (r < 55) return 'SAW';
+            if (r < 63) return 'INVERTER';
+            if (r < 70) return 'ADRENALINE';
+            if (r < 75) return 'CHOKE';
+            if (r < 79) return 'BIG_INVERTER';
+            if (r < 83) return 'LUCKYCHARM';
+            if (r < 88) return 'FLASHBANG';
+            if (r < 91) return 'CRUSHER';
+            if (r < 95) return 'MIRROR';
+            if (r < 99) return 'DECK_CARD';
+            if (r < 100) {
+                // equal rarity
+                if (Math.random() < 0.5) return 'TOTEM';
+                return 'JACKPOT';
+            }
+            return 'JACKPOT'; // fallback
+        } else {
+            // Dealer Hard Mode (no contract, higher totem, no jackpot): BEER (15%), CIGS (4%), GLASS (8%), CUFFS (8%), PHONE (8%), SAW (5%), INVERTER (8%), ADRENALINE (7%), CHOKE (5%), BIG_INVERTER (4%), LUCKYCHARM (4%), FLASHBANG (5%), CRUSHER (3%), MIRROR (3%), DECK_CARD (3%), TOTEM (10%)
+            if (r < 15) return 'BEER';
+            if (r < 19) return 'CIGS';
+            if (r < 27) return 'GLASS';
+            if (r < 35) return 'CUFFS';
+            if (r < 43) return 'PHONE';
+            if (r < 48) return 'SAW';
+            if (r < 56) return 'INVERTER';
+            if (r < 63) return 'ADRENALINE';
+            if (r < 68) return 'CHOKE';
+            if (r < 72) return 'BIG_INVERTER';
+            if (r < 76) return 'LUCKYCHARM';
+            if (r < 81) return 'FLASHBANG';
+            if (r < 84) return 'CRUSHER';
+            if (r < 87) return 'MIRROR';
+            if (r < 90) return 'DECK_CARD';
+            return 'TOTEM';
+        }
     } else {
-        // Normal Mode Distribution (total = 91% since CONTRACT is 9% for player)
-        if (r < 10) return 'BEER';            // 10%
-        if (r < 20) return 'CIGS';            // 10%
-        if (r < 27) return 'GLASS';           // 7%
-        if (r < 34) return 'CUFFS';           // 7%
-        if (r < 42) return 'PHONE';           // 8%
-        if (r < 47) return 'SAW';             // 5%
-        if (r < 54) return 'INVERTER';        // 7%
-        if (r < 61) return 'ADRENALINE';      // 7%
-        if (r < 66) return 'CHOKE';           // 5%
-        if (r < 70) return 'BIG_INVERTER';    // 4%
-        if (r < 74) return 'LUCKYCHARM';      // 4%
-        if (r < 79) return 'FLASHBANG';       // 5%
-        if (r < 82) return 'CRUSHER';         // 3%
-        if (r < 86) return 'MIRROR';          // 4%
-        if (r < 90) return 'DECK_CARD';       // 4%
-        return 'TOTEM';                       // 1% (+ remainder)
+        if (!isDealer) {
+            // Player Normal Mode: CONTRACT (9%), BEER (10%), CIGS (9%), GLASS (7%), CUFFS (7%), PHONE (8%), SAW (5%), INVERTER (7%), ADRENALINE (7%), CHOKE (5%), BIG_INVERTER (4%), LUCKYCHARM (4%), FLASHBANG (5%), CRUSHER (3%), MIRROR (4%), DECK_CARD (3%), TOTEM (1%), JACKPOT (2%)
+            if (r < 9) return 'CONTRACT';
+            if (r < 19) return 'BEER';
+            if (r < 28) return 'CIGS';
+            if (r < 35) return 'GLASS';
+            if (r < 42) return 'CUFFS';
+            if (r < 50) return 'PHONE';
+            if (r < 55) return 'SAW';
+            if (r < 62) return 'INVERTER';
+            if (r < 69) return 'ADRENALINE';
+            if (r < 74) return 'CHOKE';
+            if (r < 78) return 'BIG_INVERTER';
+            if (r < 82) return 'LUCKYCHARM';
+            if (r < 87) return 'FLASHBANG';
+            if (r < 90) return 'CRUSHER';
+            if (r < 94) return 'MIRROR';
+            if (r < 97) return 'DECK_CARD';
+            if (r < 98) return 'TOTEM';
+            return 'JACKPOT';
+        } else {
+            // Dealer Normal Mode (no jackpot): BEER (15%), CIGS (14%), GLASS (7%), CUFFS (7%), PHONE (8%), SAW (5%), INVERTER (7%), ADRENALINE (7%), CHOKE (5%), BIG_INVERTER (4%), LUCKYCHARM (4%), FLASHBANG (5%), CRUSHER (3%), MIRROR (4%), DECK_CARD (4%), TOTEM (1%)
+            if (r < 15) return 'BEER';
+            if (r < 29) return 'CIGS';
+            if (r < 36) return 'GLASS';
+            if (r < 43) return 'CUFFS';
+            if (r < 51) return 'PHONE';
+            if (r < 56) return 'SAW';
+            if (r < 63) return 'INVERTER';
+            if (r < 70) return 'ADRENALINE';
+            if (r < 75) return 'CHOKE';
+            if (r < 79) return 'BIG_INVERTER';
+            if (r < 83) return 'LUCKYCHARM';
+            if (r < 88) return 'FLASHBANG';
+            if (r < 91) return 'CRUSHER';
+            if (r < 95) return 'MIRROR';
+            if (r < 99) return 'DECK_CARD';
+            return 'TOTEM';
+        }
     }
 };
-
-// ... (getDealerCheatingItem kept same)
 
 const getDealerCheatingItem = (hp: number): ItemType => {
     const r = Math.random();
 
     // LOW HEALTH PANIC MODE (<= 2 HP)
     // He wants to SURVIVE.
-    // Contract is suicide here, avoid it.
     if (hp <= 2) {
-        if (r < 0.30) return 'CIGS';        // 30% Heal
-        if (r < 0.45) return 'BEER';        // 15% Skip current shell
-        if (r < 0.60) return 'TOTEM';       // 15% Survive lethal
+        if (r < 0.35) return 'CIGS';       // 35% Cigs
+        if (r < 0.60) return 'TOTEM';      // 25% Totem
         if (r < 0.70) return 'ADRENALINE';  // 10% Steal Cigs
-        if (r < 0.80) return 'CUFFS';       // 10% Stop player
-        if (r < 0.90) return 'SAW';         // 10% Desperation Damage
-        return 'CHOKE';                     // 10% Desperation Damage
+        if (r < 0.85) return 'CUFFS';       // 15% Cuffs
+        return 'INVERTER';                  // 15% Inverter
     }
 
-    // AGGRESSIVE MODE (> 2 HP)
+    // AGGRESSIVE MODE (hp > 2)
     // He wants to KILL.
-    if (r < 0.25) return 'SAW';         // 25% double damage
-    if (r < 0.50) return 'CHOKE';       // 25% huge damage/skip
-    if (r < 0.65) return 'GLASS';       // 15% intel
-    if (r < 0.75) return 'CUFFS';       // 10% control
-    if (r < 0.85) return 'INVERTER';    // 10% manipulation
-    if (r < 0.90) return 'BIG_INVERTER';// 5% chaos
-    // CONTRACT REMOVED FOR DEALER
-    return 'ADRENALINE';                // 10% steal
+    if (r < 0.25) return 'SAW';         // 25% Saw
+    if (r < 0.45) return 'INVERTER';    // 20% Inverter
+    if (r < 0.60) return 'CHOKE';       // 15% Choke
+    if (r < 0.70) return 'CUFFS';       // 10% Cuffs
+    if (r < 0.80) return 'REMOTE';      // 10% Remote
+    if (r < 0.90) return 'BIG_INVERTER'; // 10% Big Inverter
+    if (r < 0.92) return 'ADRENALINE';  // 2% steal
+    if (r < 0.96) return 'LUCKYCHARM';  // 4% luck
+    return 'GLASS';                     // 4% glass
 };
 
 export const getContractLoot = (luckycharmsUsed: number = 0): ItemType[] => {

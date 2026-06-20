@@ -57,6 +57,7 @@
 | 🌟 | **Totem of Undying** | [PASSIVE] Auto-saves at 1 HP on lethal damage. Cannot be stolen via Adrenaline. Can be destroyed by Crusher. Max 1. |
 | 🪞 | **Mirror** | Replays ALL items opponent used on their last turn, in sequence. Excludes Mirror itself. |
 | 🃏 | **Tarot Deck** | Draw one of 6 randomly fanned cards. 11 possible cards with varied effects. |
+| 🎰 | **Jackpot Machine** | Spin to win immunity! 20% 3-shot immune (Jackpot Win), 20% 1-shot immune (Normal Win), 60% lose. Exclusive to Player. Stacks. |
 
 ---
 
@@ -77,6 +78,7 @@ When using the **Tarot Deck** item, 6 cards are fanned face-down on the table. Y
 | **The Tower** | Active (Amber) | Destroy 1 random item from opponent's inventory (excluding Totem). |
 | **The Fool** | Active (Pink) | Reveals a shell type. Lie probability: 0% (3+ shells), 10% (2 shells), 25% (1 shell). |
 | **Justice** | Active (Emerald) | Swap your HP with opponent's HP. Extremely powerful when you're low and they're high. |
+| **Temperance** | Active (Sky Blue) | Swap all items with opponent. Great if they have more or better items. |
 
 ---
 
@@ -113,7 +115,7 @@ Contracts are tested first. If the contract roll succeeds, it is drawn; otherwis
 | :--- | :---: | :---: |
 | **Blood Contract** | **9.0%** | **7.0%** |
 | **Beer** | **10.0%** | **15.0%** |
-| **Cigarettes** | **10.0%** | **4.0%** |
+| **Cigarettes** | **9.0%** | **4.0%** |
 | **Magnifying Glass** | **7.0%** | **8.0%** |
 | **Handcuffs** | **7.0%** | **8.0%** |
 | **Burner Phone** | **8.0%** | **8.0%** |
@@ -126,8 +128,9 @@ Contracts are tested first. If the contract roll succeeds, it is drawn; otherwis
 | **Flashbang** | **5.0%** | **5.0%** |
 | **Crusher** | **3.0%** | **3.0%** |
 | **Mirror** | **4.0%** | **4.0%** |
-| **Tarot Deck Card** | **4.0%** | **4.0%** |
+| **Tarot Deck Card** | **3.0%** | **4.0%** |
 | **Totem of Undying** | **1.0%** | **1.0%** |
+| **Jackpot Slot Machine** | **2.0%** | **1.0%** |
 
 *Note: Dealer cannot draw a Blood Contract. Unique items (Contract, Lucky Charm, Totem) max 1 per inventory.*
 
@@ -153,8 +156,9 @@ Dealer focuses on maximizing damage output and board control:
 - 🔍 **Magnifying Glass (Intel)**: **15.0%**
 - 🔗 **Handcuffs (Skip player)**: **10.0%**
 - 🔄 **Inverter (Polarity swap)**: **10.0%**
-- 💉 **Adrenaline (Steal item)**: **10.0%**
+- 💉 **Adrenaline (Steal item)**: **2.0%**
 - ⚡ **Big Inverter (Bulk swap)**: **5.0%**
+- 🌟 **Totem of Undying (Passive)**: **8.0%**
 
 ---
 
@@ -194,6 +198,19 @@ npm run build
 
 </div>
 
+---
+ 
+## 📜 Changelog
+ 
+### v2.1.0 (Jackpot Protocols & Audio Dimming)
+- **Jackpot Audio Fixed**: Realigned slot machine audio pathways (`slotmachine`, `jackpot`, and `jackpotloop` files loaded properly).
+- **Dynamic Music Dimming**: Game music dims to 35% during standard item SFX, and to 5% (almost muted) while the Jackpot looping immunity theme is active.
+- **Inventory Icon Fix**: Jackpot item now successfully renders a golden Coins icon in inventory, loot, and debug screens.
+- **Drop Rate Balancing**:
+  - Normal Mode: Jackpot is a rare drop (2.0%) just above Totem (1.0%).
+  - Hard Mode: Totem (1.0%) and Jackpot (1.0%) are equal rarity.
+- **Debug Relocation**: Reorganized Developer console panel, renaming the 'Tarot' section to 'Item Power' and moving the Jackpot forced win cheats there.
+ 
 ---
 
 ## 📜 Credits

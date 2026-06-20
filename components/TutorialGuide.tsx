@@ -290,9 +290,9 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <ItemCard
                             icon={<Icons.Flashbang size={20} />}
                             name="FLASHBANG"
-                            description="Blinds the opponent, completely preventing them from using ANY items on their next turn. They can still pick up the gun and shoot."
+                            description="Blinds the opponent, completely preventing them from using ANY items on their next turn. Also disables the target's Totem of Undying passive save for that round. They can still pick up the gun and shoot."
                             color="text-zinc-300"
-                            effect="→ BLOCK ALL OPPONENT ITEMS"
+                            effect="→ BLOCK ITEMS & DISABLE TOTEM"
                         />
 
                         <ItemCard
@@ -306,9 +306,9 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <ItemCard
                             icon={<Icons.Totem size={20} />}
                             name="TOTEM OF UNDYING"
-                            description="[PASSIVE] Auto-activates when HP drops to 0, saving you at 1 HP. Cannot be stolen via Adrenaline. Can be destroyed by Crusher. Max 1 per inventory."
+                            description="[PASSIVE] Auto-activates when HP drops to 0, saving you at 1 HP. Fails to trigger if you are Flashbanged/Blinded. Cannot be stolen via Adrenaline. Can be destroyed by Crusher. Max 1 per inventory."
                             color="text-amber-400"
-                            effect="→ AUTO-SURVIVE AT 1 HP (UNSTEALABLE)"
+                            effect="→ AUTO-SURVIVE (BLOCKED BY BLIND)"
                         />
 
                         <ItemCard
@@ -317,6 +317,14 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             description="Copies and replays ALL items your opponent used on their last turn, in sequence. Excludes Mirror itself to prevent infinite loops. Useless if opponent used no items."
                             color="text-indigo-400"
                             effect="→ REPLAY OPPONENT'S LAST TURN ITEMS"
+                        />
+
+                        <ItemCard
+                            icon={<Icons.Jackpot size={20} />}
+                            name="JACKPOT SLOT MACHINE"
+                            description="Spin to win! 20% chance for 3-shot immunity (Jackpot Win), 20% chance for 1-shot immunity (Normal Win), and 60% chance for no win. Exclusive to Player (Dealer cannot get or steal). Stacks with multiple wins."
+                            color="text-yellow-500"
+                            effect="→ SPIN FOR SHOT IMMUNITY (PLAYER ONLY)"
                         />
                     </div>
                 </div>
@@ -411,6 +419,13 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             color="text-emerald-400"
                             effect="→ SWAP HP TOTALS"
                         />
+                        <ItemCard
+                            icon={<Icons.DeckCard />}
+                            name="TEMPERANCE"
+                            description="Instantly swap your entire item inventory with your opponent's inventory. Great if they have more or better items than you."
+                            color="text-sky-400"
+                            effect="→ SWAP ITEMS WITH ENEMY"
+                        />
                     </div>
                 </div>
             )
@@ -454,7 +469,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans">Cigarettes (Heal)</td>
-                                            <td className="p-1.5 text-center">10.0%</td>
+                                            <td className="p-1.5 text-center">9.0%</td>
                                             <td className="p-1.5 text-center text-red-400">4.0%</td>
                                         </tr>
                                         <tr>
@@ -519,13 +534,18 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans text-purple-400 font-bold">Tarot Deck Card</td>
-                                            <td className="p-1.5 text-center text-purple-400 font-bold">4.0%</td>
+                                            <td className="p-1.5 text-center text-purple-400 font-bold">3.0%</td>
                                             <td className="p-1.5 text-center text-purple-400 font-bold">4.0%</td>
                                         </tr>
                                         <tr>
                                             <td className="p-1.5 pl-2 font-sans text-amber-400 font-bold">Totem of Undying (Passive)</td>
                                             <td className="p-1.5 text-center text-amber-400 font-bold">1.0%</td>
                                             <td className="p-1.5 text-center text-amber-400 font-bold">1.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-1.5 pl-2 font-sans text-yellow-500 font-bold">Jackpot Slot Machine</td>
+                                            <td className="p-1.5 text-center text-yellow-500 font-bold">2.0%</td>
+                                            <td className="p-1.5 text-center text-yellow-500 font-bold">1.0%</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -550,13 +570,15 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                                             <span className="font-bold text-red-400 text-[9px] md:text-[10px]">AGGRESSIVE (HP &gt; 2):</span>
                                             <br />• Hand Saw / Choke Mod: **25.0%** each
                                             <br />• Magnifying Glass: **15.0%**
-                                            <br />• Adrenaline / Cuffs / Inverter: **10.0%** each
+                                            <br />• Cuffs / Inverter: **10.0%** each
+                                            <br />• Totem of Undying: **8.0%**
                                             <br />• Big Inverter: **5.0%**
+                                            <br />• Adrenaline: **2.0%**
                                         </div>
                                         <div>
                                             <span className="font-bold text-green-400 text-[9px] md:text-[10px]">PANIC/SURVIVAL (HP &le; 2):</span>
-                                            <br />• Cigarettes (Heal): **40.0%**
-                                            <br />• Beer: **20.0%**
+                                            <br />• Cigarettes (Heal): **30.0%**
+                                            <br />• Beer / Totem of Undying: **15.0%** each
                                             <br />• Adrenaline / Cuffs / Saw / Choke: **10.0%** each
                                         </div>
                                     </div>
@@ -750,11 +772,11 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <div className="md:col-span-2">
                             <div className="bg-gradient-to-r from-purple-950/40 to-stone-900/40 border border-purple-900/30 p-3 md:p-4 rounded-sm">
                                 <h4 className="font-black text-purple-400 text-xs md:text-sm uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    🧪 EXPERIMENTAL GEAR (IN PIPELINE)
+                                    🎰 ACTIVE SPECIAL PROTOCOL
                                 </h4>
                                 <div className="space-y-2 text-stone-400 text-xs">
                                     <div>
-                                        <span className="font-bold text-stone-200">🎰 JACKPOT:</span> Grants temporary absolute immunity from the next 3 shell discharges (self-inflicted or enemy fired).
+                                        <span className="font-bold text-stone-200">🎰 JACKPOT:</span> Grants absolute immunity from the next 3 shell discharges (self-inflicted or enemy fired). Exclusive to player, dealer cannot steal or acquire it. Stacks normal wins (+1 immune shot) and jackpot wins (3 immune shots).
                                     </div>
                                 </div>
                             </div>
@@ -764,7 +786,52 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
             )
         },
 
-        // Page 6: Developer Info
+        // Page 6: Changelog
+        {
+            title: "CHANGELOG",
+            icon: <Code size={20} className="text-blue-500" />,
+            content: (
+                <div className="space-y-4">
+                    <p className="text-stone-400 text-center text-xs md:text-sm mb-3">
+                        📋 Version history and system log changes.
+                    </p>
+
+                    <div className="space-y-3 max-h-[48vh] overflow-y-auto pr-1 custom-scrollbar">
+                        <div className="bg-stone-900/60 border border-stone-850 p-3 rounded-lg space-y-2 text-left">
+                            <span className="font-black text-white text-[10px] md:text-xs block border-b border-stone-800 pb-1.5 flex justify-between">
+                                <span>v2.1.0 - JACKPOT PROTOCOLS & BALANCING</span>
+                                <span className="text-[9px] text-stone-500 font-mono">CURRENT</span>
+                            </span>
+                            <ul className="list-disc pl-4 text-stone-350 text-[9px] md:text-[10px] space-y-1.5 leading-relaxed">
+                                <li><strong>Jackpot Mechanics Fixed</strong>: Corrected slot machine audio pathways to ensure spin and loop sounds play properly.</li>
+                                <li><strong>Dynamic Music Dimming</strong>: Background game music now dims automatically during standard item usage SFX, and drops to 5% (almost muted) while the Jackpot loop is active, restoring volume on immunity depletion.</li>
+                                <li><strong>Inventory Icon Fix</strong>: Added rendering mappings for the Jackpot slot machine item in the inventory and loot overlays.</li>
+                                <li><strong>Balance & Drop Rates Tuning</strong>:
+                                    <br />• <em>Normal Mode</em>: Jackpot is a rare drop (2.0%) positioned just above Totem (1.0%).
+                                    <br />• <em>Hard Mode</em>: Totem (1.0%) and Jackpot (1.0%) have equal rare item drop rates.
+                                </li>
+                                <li><strong>Debug Console Relocation</strong>: Reorganized the Developer panel, renaming the &apos;Tarot&apos; section to &apos;Item Power&apos; and moving the Jackpot forced win cheats there.</li>
+                                <li><strong>Guide & Documentation</strong>: Updated the tactical guide and repository documentation with the new drop matrix and item effects.</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-stone-900/60 border border-stone-850 p-3 rounded-lg space-y-2 opacity-70 text-left">
+                            <span className="font-black text-stone-300 text-[10px] md:text-xs block border-b border-stone-800 pb-1.5">
+                                v2.0.0 - MATCH STATS & DEALER UPGRADES
+                            </span>
+                            <ul className="list-disc pl-4 text-stone-400 text-[9px] md:text-[10px] space-y-1 leading-relaxed">
+                                <li><strong>Match Statistics Screen</strong>: Added rich scoreboard breakdowns, favorite items, and tactics grids.</li>
+                                <li><strong>Mobile Safety Triggers</strong>: Added double-tap confirmation system for inventory usage on touch devices.</li>
+                                <li><strong>Tarot Card Updates</strong>: Integrated 11 tarot cards with active/passive effects and custom mystical deck graphics.</li>
+                                <li><strong>Dealer AI Upgrades</strong>: Added smart totem/flashbang counters and multi-item synergy strategies.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+
+        // Page 7: Developer Info
         {
             title: "DEVELOPER",
             icon: <Code size={20} className="text-red-500" />,
@@ -860,46 +927,72 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
     }, [currentPage]);
 
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-2 sm:p-4 overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto custom-scrollbar select-none animate-in fade-in duration-300">
             <div
-                className="w-[85vw] h-[85vh] max-w-[85vw] max-h-[85vh] bg-stone-950/45 backdrop-blur-2xl border border-stone-850 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5 my-auto"
+                className="w-[95vw] h-[90vh] md:w-[85vw] md:h-[85vh] max-w-[95vw] max-h-[90vh] bg-stone-950/45 backdrop-blur-2xl border border-stone-850 shadow-[0_40px_100px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5 my-auto"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
             >
-                {/* Decorative */}
-                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-red-500/10 to-transparent" />
-
+                {/* Decorative top stripe */}
+                <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-red-500/30 to-transparent z-50" />
+ 
                 {/* Header */}
-                <div className="flex justify-between items-center p-4 border-b border-stone-800/50 bg-stone-950/20 shrink-0">
+                <div className="flex justify-between items-center p-4 border-b border-stone-800/50 bg-stone-950/30 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="p-1.5 bg-stone-900/60 rounded-xl border border-stone-800 flex items-center justify-center text-red-500">
+                        <div className="p-2 bg-stone-900/80 rounded-xl border border-stone-800 flex items-center justify-center text-red-500 shadow-inner">
                             {pages[currentPage].icon}
                         </div>
                         <div>
-                            <h2 className="text-base sm:text-lg font-black text-white tracking-[0.2em] uppercase leading-tight">
-                                {pages[currentPage].title}
+                            <h2 className="text-sm sm:text-lg font-black text-white tracking-[0.25em] uppercase leading-tight">
+                                Tactical Manual
                             </h2>
-                            <p className="text-[8px] sm:text-[9px] text-stone-500 font-bold tracking-[0.4em] uppercase">Tactical Manual 1.0</p>
+                            <p className="text-[8px] sm:text-[9px] text-stone-500 font-bold tracking-[0.4em] uppercase">VER {GAME_VERSION} • DEPLOYMENT SPEC</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1.5 text-stone-500 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95 cursor-pointer"
+                        className="p-2 text-stone-500 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-95 cursor-pointer border border-transparent hover:border-white/5"
                         aria-label="Close guide"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
                 </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-contain custom-scrollbar">
-                    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {pages[currentPage].content}
+ 
+                {/* Split Navigation & Content Container */}
+                <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
+                    {/* Navigation Sidebar (Vertical on Desktop, Horizontal on Mobile) */}
+                    <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto bg-stone-950/60 border-b md:border-b-0 md:border-r border-stone-850 p-2 md:p-4 gap-1.5 shrink-0 select-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] w-full md:w-56 items-center md:items-stretch">
+                        {pages.map((page, idx) => {
+                            const isActive = idx === currentPage;
+                            return (
+                                <button
+                                    key={idx}
+                                    onClick={() => goToPage(idx)}
+                                    className={`flex items-center gap-2.5 px-3 py-2 md:py-3 border text-left transition-all shrink-0 md:shrink rounded-xl cursor-pointer ${
+                                        isActive
+                                        ? 'bg-red-500/10 border-red-500/35 text-white font-black shadow-[0_0_15px_rgba(239,68,68,0.06)]'
+                                        : 'bg-transparent border-transparent text-stone-500 hover:text-stone-300 hover:bg-white/5'
+                                    }`}
+                                >
+                                    <div className={`p-1 rounded-lg shrink-0 ${isActive ? 'bg-red-500/20 text-red-400' : 'bg-stone-900 border border-stone-800 text-stone-500'}`}>
+                                        {React.cloneElement(page.icon as React.ReactElement, { size: 14 })}
+                                    </div>
+                                    <span className="text-[10px] md:text-xs tracking-wider uppercase font-sans font-bold leading-none truncate">{page.title}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+ 
+                    {/* Content Area */}
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-contain custom-scrollbar bg-stone-900/10">
+                        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {pages[currentPage].content}
+                        </div>
                     </div>
                 </div>
-
-                {/* Footer - Navigation */}
+ 
+                {/* Footer - Navigation Stepper */}
                 <div className="shrink-0 p-3 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl">
                     <div className="max-w-4xl mx-auto flex items-center justify-between">
                         <button
@@ -913,20 +1006,20 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             <ChevronLeft size={14} />
                             BACK
                         </button>
-
+ 
                         <div className="flex items-center gap-2">
                             {pages.map((_, index) => (
                                 <button
                                     key={index}
                                     onClick={() => goToPage(index)}
-                                    className={`h-1 rounded-full transition-all ${index === currentPage
+                                    className={`h-1.5 rounded-full transition-all ${index === currentPage
                                         ? 'w-6 bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]'
                                         : 'w-1.5 bg-stone-800 hover:bg-stone-700'
                                         }`}
                                 />
                             ))}
                         </div>
-
+ 
                         <button
                             onClick={nextPage}
                             disabled={currentPage === pages.length - 1}

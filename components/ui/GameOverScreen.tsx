@@ -3,6 +3,7 @@ import { Skull, Power, Trophy, Target, Zap, Activity, RotateCcw } from 'lucide-r
 import { TurnOwner } from '../../types';
 import { MatchStats, GameStats, getStoredStats, calculateMatchScore, saveGameStats } from '../../utils/statsManager';
 import { audioManager } from '../../utils/audioManager';
+import { Icons } from './Icons';
 
 interface GameOverScreenProps {
     winner: TurnOwner | null;
@@ -106,7 +107,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
     const rankInfo = getRankInfo(finalScore);
 
     return (
-        <div className="absolute inset-0 z-[300] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl pointer-events-auto overflow-y-auto py-10 text-stone-200 font-sans select-none animate-in fade-in duration-1000">
+        <div className="absolute inset-0 z-[300] flex flex-col items-center justify-start bg-black/90 backdrop-blur-xl pointer-events-auto overflow-y-auto py-12 md:py-16 text-stone-200 font-sans select-none animate-in fade-in duration-1000">
 
             {/* Background Atmosphere */}
             <div className={`absolute inset-0 pointer-events-none transition-colors duration-1000 ${winner === 'PLAYER' ? 'bg-green-500/5' : 'bg-red-500/10'}`}>
@@ -158,7 +159,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
 
             {/* Match Stats Grid */}
             {matchData && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 w-full max-w-4xl px-6 animate-in slide-in-from-bottom-8 duration-1000 delay-300">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 w-full max-w-4xl px-6 animate-in slide-in-from-bottom-8 duration-1000 delay-300">
                     <div className="bg-stone-900/40 backdrop-blur-md border border-white/5 p-6 rounded-2xl flex flex-col items-center group hover:bg-stone-900/60 transition-all">
                         <Activity className="text-blue-500 mb-2 group-hover:scale-110 transition-transform" size={20} />
                         <div className="text-stone-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Duration</div>
@@ -182,6 +183,171 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
                         <Skull className="text-purple-500 mb-2 group-hover:scale-110 transition-transform" size={20} />
                         <div className="text-stone-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Lethality</div>
                         <div className="text-2xl md:text-3xl font-black text-white">{matchData.damageDealt}</div>
+                    </div>
+                </div>
+            )}
+
+            {/* Extended Match Analysis */}
+            {matchData && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-4xl px-6 mb-12 animate-in slide-in-from-bottom-12 duration-1000 delay-500">
+                    
+                    {/* Left Column: Score Breakdown & Achievements */}
+                    <div className="bg-stone-900/30 backdrop-blur-md border border-white/5 p-6 rounded-2xl flex flex-col gap-6 text-left">
+                        <div>
+                            <h3 className="text-xs text-stone-500 font-bold tracking-[0.4em] uppercase mb-4 flex items-center gap-2">
+                                <Trophy size={14} className="text-yellow-500" /> Score Breakdown
+                            </h3>
+                            <div className="space-y-3 font-mono text-xs md:text-sm">
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-stone-400 font-sans">Match Outcome:</span>
+                                    <span className={matchData.result === 'WIN' ? 'text-green-400 font-bold' : 'text-red-500 font-bold'}>
+                                        {matchData.result === 'WIN' ? '+1,000 pts' : '+0 pts'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-stone-400 font-sans">Rounds Survived ({matchData.roundsSurvived}):</span>
+                                    <span className="text-stone-200">+{matchData.roundsSurvived * 100} pts</span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-stone-400 font-sans">Shots Hit ({matchData.shotsHit}):</span>
+                                    <span className="text-stone-200">+{matchData.shotsHit * 20} pts</span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-stone-400 font-sans">Damage Dealt ({matchData.damageDealt}):</span>
+                                    <span className="text-stone-200">+{matchData.damageDealt * 50} pts</span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 pb-2">
+                                    <span className="text-stone-400 font-sans">Tactics (Items Used: {Object.values(matchData.itemsUsed).reduce((a,b)=>a+b, 0)}):</span>
+                                    <span className="text-stone-200">+{Object.values(matchData.itemsUsed).reduce((a,b)=>a+b, 0) * 15} pts</span>
+                                </div>
+                                {matchData.selfShots > 0 && (
+                                    <div className="flex justify-between border-b border-white/5 pb-2 text-red-500">
+                                        <span className="font-sans">Self-Shots Penalty ({matchData.selfShots}):</span>
+                                        <span>-{matchData.selfShots * 50} pts</span>
+                                    </div>
+                                )}
+                                {matchData.isHardMode && (
+                                    <div className="flex justify-between border-b border-red-500/20 pb-2 text-red-400 font-bold">
+                                        <span className="font-sans tracking-wider uppercase text-[10px]">HARD MODE MULTIPLIER:</span>
+                                        <span>x2</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between pt-2 text-base md:text-lg font-black text-yellow-500">
+                                    <span className="font-sans uppercase">Total Rating Score:</span>
+                                    <span className="drop-shadow-[0_0_10px_rgba(234,179,8,0.4)]">{calculateMatchScore(matchData).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Achievements / Badges Section */}
+                        <div className="border-t border-white/5 pt-4">
+                            <h4 className="text-[10px] text-stone-500 font-bold tracking-[0.3em] uppercase mb-3">Service Commendations</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {matchData.result === 'WIN' && matchData.damageTaken === 0 && (
+                                    <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-bold rounded-lg tracking-widest uppercase animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.15)]">
+                                        🥇 PERFECT SURVIVAL
+                                    </span>
+                                )}
+                                {Object.values(matchData.itemsUsed).reduce((a,b)=>a+b, 0) >= 10 && (
+                                    <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[9px] font-bold rounded-lg tracking-widest uppercase">
+                                        🧠 GRANDMASTER TACTICIAN
+                                    </span>
+                                )}
+                                {matchData.shotsFired > 0 && (matchData.shotsHit / matchData.shotsFired) >= 0.8 && (
+                                    <span className="px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-400 text-[9px] font-bold rounded-lg tracking-widest uppercase">
+                                        🎯 ELITE SHARPSHOOTER
+                                    </span>
+                                )}
+                                {matchData.selfShots >= 3 && (
+                                    <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[9px] font-bold rounded-lg tracking-widest uppercase">
+                                        🎲 DESPERATE GAMBLER
+                                    </span>
+                                )}
+                                {matchData.isHardMode && matchData.result === 'WIN' && (
+                                    <span className="px-3 py-1 bg-red-950/40 border border-red-700/50 text-red-500 text-[9px] font-black rounded-lg tracking-widest uppercase animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.2)]">
+                                        💀 HELL WALKER
+                                    </span>
+                                )}
+                                {(!matchData.isHardMode && matchData.result === 'WIN') && (
+                                    <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[9px] font-bold rounded-lg tracking-widest uppercase">
+                                        🎖️ INITIATE CONTRACT
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Tactics Breakdown & Match History */}
+                    <div className="flex flex-col gap-6">
+                        {/* Tactics Breakdown */}
+                        <div className="bg-stone-900/30 backdrop-blur-md border border-white/5 p-6 rounded-2xl text-left flex-1">
+                            <h3 className="text-xs text-stone-500 font-bold tracking-[0.4em] uppercase mb-4 flex items-center gap-2">
+                                <Zap size={14} className="text-yellow-500" /> Tactics Breakdown
+                            </h3>
+                            {Object.keys(matchData.itemsUsed).length > 0 ? (
+                                <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {Object.entries(matchData.itemsUsed).map(([item, count]) => {
+                                        const ItemIcon = Icons[item as keyof typeof Icons] || Icons.Beer;
+                                        return (
+                                            <div key={item} className="flex items-center gap-2.5 p-2 bg-stone-950/40 border border-white/5 rounded-xl hover:border-white/10 transition-colors">
+                                                <div className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center border border-stone-800 text-stone-300">
+                                                    <ItemIcon size={16} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[10px] font-black text-stone-200 tracking-wider truncate uppercase">{item}</div>
+                                                    <div className="text-[9px] font-mono text-stone-500">USED: {count}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="text-stone-500 font-mono text-xs py-6 text-center italic border border-dashed border-white/5 rounded-xl">
+                                    No items deployed. Pure guts.
+                                </div>
+                            )}
+
+                            {/* Most Used Item Badge */}
+                            {Object.keys(matchData.itemsUsed).length > 0 && (
+                                <div className="mt-4 p-3 bg-purple-950/20 border border-purple-900/30 rounded-xl flex items-center gap-3">
+                                    <div className="text-purple-400 font-black text-xs tracking-widest uppercase">Preferred Instrument:</div>
+                                    <div className="px-2.5 py-0.5 bg-purple-900/50 border border-purple-500/30 rounded text-[9px] font-mono text-purple-300 uppercase tracking-widest font-black">
+                                        {Object.entries(matchData.itemsUsed).reduce((a, b) => a[1] > b[1] ? a : b)[0]}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Recent History log */}
+                        <div className="bg-stone-900/30 backdrop-blur-md border border-white/5 p-6 rounded-2xl text-left">
+                            <h3 className="text-xs text-stone-500 font-bold tracking-[0.4em] uppercase mb-4 flex items-center gap-2">
+                                <Activity size={14} className="text-blue-500" /> Recent Operations
+                            </h3>
+                            {stats && stats.matchHistory && stats.matchHistory.length > 0 ? (
+                                <div className="space-y-2.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {stats.matchHistory.slice(0, 5).map((match, mi) => (
+                                        <div key={mi} className="flex items-center justify-between p-2.5 bg-stone-950/30 border border-white/5 rounded-xl text-xs font-mono">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className={`w-2.5 h-2.5 rounded-full ${match.result === 'WIN' ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-600'}`} />
+                                                <span className="font-sans font-bold text-stone-300">{match.result === 'WIN' ? 'WIN' : 'LOSS'}</span>
+                                                <span className="text-[10px] text-stone-600">|</span>
+                                                <span className={`text-[9px] font-sans px-1.5 py-0.5 rounded ${match.isHardMode ? 'bg-red-950/40 border border-red-900/30 text-red-500' : 'bg-stone-800 text-stone-400'}`}>
+                                                    {match.isHardMode ? 'HARD' : 'NORMAL'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-[10px]">
+                                                <span className="text-stone-500">{match.roundsSurvived} RDS</span>
+                                                <span className="text-yellow-500 font-black">{match.totalScore.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-stone-500 font-mono text-xs py-6 text-center italic border border-dashed border-white/5 rounded-xl">
+                                    No entries found in archive.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

@@ -1,10 +1,10 @@
 
 export interface TarotCard {
-  name: 'The Magician' | 'The Hanged Man' | 'The Hermit' | 'The Moon' | 'Judgment' | 'Wheel of Fortune' | 'The Sun' | 'Death' | 'The Tower' | 'The Fool' | 'Justice';
+  name: 'The Magician' | 'The Hanged Man' | 'The Hermit' | 'The Moon' | 'Judgment' | 'Wheel of Fortune' | 'The Sun' | 'Death' | 'The Tower' | 'The Fool' | 'Justice' | 'Temperance';
   power: string;
 }
 
-export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER' | 'CONTRACT' | 'LUCKYCHARM' | 'FLASHBANG' | 'CRUSHER' | 'TOTEM' | 'MIRROR' | 'DECK_CARD';
+export type ItemType = 'GLASS' | 'BEER' | 'CIGS' | 'CUFFS' | 'SAW' | 'PHONE' | 'INVERTER' | 'ADRENALINE' | 'CHOKE' | 'REMOTE' | 'BIG_INVERTER' | 'CONTRACT' | 'LUCKYCHARM' | 'FLASHBANG' | 'CRUSHER' | 'TOTEM' | 'MIRROR' | 'DECK_CARD' | 'JACKPOT';
 export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER';
 export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI' | 'DEALER_GUN'; // Added DEALER_GUN
@@ -81,6 +81,7 @@ export interface PlayerState {
   isFlashbanged?: boolean; // Added
   lastTurnItemsUsed?: ItemType[];
   currentTurnItemsUsed?: ItemType[];
+  jackpotImmunityShots?: number;
 }
 
 export interface LogEntry {
@@ -110,6 +111,8 @@ export interface AnimationState {
   triggerTotem: number; // Totem
   triggerMirror: number; // Mirror
   triggerDeckCard: number; // DeckCard
+  triggerJackpot: number; // Jackpot
+  jackpotResult?: 'JACKPOT' | 'NORMAL' | 'LOSE' | null;
   totemTarget?: TurnOwner | null; // Totem target
   isSawing: boolean; // Continuous saw state
   ejectedShellColor: 'red' | 'blue' | 'red+red' | 'red+blue' | 'blue+red' | 'blue+blue';
@@ -184,6 +187,7 @@ export interface SceneContext {
     itemCrusher: THREE.Group;
     itemTotem: THREE.Group;
     itemMirror: THREE.Group;
+    itemJackpot: THREE.Group;
     itemLight: THREE.PointLight; // Light for illuminating items during animations
   };
   itemDeckCards?: THREE.Group[]; // Tarot card 3D models fanned on table

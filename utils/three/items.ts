@@ -840,6 +840,11 @@ export const createCardTexture = (name: string, isBack: boolean): THREE.CanvasTe
                 accentColor = '#a78bfa';
                 desc = 'Swap HP totals';
                 break;
+            case 'Temperance':
+                bgColor = '#1e293b'; // Slate/Grey-Blue
+                accentColor = '#38bdf8'; // Sky blue
+                desc = 'Swap items with opponent';
+                break;
         }
 
         const grad = ctx.createRadialGradient(128, 192, 10, 128, 192, 220);
@@ -1049,6 +1054,27 @@ export const createCardTexture = (name: string, isBack: boolean): THREE.CanvasTe
             ctx.arc(25, 5, 8, 0, Math.PI, false);
             ctx.stroke();
         }
+        else if (name === 'Temperance') {
+            ctx.beginPath();
+            ctx.arc(-10, -10, 15, Math.PI, Math.PI * 1.8);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(3, -13);
+            ctx.lineTo(8, -13);
+            ctx.lineTo(6, -8);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(10, 10, 15, 0, Math.PI * 0.8);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(-3, 13);
+            ctx.lineTo(-8, 13);
+            ctx.lineTo(-6, 8);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         ctx.restore();
 
@@ -1113,6 +1139,77 @@ export const createTarotCard = (name: string): THREE.Group => {
 
     group.name = `ITEM_DECK_CARD_${name.replace(/\s+/g, '_')}`;
     group.userData = { name, isRevealed: false };
+
+    return group;
+};
+
+export const createJackpotMachine = (): THREE.Group => {
+    const group = new THREE.Group();
+
+    // Cabinet body (red metal)
+    const cabMat = new THREE.MeshStandardMaterial({ color: 0xcc1111, metalness: 0.6, roughness: 0.2 });
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.45, 0.26), cabMat);
+    cab.castShadow = true;
+    cab.receiveShadow = true;
+    group.add(cab);
+
+    // Gold chrome trim
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.1 });
+    const topTrim = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.05, 0.28), trimMat);
+    topTrim.position.y = 0.23;
+    group.add(topTrim);
+
+    // Screen plane for reels
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, 256, 128);
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(2, 2, 252, 124);
+        ctx.beginPath();
+        ctx.moveTo(85, 0); ctx.lineTo(85, 128);
+        ctx.moveTo(170, 0); ctx.lineTo(170, 128);
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = '42px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🍎', 42, 64);
+        ctx.fillText('💎', 128, 64);
+        ctx.fillText('🍒', 213, 64);
+    }
+    const screenTex = new THREE.CanvasTexture(canvas);
+    const screenMat = new THREE.MeshBasicMaterial({ map: screenTex });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.18), screenMat);
+    screen.position.set(0, 0.06, 0.131); // Slightly in front of body
+    group.add(screen);
+
+    // Side arm lever rod
+    const armMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
+    const armGroup = new THREE.Group();
+    armGroup.position.set(0.17, 0.05, 0);
+    
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.25, 8), armMat);
+    arm.position.y = 0.125;
+    armGroup.add(arm);
+
+    // Lever handle (red ball)
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.3 });
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), ballMat);
+    ball.position.y = 0.25;
+    armGroup.add(ball);
+    
+    armGroup.rotation.z = Math.PI / 6; // Angled backward slightly
+    group.add(armGroup);
+
+    group.name = 'ITEM_JACKPOT';
+    group.userData = { canvas, ctx, texture: screenTex, arm: armGroup };
+
+    group.scale.setScalar(2.0);
 
     return group;
 };
