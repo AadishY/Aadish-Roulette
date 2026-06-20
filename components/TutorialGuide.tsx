@@ -786,52 +786,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
             )
         },
 
-        // Page 6: Changelog
-        {
-            title: "CHANGELOG",
-            icon: <Code size={20} className="text-blue-500" />,
-            content: (
-                <div className="space-y-4">
-                    <p className="text-stone-400 text-center text-xs md:text-sm mb-3">
-                        📋 Version history and system log changes.
-                    </p>
-
-                    <div className="space-y-3 max-h-[48vh] overflow-y-auto pr-1 custom-scrollbar">
-                        <div className="bg-stone-900/60 border border-stone-850 p-3 rounded-lg space-y-2 text-left">
-                            <span className="font-black text-white text-[10px] md:text-xs block border-b border-stone-800 pb-1.5 flex justify-between">
-                                <span>v2.1.0 - JACKPOT PROTOCOLS & BALANCING</span>
-                                <span className="text-[9px] text-stone-500 font-mono">CURRENT</span>
-                            </span>
-                            <ul className="list-disc pl-4 text-stone-350 text-[9px] md:text-[10px] space-y-1.5 leading-relaxed">
-                                <li><strong>Jackpot Mechanics Fixed</strong>: Corrected slot machine audio pathways to ensure spin and loop sounds play properly.</li>
-                                <li><strong>Dynamic Music Dimming</strong>: Background game music now dims automatically during standard item usage SFX, and drops to 5% (almost muted) while the Jackpot loop is active, restoring volume on immunity depletion.</li>
-                                <li><strong>Inventory Icon Fix</strong>: Added rendering mappings for the Jackpot slot machine item in the inventory and loot overlays.</li>
-                                <li><strong>Balance & Drop Rates Tuning</strong>:
-                                    <br />• <em>Normal Mode</em>: Jackpot is a rare drop (2.0%) positioned just above Totem (1.0%).
-                                    <br />• <em>Hard Mode</em>: Totem (1.0%) and Jackpot (1.0%) have equal rare item drop rates.
-                                </li>
-                                <li><strong>Debug Console Relocation</strong>: Reorganized the Developer panel, renaming the &apos;Tarot&apos; section to &apos;Item Power&apos; and moving the Jackpot forced win cheats there.</li>
-                                <li><strong>Guide & Documentation</strong>: Updated the tactical guide and repository documentation with the new drop matrix and item effects.</li>
-                            </ul>
-                        </div>
-
-                        <div className="bg-stone-900/60 border border-stone-850 p-3 rounded-lg space-y-2 opacity-70 text-left">
-                            <span className="font-black text-stone-300 text-[10px] md:text-xs block border-b border-stone-800 pb-1.5">
-                                v2.0.0 - MATCH STATS & DEALER UPGRADES
-                            </span>
-                            <ul className="list-disc pl-4 text-stone-400 text-[9px] md:text-[10px] space-y-1 leading-relaxed">
-                                <li><strong>Match Statistics Screen</strong>: Added rich scoreboard breakdowns, favorite items, and tactics grids.</li>
-                                <li><strong>Mobile Safety Triggers</strong>: Added double-tap confirmation system for inventory usage on touch devices.</li>
-                                <li><strong>Tarot Card Updates</strong>: Integrated 11 tarot cards with active/passive effects and custom mystical deck graphics.</li>
-                                <li><strong>Dealer AI Upgrades</strong>: Added smart totem/flashbang counters and multi-item synergy strategies.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            )
-        },
-
-        // Page 7: Developer Info
+        // Page 6: Developer Info
         {
             title: "DEVELOPER",
             icon: <Code size={20} className="text-red-500" />,
