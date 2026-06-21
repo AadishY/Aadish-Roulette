@@ -9,17 +9,45 @@ const getRedisConfig = () => {
     return { url, token };
 };
 
+const getBackendUrl = () => {
+    if (import.meta.env.VITE_SERVER_URL) {
+        return import.meta.env.VITE_SERVER_URL;
+    }
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+    }
+    return 'https://aadish-roulette.onrender.com';
+};
+
+const checkIfDiscord = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.has('frame_id') || params.has('instance_id') || window.location.search.includes('platform=') || window.location.hostname.includes('discordsays.com');
+};
+
 const executeRedisCommand = async (command: any[]) => {
-    const { url, token } = getRedisConfig();
-    
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(command)
-    });
+    const isDiscord = checkIfDiscord();
+    let res;
+
+    if (isDiscord) {
+        const backendUrl = getBackendUrl();
+        res = await fetch(`${backendUrl}/api/redis`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(command)
+        });
+    } else {
+        const { url, token } = getRedisConfig();
+        res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(command)
+        });
+    }
 
     if (!res.ok) {
         throw new Error(`Upstash Redis error: ${res.status} ${res.statusText}`);
@@ -30,17 +58,29 @@ const executeRedisCommand = async (command: any[]) => {
 };
 
 const executeRedisPipeline = async (commands: any[][]) => {
-    const { url, token } = getRedisConfig();
-    
-    // FIX: Routed to /pipeline to allow batch command parsing via Upstash REST API
-    const res = await fetch(`${url}/pipeline`, {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(commands)
-    });
+    const isDiscord = checkIfDiscord();
+    let res;
+
+    if (isDiscord) {
+        const backendUrl = getBackendUrl();
+        res = await fetch(`${backendUrl}/api/redis/pipeline`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(commands)
+        });
+    } else {
+        const { url, token } = getRedisConfig();
+        res = await fetch(`${url}/pipeline`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(commands)
+        });
+    }
 
     if (!res.ok) {
         throw new Error(`Upstash Redis pipeline error: ${res.status} ${res.statusText}`);

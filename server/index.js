@@ -20,8 +20,8 @@ const allowedOrigins = allowedOriginsEnv ? allowedOriginsEnv.split(',') : [];
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Broad capture to allow local servers, matching environment origins, or Hugging Face iframe deployments
-        if (!origin || allowedOrigins.includes(origin) || allowedOriginsEnv === "*" || origin.includes('.hf.space') || origin.includes('localhost:') || origin.includes('127.0.0.1:')) {
+        // Broad capture to allow local servers, matching environment origins, Hugging Face iframe deployments, or Discord Activity client
+        if (!origin || allowedOrigins.includes(origin) || allowedOriginsEnv === "*" || origin.includes('.hf.space') || origin.includes('localhost:') || origin.includes('127.0.0.1:') || origin.includes('.discordsays.com')) {
             callback(null, true);
         } else {
             callback(new Error('Blocked by Security Framework: Unauthorized Origin Connection'));
@@ -32,6 +32,47 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(express.json());
+
+// --- SECURE UPSTASH REDIS TUNNEL PROXY ---
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || "https://enormous-mackerel-87613.upstash.io";
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "gQAAAAAAAVY9AAIncDFhZDhkNGNjODM5M2I0NmY5YTg5YzQwYWFhOGU3NzI2NnAxODc2MTM";
+
+app.post('/api/redis', async (req, res) => {
+    try {
+        const response = await fetch(REDIS_URL, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${REDIS_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(req.body)
+        });
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (err) {
+        console.error("Redis proxy error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/redis/pipeline', async (req, res) => {
+    try {
+        const response = await fetch(`${REDIS_URL}/pipeline`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${REDIS_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(req.body)
+        });
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (err) {
+        console.error("Redis pipeline proxy error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // Analytics Metric Storage Vitals
 const serverStartTime = Date.now();
@@ -58,7 +99,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
         origin: allowedOriginsEnv === "*" ? true : (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin) || origin.includes('.hf.space') || origin.includes('localhost:')) {
+            if (!origin || allowedOrigins.includes(origin) || origin.includes('.hf.space') || origin.includes('localhost:') || origin.includes('.discordsays.com')) {
                 callback(null, true);
             } else {
                 callback(null, false);
