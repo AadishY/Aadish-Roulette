@@ -17,9 +17,8 @@ const previewCache: Record<string, LinkPreviewData | null> = {};
 
 const params = new URLSearchParams(window.location.search);
 const isDiscord = params.has('frame_id') || params.has('instance_id') || window.location.search.includes('platform=') || window.location.hostname.includes('discordsays.com');
-const SERVER_URL = isDiscord 
-    ? window.location.origin 
-    : (import.meta.env.VITE_SERVER_URL || 'https://yoakatsuki-buckshot.hf.space');
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 
+    (isDiscord ? window.location.origin : 'https://yoakatsuki-buckshot.hf.space');
 
 export const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ url }) => {
     const [data, setData] = useState<LinkPreviewData | null>(null);

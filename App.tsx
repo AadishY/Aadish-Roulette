@@ -24,9 +24,8 @@ import { ShellType, ItemType } from './types';
 
 const urlParams = new URLSearchParams(window.location.search);
 const isDiscordPlatform = urlParams.has('frame_id') || urlParams.has('instance_id') || window.location.search.includes('platform=') || window.location.hostname.includes('discordsays.com');
-const SERVER_URL = isDiscordPlatform 
-    ? window.location.origin 
-    : (import.meta.env.VITE_SERVER_URL || 'https://yoakatsuki-buckshot.hf.space');
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 
+    (isDiscordPlatform ? window.location.origin : 'https://yoakatsuki-buckshot.hf.space');
 
 type AppState = 'MENU' | 'LOADING_SP' | 'LOADING_GAME' | 'GAME' | 'LOADING_MP' | 'MP_SELECTION' | 'LOBBY';
 
