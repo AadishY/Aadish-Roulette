@@ -2,7 +2,7 @@
 
 # 🎯 AADISH ROULETTE
 
-<img src="image/favicon/android-chrome-512x512.png" alt="Aadish Roulette Logo" width="160" height="160" />
+<img src="image/Banner.jpg" alt="Aadish Roulette Banner" width="100%" style="border-radius: 12px;" />
 
 ### A Deadly Game of Chance
 
@@ -11,7 +11,7 @@
 
 ---
 
-![Game Preview](image/preview-normalquality.jpg)
+<img src="image/Banner gif.gif" alt="Aadish Roulette Gameplay Banner" width="100%" style="border-radius: 12px;" />
 
 *A high-stakes tabletop horror game where you play Russian Roulette with a 12-gauge pump-action shotgun.*
 
@@ -22,6 +22,20 @@
 ## 🎬 About
 
 **Aadish Roulette** is a web-based reimagining of the deadly shotgun game, inspired by Mike Klubnika's *Buckshot Roulette*. Built with React, TypeScript, and Three.js, it features 3D layouts, retro CRT filters, atmospheric volumetric lighting, and strategic item play.
+
+### 🎥 Gameplay Showcase
+
+Watch the short gameplay trailer to see the high-stakes action in real-time:
+
+<div align="center">
+  <video src="image/ShortVideo(Lowsize).mp4" width="100%" controls loop muted style="border-radius: 12px; border: 1px solid #333; max-width: 800px;"></video>
+</div>
+
+### 📸 Screenshots
+
+<div align="center">
+  <img src="image/preview-normalquality.jpg" alt="Aadish Roulette Table View" width="100%" style="border-radius: 12px; border: 1px solid #333; max-width: 800px;" />
+</div>
 
 ---
 

@@ -1315,7 +1315,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-1.5 mt-0.5">
+                    <div className="mt-1">
                         {/* Leaderboard Trigger Button */}
                         <button
                             onClick={() => {
@@ -1327,18 +1327,6 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                         >
                             <Crown size={12} className="text-amber-750 group-hover/lb:text-amber-400 transition-colors group-hover/lb:rotate-[-10deg] transition-transform duration-300 shrink-0" />
                             <span>Leaderboard</span>
-                        </button>
-
-                        {/* System Changelog Button */}
-                        <button
-                            onClick={() => {
-                                audioManager.playSound('click');
-                                setShowChangelog(true);
-                            }}
-                            className="w-full py-2 sm:py-2.5 bg-gradient-to-r from-stone-900/20 via-stone-900/40 to-stone-900/20 border border-stone-850 hover:border-stone-600 text-stone-400 font-black text-[9px] sm:text-xs flex items-center justify-center gap-1.5 tracking-[0.15em] sm:tracking-[0.3em] hover:text-amber-455 hover:border-amber-600 hover:bg-stone-900/30 hover:scale-[1.015] active:scale-[0.985] transition-all duration-300 uppercase rounded-xl cursor-pointer group/cl"
-                        >
-                            <BookOpen size={12} className="text-stone-500 group-hover/cl:text-amber-500 transition-colors group-hover/cl:rotate-[-8deg] transition-transform duration-300 shrink-0" />
-                            <span>Changelog</span>
                         </button>
                     </div>
                 </div>
