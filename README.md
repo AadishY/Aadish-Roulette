@@ -25,11 +25,9 @@
 
 ---
 
-### 🎥 Gameplay Showcase
+## Gameplay Showcase
 
-Watch the short gameplay trailer to see the high-stakes action in real-time:
 https://github.com/user-attachments/assets/e369969c-1fcc-43d0-994e-a4c02572d001
-
 
 
 ---
