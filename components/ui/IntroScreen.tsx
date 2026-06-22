@@ -266,6 +266,17 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
             return;
         }
 
+        if (p.length < 6) {
+            setLoginError('PASSWORD MUST BE AT LEAST 6 CHARACTERS');
+            setIsLoadingRedis(false);
+            return;
+        }
+        if (p.length > 20) {
+            setLoginError('PASSWORD MUST BE AT MOST 20 CHARACTERS');
+            setIsLoadingRedis(false);
+            return;
+        }
+
         try {
             if (loginTab === 'signin') {
                 const res = await loginUser(u, p);
@@ -561,7 +572,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                                         <Lock size={10} className="text-red-655" />
                                         Password
                                     </span>
-                                    <span className="text-[8px] text-stone-600 font-mono tracking-widest uppercase">SECURE VAULT</span>
+                                    <span className="text-[8px] text-stone-600 font-mono tracking-widest uppercase">REQ: 6-20 CHARS</span>
                                 </div>
                                 <div className="relative flex items-center group/input">
                                     <span className="absolute left-2.5 text-stone-655 group-focus-within/input:text-red-500 transition-colors font-bold text-xs pointer-events-none">[</span>
@@ -570,6 +581,8 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                                         value={loginPassword}
                                         onChange={(e) => setLoginPassword(e.target.value)}
                                         placeholder="••••••••••••••"
+                                        minLength={6}
+                                        maxLength={20}
                                         className="w-full bg-stone-950 border-2 border-stone-855 hover:border-stone-750 focus:border-red-500/50 px-5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-mono font-bold text-stone-200 outline-none transition-all tracking-[0.15em] uppercase rounded-xl placeholder-stone-855 focus:shadow-[0_0_20px_rgba(220,38,38,0.06)]"
                                         required
                                     />
@@ -1246,17 +1259,24 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                             <span>START GAME</span>
                         </button>
 
-                        {/* Multiplayer Button */}
+                        {/* Multiplayer Button — Requires Login */}
                         <button 
                             onClick={() => {
                                 audioManager.playSound('click');
+                                if (!loggedInUser) {
+                                    setLoginError('');
+                                    setLoginSuccess('');
+                                    setShowLoginModal(true);
+                                    return;
+                                }
                                 onStartMultiplayer(inputName.trim());
                             }} 
                             disabled={!inputName.trim()} 
-                            className="col-span-6 px-2.5 py-2 sm:py-2.5 bg-stone-950/60 border-2 border-cyan-850/60 text-cyan-400 font-black text-[9px] sm:text-xs hover:text-white hover:border-cyan-500 hover:bg-cyan-950/20 hover:shadow-[0_0_30px_rgba(6,182,212,0.35)] hover:scale-[1.015] active:scale-[0.985] transition-all duration-300 disabled:opacity-20 flex items-center justify-center gap-1.5 group rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.3)] uppercase tracking-[0.2em] leading-none cursor-pointer"
+                            className="col-span-6 px-2.5 py-2 sm:py-2.5 bg-stone-950/60 border-2 border-cyan-850/60 text-cyan-400 font-black text-[9px] sm:text-xs hover:text-white hover:border-cyan-500 hover:bg-cyan-950/20 hover:shadow-[0_0_30px_rgba(6,182,212,0.35)] hover:scale-[1.015] active:scale-[0.985] transition-all duration-300 disabled:opacity-20 flex items-center justify-center gap-1.5 group rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.3)] uppercase tracking-[0.2em] leading-none cursor-pointer relative"
                         >
                             <Swords size={12} className="text-cyan-500 group-hover:rotate-12 transition-transform duration-300 shrink-0" />
                             <span>MULTIPLAYER</span>
+                            {!loggedInUser && <Lock size={8} className="absolute top-1.5 right-1.5 text-red-650/70" />}
                         </button>
 
                         {/* Hard Mode Button */}

@@ -48,7 +48,8 @@ app.use(express.json());
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || "https://enormous-mackerel-87613.upstash.io";
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "gQAAAAAAAVY9AAIncDFhZDhkNGNjODM5M2I0NmY5YTg5YzQwYWFhOGU3NzI2NnAxODc2MTM";
 
-app.post('/redis', async (req, res) => {
+// --- SHARED REDIS PROXY HANDLERS ---
+const handleRedisProxy = async (req, res) => {
     try {
         const response = await fetch(REDIS_URL, {
             method: 'POST',
@@ -64,9 +65,9 @@ app.post('/redis', async (req, res) => {
         console.error("Redis proxy error:", err);
         res.status(500).json({ error: err.message });
     }
-});
+};
 
-app.post('/redis/pipeline', async (req, res) => {
+const handleRedisPipelineProxy = async (req, res) => {
     try {
         const response = await fetch(`${REDIS_URL}/pipeline`, {
             method: 'POST',
@@ -82,44 +83,14 @@ app.post('/redis/pipeline', async (req, res) => {
         console.error("Redis pipeline proxy error:", err);
         res.status(500).json({ error: err.message });
     }
-});
+};
+
+app.post('/redis', handleRedisProxy);
+app.post('/redis/pipeline', handleRedisPipelineProxy);
 
 // Aliased routes for Discord Activity proxy (client calls /api/redis when in Discord)
-app.post('/api/redis', async (req, res) => {
-    try {
-        const response = await fetch(REDIS_URL, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${REDIS_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(req.body)
-        });
-        const data = await response.json();
-        res.status(response.status).json(data);
-    } catch (err) {
-        console.error("Redis proxy error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/redis/pipeline', async (req, res) => {
-    try {
-        const response = await fetch(`${REDIS_URL}/pipeline`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${REDIS_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(req.body)
-        });
-        const data = await response.json();
-        res.status(response.status).json(data);
-    } catch (err) {
-        console.error("Redis pipeline proxy error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
+app.post('/api/redis', handleRedisProxy);
+app.post('/api/redis/pipeline', handleRedisPipelineProxy);
 
 // --- DISCORD EMBEDDED ACTIVITY OAUTH TOKEN EXCHANGE ---
 app.post('/api/token', async (req, res) => {
@@ -483,7 +454,7 @@ const createRoomObject = (roomId, hostId, hostName, settings) => {
     };
 };
 
-const joinSocketToRoom = (socket, room, playerName) => {
+const joinSocketToRoom = (socket, room, playerName, authId) => {
     if (room.players.length >= 4) {
         socket.emit('error', 'Lobby is full (Max 4 players allowed).');
         return;
@@ -494,52 +465,69 @@ const joinSocketToRoom = (socket, room, playerName) => {
     }
 
     const newPlayerName = playerName ? playerName.trim().substring(0, 14) : `Player ${room.players.length + 1}`;
+    const cleanAuthId = authId ? authId.trim().toLowerCase() : null;
 
-    // Check if player with same name already in room (for reconnection resume state)
-    const existingPlayerIndex = room.players.findIndex(p => p.name.toLowerCase() === newPlayerName.toLowerCase());
-    if (existingPlayerIndex !== -1) {
-        const oldPlayer = room.players[existingPlayerIndex];
-        console.log(`[RECONNECT] Player ${oldPlayer.name} reconnected. Updating socket ID from ${oldPlayer.id} to ${socket.id}`);
-        
-        // If the old socket is still connected (ghost connection), leave and emit warning
-        const oldSocket = io.sockets.sockets.get(oldPlayer.id);
-        if (oldSocket) {
-            oldSocket.emit('error', 'Linked connection active elsewhere. Dropping tunnel.');
-            oldSocket.leave(room.id);
+    // Reconnection: Only reconnect if both the existing and joining player share the same authId (logged-in account)
+    if (cleanAuthId) {
+        const existingPlayerIndex = room.players.findIndex(p => p.authId && p.authId === cleanAuthId);
+        if (existingPlayerIndex !== -1) {
+            const oldPlayer = room.players[existingPlayerIndex];
+            console.log(`[RECONNECT] Player ${oldPlayer.name} (authId: ${cleanAuthId}) reconnected. Updating socket ID from ${oldPlayer.id} to ${socket.id}`);
+            
+            // If the old socket is still connected (ghost connection), leave and emit warning
+            const oldSocket = io.sockets.sockets.get(oldPlayer.id);
+            if (oldSocket) {
+                oldSocket.emit('error', 'Linked connection active elsewhere. Dropping tunnel.');
+                oldSocket.leave(room.id);
+            }
+            
+            // Re-assign socket ID and reset state
+            oldPlayer.id = socket.id;
+            oldPlayer.name = newPlayerName; // Update name in case it changed
+            oldPlayer.ready = false;
+            
+            socket.join(room.id);
+            
+            const reconnectMessage = {
+                sender: 'SYSTEM',
+                color: '#737373',
+                text: `${oldPlayer.name} reconnected to the bunker.`,
+                timestamp: Date.now()
+            };
+            room.messages.push(reconnectMessage);
+            if (room.messages.length > 50) room.messages.shift();
+            
+            io.to(room.id).emit('roomUpdated', room);
+            socket.emit('joinedRoom', { room, playerId: socket.id });
+            io.to(room.id).emit('chatMessageReceived', reconnectMessage);
+            return;
         }
-        
-        // Re-assign socket ID and reset state
-        oldPlayer.id = socket.id;
-        oldPlayer.ready = false; // reset ready status on reconnecting
-        
-        socket.join(room.id);
-        
-        const reconnectMessage = {
-            sender: 'SYSTEM',
-            color: '#737373',
-            text: `${oldPlayer.name} reconnected to the bunker.`,
-            timestamp: Date.now()
-        };
-        room.messages.push(reconnectMessage);
-        if (room.messages.length > 50) room.messages.shift();
-        
-        io.to(room.id).emit('roomUpdated', room);
-        socket.emit('joinedRoom', { room, playerId: socket.id });
-        io.to(room.id).emit('chatMessageReceived', reconnectMessage);
-        return;
+    }
+
+    // Disambiguate same-name players: append suffix if name already exists in room
+    let finalName = newPlayerName;
+    const nameLower = newPlayerName.toLowerCase();
+    const existingNames = room.players.map(p => p.name.toLowerCase());
+    if (existingNames.includes(nameLower)) {
+        let suffix = 2;
+        while (existingNames.includes(`${nameLower}(${suffix})`)) {
+            suffix++;
+        }
+        finalName = `${newPlayerName}(${suffix})`;
     }
 
     const playerColor = PLAYER_COLORS[room.players.length % PLAYER_COLORS.length];
     const newPlayer = {
         id: socket.id,
-        name: newPlayerName,
+        name: finalName,
         color: playerColor,
         ready: false,
         hp: room.settings.hp,
         maxHp: room.settings.hp,
         items: [],
         isHandcuffed: false,
-        isSawedActive: false
+        isSawedActive: false,
+        authId: cleanAuthId
     };
 
     room.players.push(newPlayer);
@@ -578,7 +566,7 @@ io.on('connection', (socket) => {
         return requestPacketCounter > 50;
     };
 
-    socket.on('createRoom', ({ playerName, settings }) => {
+    socket.on('createRoom', ({ playerName, settings, authId }) => {
         if (throttleCheck()) return;
         
         let roomId;
@@ -597,10 +585,10 @@ io.on('connection', (socket) => {
         const room = createRoomObject(roomId, socket.id, hostName, settings);
         rooms.set(roomId, room);
 
-        joinSocketToRoom(socket, room, playerName);
+        joinSocketToRoom(socket, room, playerName, authId);
     });
 
-    socket.on('joinRoom', ({ roomId, playerName }) => {
+    socket.on('joinRoom', ({ roomId, playerName, authId }) => {
         if (throttleCheck()) return;
         const room = rooms.get(roomId);
 
@@ -609,10 +597,10 @@ io.on('connection', (socket) => {
             return;
         }
 
-        joinSocketToRoom(socket, room, playerName);
+        joinSocketToRoom(socket, room, playerName, authId);
     });
 
-    socket.on('quickJoin', ({ playerName, settings }) => {
+    socket.on('quickJoin', ({ playerName, settings, authId }) => {
         if (throttleCheck()) return;
         
         let availableRoom = null;
@@ -624,7 +612,7 @@ io.on('connection', (socket) => {
         }
 
         if (availableRoom) {
-            joinSocketToRoom(socket, availableRoom, playerName);
+            joinSocketToRoom(socket, availableRoom, playerName, authId);
         } else {
             let roomId;
             let attempts = 0;
@@ -637,7 +625,7 @@ io.on('connection', (socket) => {
             const room = createRoomObject(roomId, socket.id, hostName, settings);
             rooms.set(roomId, room);
 
-            joinSocketToRoom(socket, room, playerName);
+            joinSocketToRoom(socket, room, playerName, authId);
         }
     });
 

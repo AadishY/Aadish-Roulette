@@ -115,6 +115,13 @@ export const registerUser = async (username: string, passwordHash: string): Prom
         return { success: false, error: 'Username and password required' };
     }
 
+    if (passwordHash.length < 6) {
+        return { success: false, error: 'Password must be at least 6 characters' };
+    }
+    if (passwordHash.length > 20) {
+        return { success: false, error: 'Password must be at most 20 characters' };
+    }
+
     // Dev username is reserved
     const devUser = (import.meta.env.VITE_DEV_USERNAME || 'aadish').toLowerCase();
     if (cleanUsername === devUser) {
@@ -165,6 +172,13 @@ export const loginUser = async (username: string, passwordHash: string): Promise
     const cleanUsername = username.trim().toLowerCase();
     if (!cleanUsername || !passwordHash) {
         return { success: false, error: 'Username and password required' };
+    }
+
+    if (passwordHash.length < 6) {
+        return { success: false, error: 'Password must be at least 6 characters' };
+    }
+    if (passwordHash.length > 20) {
+        return { success: false, error: 'Password must be at most 20 characters' };
     }
 
     const key = `aadishroulette:${cleanUsername}`;

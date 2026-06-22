@@ -74,13 +74,14 @@ export default function App() {
     }).catch(() => { });
   }, []);
 
-  // Handle direct url invite link joining if name is already cached
+  // Handle direct url invite link joining if name is already cached AND user is logged in
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get('room');
     if (roomId && /^[0-9]{4}$/.test(roomId)) {
+      const loggedInUser = localStorage.getItem('aadish_roulette_logged_in_user');
       const cachedName = localStorage.getItem('aadish_roulette_name');
-      if (cachedName && cachedName.trim().length > 0) {
+      if (loggedInUser && cachedName && cachedName.trim().length > 0) {
         spGame.setPlayerName(cachedName.trim());
         setAppState('LOADING_MP');
         mp.connect();
@@ -502,26 +503,32 @@ export default function App() {
     }
   }, [mp.isConnected, mp.socket, mp.playerId, spGame]);
 
+  // Shared utility: Generate a randomized chamber and item batches for multiplayer rounds
+  const generateMPBatch = useCallback((settings: any, playerCount: number) => {
+    const total = randomInt(2, 8);
+    const maxLives = Math.floor(total / 2);
+    let lives = randomInt(1, maxLives);
+    if (lives < maxLives && Math.random() > 0.4) lives = maxLives;
+    const blanks = total - lives;
+
+    const chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
+    for (let i = chamber.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [chamber[i], chamber[j]] = [chamber[j], chamber[i]];
+    }
+
+    const itemsCount = settings.itemsPerShipment === 9 ? randomInt(1, 8) : settings.itemsPerShipment;
+    const hostItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
+    const clientItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
+
+    return { chamber, hostItems, clientItems, lives, blanks };
+  }, []);
+
   const handleStartMPGame = () => {
     if (mp.room && mp.playerId === mp.room.hostId) {
       const settings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
-
-      const total = randomInt(2, 8);
-      const maxLives = Math.floor(total / 2);
-      let lives = randomInt(1, maxLives);
-      if (lives < maxLives && Math.random() > 0.4) lives = maxLives;
-      const blanks = total - lives;
-
-      const chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
-      for (let i = chamber.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [chamber[i], chamber[j]] = [chamber[j], chamber[i]];
-      }
-
       const playerCount = mp.room?.players?.length || 2;
-      const itemsCount = settings.itemsPerShipment === 9 ? randomInt(1, 8) : settings.itemsPerShipment;
-      const hostItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
-      const clientItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
+      const { chamber, hostItems, clientItems } = generateMPBatch(settings, playerCount);
 
       const hpVal = settings.hp === 9 ? randomInt(2, 8) : settings.hp;
       const gameData = {
@@ -543,23 +550,8 @@ export default function App() {
         if (mp.playerId === mp.room.hostId) {
           console.log("Batch end detected (HOST) - Generating new batch...");
           const settings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
-
-          const total = randomInt(2, 8);
-          const maxLives = Math.floor(total / 2);
-          let lives = randomInt(1, maxLives);
-          if (lives < maxLives && Math.random() > 0.4) lives = maxLives;
-          const blanks = total - lives;
-
-          const chamber = [...Array(lives).fill('LIVE'), ...Array(blanks).fill('BLANK')] as ShellType[];
-          for (let i = chamber.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [chamber[i], chamber[j]] = [chamber[j], chamber[i]];
-          }
-
           const playerCount = mp.room?.players?.length || 2;
-          const itemsCount = settings.itemsPerShipment === 9 ? randomInt(1, 8) : settings.itemsPerShipment;
-          const hostItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
-          const clientItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
+          const { chamber, hostItems, clientItems, lives, blanks } = generateMPBatch(settings, playerCount);
 
           const syncAction = {
             type: 'SYNC_ROUND',
@@ -570,9 +562,7 @@ export default function App() {
           };
 
           mp.sendAction(mp.room.id, syncAction);
-          // System message for chat
           mp.sendMessage(mp.room.id, `SYSTEM: NEW BATCH REPLENISHED - ${lives} LIVE, ${blanks} BLANK`);
-          // Host also applies it locally
           spGame.setOverlayText('RELOADING NEW BATCH...');
           spGame.startRound(false, false, undefined, chamber, hostItems, clientItems, 'PLAYER');
         } else {
@@ -581,7 +571,7 @@ export default function App() {
         }
       });
     }
-  }, [spGame.gameState.isMultiplayer, mp.room, mp.playerId, spGame]);
+  }, [spGame.gameState.isMultiplayer, mp.room, mp.playerId, spGame, generateMPBatch]);
 
   const onLoadingComplete = () => {
     if (appState === 'LOADING_SP') {
@@ -720,10 +710,8 @@ export default function App() {
     spGame.gameState.currentShellIndex
   ]);
 
-  const handleMainMenu = () => {
-    setAppState('GAME');
-    spGame.resetGame(true);
-  };
+  // handleMainMenu is aliased to handleBackToMenu for consistency
+  const handleMainMenu = handleBackToMenu;
 
   const handleRestartSP = () => {
     setAppState('LOADING_SP');

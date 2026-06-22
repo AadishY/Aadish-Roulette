@@ -34,6 +34,17 @@ const loadSavedSettings = () => {
     return savedSettings;
 };
 
+const getAuthId = (): string | null => {
+    try {
+        const saved = localStorage.getItem('aadish_roulette_logged_in_user');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return parsed?.username?.trim().toLowerCase() || null;
+        }
+    } catch (e) {}
+    return null;
+};
+
 export function useMultiplayer() {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [room, setRoom] = useState<any>(null);
@@ -53,6 +64,10 @@ export function useMultiplayer() {
     }, []);
 
     const connect = useCallback(() => {
+        // Prevent socket leaks if connect is called while already connected
+        if (socket) {
+            socket.disconnect();
+        }
         setIsConnecting(true);
         setError(null);
         setConnectionStatus('ESTABLISHING LINK...');
@@ -155,17 +170,17 @@ export function useMultiplayer() {
     }, [socket]);
 
     const joinRoom = (roomId: string, playerName: string) => {
-        socket?.emit('joinRoom', { roomId, playerName });
+        socket?.emit('joinRoom', { roomId, playerName, authId: getAuthId() });
     };
 
     const createRoom = (playerName: string) => {
         const savedSettings = loadSavedSettings();
-        socket?.emit('createRoom', { playerName, settings: savedSettings });
+        socket?.emit('createRoom', { playerName, settings: savedSettings, authId: getAuthId() });
     };
 
     const quickJoin = (playerName: string) => {
         const savedSettings = loadSavedSettings();
-        socket?.emit('quickJoin', { playerName, settings: savedSettings });
+        socket?.emit('quickJoin', { playerName, settings: savedSettings, authId: getAuthId() });
     };
 
     const clearError = useCallback(() => {
