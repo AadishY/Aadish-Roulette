@@ -31,12 +31,6 @@ Watch the short gameplay trailer to see the high-stakes action in real-time:
   <video src="public/image/ShortVideo(Lowsize).mp4" width="100%" controls loop muted style="border-radius: 12px; border: 1px solid #333; max-width: 800px;"></video>
 </div>
 
-### 📸 Screenshots
-
-<div align="center">
-  <img src="public/image/preview-normalquality.jpg" alt="Aadish Roulette Table View" width="100%" style="border-radius: 12px; border: 1px solid #333; max-width: 800px;" />
-</div>
-
 ---
 
 ## 🎮 How to Play
