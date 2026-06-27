@@ -59,9 +59,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                 <div className="text-[8px] sm:text-[9px] text-stone-600 font-bold tracking-[0.3em] uppercase text-center border-b border-stone-900/35 pb-2 mb-3.5 select-none">
                     [ CHAT AREA ]
                 </div>
-                <div className="text-[8px] sm:text-[9px] text-stone-550 font-bold text-center tracking-[0.15em] italic select-none opacity-50 -mt-2 mb-4">
-                    this is chatarea
-                </div>
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-center select-none opacity-20 py-20">
                         <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.4em] text-stone-500">

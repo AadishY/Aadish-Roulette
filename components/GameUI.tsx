@@ -653,7 +653,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                             </svg>
-                            <span>EXPAND LINK</span>
+                            <span>ChatBox</span>
 
                             {unreadCount > 0 && (
                                 <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
@@ -670,7 +670,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         <div className="h-full flex flex-col justify-end">
                             <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
                                 <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 border-b border-white/5 flex justify-between items-center select-none">
-                                    <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">Comm_Link</span>
+                                    <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">ChatBoxk</span>
                                     <div className="flex items-center gap-3">
                                         <button 
                                             onClick={() => {
@@ -735,7 +735,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                 <div className="absolute top-28 left-4 z-[100] pointer-events-none max-w-xs md:max-w-sm space-y-2 select-none">
                     {messages
                         .filter(m => m.sender !== 'SYSTEM' && !m.text.startsWith('SYSTEM:'))
-                        .slice(-3) // Show last 3 messages
+                        .slice(-5) // Show last 5 messages
                         .map((msg, i) => (
                             <div key={i} className="text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-left-2 duration-300 flex items-baseline gap-1.5">
                                 <span style={{ color: msg.color }} className="font-extrabold uppercase text-[10px] tracking-widest shrink-0">{msg.sender}:</span>
