@@ -1,3 +1,10 @@
+> ### ⚠️ **Important Notice & Inspiration**
+> This game is **heavily inspired by Buckshot Roulette**. No model, textures or script have been used or extracted from the original game files; all visual assets are completely self-made.
+> 
+> Some item sounds and background music used in this project were found publicly online—they were **not** obtained via reverse engineering. These sounds will be promptly removed if requested by the original creators.
+
+---
+
 <div align="center">
 
 # 🎯 AADISH ROULETTE
@@ -231,18 +238,27 @@ npm run build
  
 ---
 
-## 📜 Credits
+## 🏆 Credits & Acknowledgments
 
-- **Original Game Concept**: [Mike Klubnika](https://mikeklubnika.itch.io/) (Buckshot Roulette)
-- **Web Development**: [Aadish](https://github.com/AadishY)
-- **Technologies**: React, Three.js, TypeScript, Vite, TailwindCSS, Socket.io, Lucide Icons
+This project is a fan-made, open-source tribute built to explore web-based 3D graphics and real-time multiplayer implementation, deeply inspired by the tabletop suspense of the original game[cite: 1].
+
+### 💻 Core Development
+*   **Aadish** ([@aadishy](https://github.com/aadishy)) — Game architecture, multiplayer synchronization, and 3D tabletop loop design for the [aadishy/aadish-roulette](https://github.com/aadishy/aadish-roulette) repository[cite: 1].
+
+### 🎨 Original Concept
+*   **Mike Klubnika** ([Official Website](https://mikeklubnika.com/) / [Itch.io](https://mikeklubnika.itch.io/)) — The brilliant mind behind the official **Buckshot Roulette**. This project exists purely out of admiration for his work. Please support the official release on [Steam](https://store.steampowered.com/app/283550/Buckshot_Roulette/) and [Itch.io](https://mikeklubnika.itch.io/buckshot-roulette)[cite: 1].
+
+### 🔊 Audio & SFX
+*   **Ambient & Item Sounds**: Sourced entirely from public web domains and community creative commons archives[cite: 1]. No original game files were extracted, ripped, or reverse-engineered to obtain these sounds[cite: 1].
+
+### 🛠️ Built With
+*   [React](https://react.dev/) & [TypeScript](https://www.typescriptlang.org/) — Powering the reactive state machine and type-safe gameplay loop[cite: 1].
+*   [Three.js](https://threejs.org/) & [React Three Fiber](https://github.com/pmndrs/react-three-fiber) — Rendering the immersive, real-time 3D tabletop environment[cite: 1].
+*   [Tailwind CSS](https://tailwindcss.com/) — Driving the sleek, responsive UI overlay systems[cite: 1].
 
 ---
 
-<div align="center">
-
-**Made with ❤️ by [Aadish](https://github.com/AadishY)**
-
-*Version 2.1.2 • 2026*
-
-</div>
+### ⚠️ Asset & Content Notice
+> **Notice:** All visual interfaces, 3D environments, and core engineering blocks inside **"aadishy/aadish-roulette"** are entirely custom-built from scratch[cite: 1]. 
+> 
+> The background tracks and certain item sound effects used during this development phase were found publicly online[cite: 1]. If you are the copyright holder of any audio asset used in this codebase and would like it removed or explicitly attributed, please open a formal issue directly on the [GitHub Repository](https://github.com/aadishy/aadish-roulette) for immediate removal[cite: 1].
