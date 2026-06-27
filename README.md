@@ -1,7 +1,7 @@
 > ### ⚠️ **Important Notice & Inspiration**
 > This game is **heavily inspired by Buckshot Roulette**. No model, textures or script have been used or extracted from the original game files; all visual assets are completely self-made.
 > 
-> Some item and background sounds used in this project were found publicly online—they were **not** obtained via reverse engineering. These sounds will be promptly removed if requested by the original creators.
+> Some item sounds and background music used in this project were found publicly online—they were **not** obtained via reverse engineering. These sounds will be promptly removed if requested by the original creators.
 
 ---
 
@@ -238,16 +238,27 @@ npm run build
  
 ---
 
-## 🏆 Credits & Acknowledgments[cite: 1]
+## 🏆 Credits & Acknowledgments
 
-This game is a fan-made tribute project built to honor the tense tabletop suspense of the original concept[cite: 1].
+This project is a fan-made, open-source tribute built to explore web-based 3D graphics and real-time multiplayer implementation, deeply inspired by the tabletop suspense of the original game[cite: 1].
 
-*   **Original Concept & Design**: Deep gratitude to **Mike Klubnika** for creating the phenomenal *Buckshot Roulette*[cite: 1]. Please support the official game on Steam and Itch.io[cite: 1].
-*   **Project Development**: Maintained and engineered by **Aadish** within the repository source file **"aadishy/aadish-roulette"**[cite: 1].
-*   **Audio Engineering**: Ambient tracks and specific item sounds were found entirely through public web domains and were not obtained via reverse engineering[cite: 1].
-*   **Open Source Community**: Built using foundational tools provided by the React, Three.js, and Tailwind CSS ecosystems[cite: 1].
+### 💻 Core Development
+*   **Aadish** ([@aadishy](https://github.com/aadishy)) — Game architecture, multiplayer synchronization, and 3D tabletop loop design for the [aadishy/aadish-roulette](https://github.com/aadishy/aadish-roulette) repository[cite: 1].
+
+### 🎨 Original Concept
+*   **Mike Klubnika** ([Official Website](https://mikeklubnika.com/) / [Itch.io](https://mikeklubnika.itch.io/)) — The brilliant mind behind the official **Buckshot Roulette**. This project exists purely out of admiration for his work. Please support the official release on [Steam](https://store.steampowered.com/app/283550/Buckshot_Roulette/) and [Itch.io](https://mikeklubnika.itch.io/buckshot-roulette)[cite: 1].
+
+### 🔊 Audio & SFX
+*   **Ambient & Item Sounds**: Sourced entirely from public web domains and community creative commons archives[cite: 1]. No original game files were extracted, ripped, or reverse-engineered to obtain these sounds[cite: 1].
+
+### 🛠️ Built With
+*   [React](https://react.dev/) & [TypeScript](https://www.typescriptlang.org/) — Powering the reactive state machine and type-safe gameplay loop[cite: 1].
+*   [Three.js](https://threejs.org/) & [React Three Fiber](https://github.com/pmndrs/react-three-fiber) — Rendering the immersive, real-time 3D tabletop environment[cite: 1].
+*   [Tailwind CSS](https://tailwindcss.com/) — Driving the sleek, responsive UI overlay systems[cite: 1].
 
 ---
 
-> ⚠️ **Content Notice**  
-> All core visual assets and mechanics within **"aadishy/aadish-roulette"** are completely self-made[cite: 1]. If you are the original owner of any found audio assets used during this development phase and wish to request adjustments or immediate removal, please open a formal issue directly in the repository[cite: 1].
+### ⚠️ Asset & Content Notice
+> **Notice:** All visual interfaces, 3D environments, and core engineering blocks inside **"aadishy/aadish-roulette"** are entirely custom-built from scratch[cite: 1]. 
+> 
+> The background tracks and certain item sound effects used during this development phase were found publicly online[cite: 1]. If you are the copyright holder of any audio asset used in this codebase and would like it removed or explicitly attributed, please open a formal issue directly on the [GitHub Repository](https://github.com/aadishy/aadish-roulette) for immediate removal[cite: 1].
