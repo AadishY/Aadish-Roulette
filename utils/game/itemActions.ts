@@ -23,7 +23,8 @@ export const handleContract = async (
     isMultiplayer?: boolean,
     handleHardModeRoundEnd?: (winner: TurnOwner) => void,
     handleMPRoundEnd?: (winner: TurnOwner) => void,
-    handleNormalModeRoundEnd?: (winner: TurnOwner) => void
+    handleNormalModeRoundEnd?: (winner: TurnOwner) => void,
+    contractLootOverride?: ItemType[]
 ) => {
     setTriggerContract(p => p + 1);
     await wait(2500); // Wait for contract sign/burn animation
@@ -168,7 +169,7 @@ export const handleContract = async (
 
     // 2. Grant Loot
     const activeCharmsCount = user === 'PLAYER' ? (player.luckycharmsUsed || 0) : (dealer.luckycharmsUsed || 0);
-    const newItems = getContractLoot(activeCharmsCount);
+    const newItems = contractLootOverride || getContractLoot(activeCharmsCount);
     const itemNames = newItems.join(' & ');
 
     if (user === 'PLAYER') {
@@ -664,7 +665,8 @@ export const handleCrusher = async (
     setDealer: StateSetter<PlayerState>,
     setTriggerCrusher: StateSetter<number>,
     addLog: (text: string, type: LogEntry['type']) => void,
-    setOverlayText?: StateSetter<string | null>
+    setOverlayText?: StateSetter<string | null>,
+    crushIndexOverride?: number
 ) => {
     // 1. Trigger animation
     setTriggerCrusher(p => p + 1);
@@ -686,7 +688,7 @@ export const handleCrusher = async (
     }
 
     // Determine the item to destroy based on the fresh copy of target items
-    const randomIndex = Math.floor(Math.random() * target.items.length);
+    const randomIndex = crushIndexOverride !== undefined ? crushIndexOverride : Math.floor(Math.random() * target.items.length);
     const itemToDestroy = target.items[randomIndex];
     const friendlyName = getFriendlyItemName(itemToDestroy);
 

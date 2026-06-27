@@ -134,7 +134,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                 }
                             >
                                 <Target size={18} className="lg:w-6 lg:h-6" />
-                                SHOOT DEALER
+                                {isMultiplayer ? 'SHOOT OPPONENT' : 'SHOOT DEALER'}
                             </button>
                         )}
 

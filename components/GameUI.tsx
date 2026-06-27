@@ -53,6 +53,8 @@ interface GameUIProps {
     isMultiplayer?: boolean;
     messages?: ChatMessage[];
     onSendMessage?: (text: string) => void;
+    mpGameState?: any;
+    mpMyPlayerId?: string | null;
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -106,9 +108,12 @@ export const GameUI: React.FC<GameUIProps> = ({
     onStartMultiplayer,
     isMultiplayer = false,
     messages = [],
-    onSendMessage
+    onSendMessage,
+    mpGameState,
+    mpMyPlayerId
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
+    const [isChatMinimized, setIsChatMinimized] = useState(false);
 
     useEffect(() => { if (playerName) setInputName(playerName); }, [playerName]);
 
@@ -530,7 +535,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <div className="absolute top-[20%] left-1/2 transform -translate-x-1/2 z-30 flex flex-col items-center animate-in fade-in zoom-in duration-500 pointer-events-none">
                                 <div className="px-6 py-2 bg-black/85 border border-purple-500/35 rounded-full shadow-[0_0_30px_rgba(168,85,247,0.2)] backdrop-blur-md">
                                     <span className="text-xs md:text-xl font-black tracking-[0.3em] uppercase text-purple-400 animate-pulse">
-                                        {gameState.turnOwner === 'PLAYER' ? '🔮 SELECT A TAROT CARD 🔮' : '🔮 DEALER CHOOSING CARD... 🔮'}
+                                        {gameState.turnOwner === 'PLAYER' ? '🔮 SELECT A TAROT CARD 🔮' : `🔮 ${gameState.opponentName?.toUpperCase() || 'DEALER'} CHOOSING CARD... 🔮`}
                                     </span>
                                 </div>
                             </div>
@@ -561,6 +566,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                                         onHoverTarget={onHoverTarget}
                                         currentAimTarget={aimTarget}
                                         isMultiplayer={isMultiplayer}
+                                        mpGameState={mpGameState}
+                                        mpMyPlayerId={mpMyPlayerId}
                                         settings={settings}
                                     />
                                 </div>
@@ -613,55 +620,95 @@ export const GameUI: React.FC<GameUIProps> = ({
 
             {/* Global Chat Overlay - Visible whenever game is active (Multiplayer only) */}
             {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && (
-                <div className="absolute bottom-4 left-4 z-[100] w-72 lg:w-96 h-64 lg:h-96 pointer-events-auto">
-                    <div className="h-full flex flex-col justify-end">
-                        <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
-                            <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex justify-between items-center">
-                                <span className="text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">Comm_Link</span>
-                                <div className="flex gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                                    <div className="w-1 h-1 rounded-full bg-green-500/50" />
-                                </div>
-                            </div>
-                            <div
-                                ref={chatScrollRef}
-                                className="flex-1 overflow-y-auto p-4 space-y-3 text-[12px] lg:text-[13px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20"
-                            >
-                                {messages.filter(m => m.sender !== 'SYSTEM').map((msg, i) => (
-                                    <div key={i} className="animate-in fade-in slide-in-from-left-1 duration-300 group">
-                                        <div className="flex items-baseline gap-2">
-                                            <span style={{ color: msg.color }} className="font-black text-[10px] lg:text-[11px] uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">{msg.sender}</span>
-                                            <span className="text-white font-medium break-words leading-relaxed drop-shadow-sm">{msg.text}</span>
+                isChatMinimized ? (
+                    <div className="absolute bottom-4 left-4 z-[100] pointer-events-auto">
+                        <button
+                            onClick={() => {
+                                audioManager.playSound('click');
+                                setIsChatMinimized(false);
+                            }}
+                            className="bg-black/90 border border-white/10 hover:border-cyan-500/50 rounded-xl px-4 py-2 text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-stone-400 hover:text-cyan-400 backdrop-blur-md shadow-lg transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                        >
+                            💬 Expand Chat
+                        </button>
+                    </div>
+                ) : (
+                    <div className="absolute bottom-4 left-4 z-[100] w-72 lg:w-96 h-64 lg:h-96 pointer-events-auto">
+                        <div className="h-full flex flex-col justify-end">
+                            <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
+                                <div className="px-4 py-2 bg-white/5 border-b border-white/5 flex justify-between items-center select-none">
+                                    <span className="text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">Comm_Link</span>
+                                    <div className="flex items-center gap-3">
+                                        <button 
+                                            onClick={() => {
+                                                audioManager.playSound('click');
+                                                setIsChatMinimized(true);
+                                            }}
+                                            className="text-stone-500 hover:text-white transition-colors text-[9px] uppercase tracking-widest font-black cursor-pointer bg-transparent border-none outline-none"
+                                        >
+                                            Minimize
+                                        </button>
+                                        <div className="flex gap-1">
+                                            <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+                                            <div className="w-1 h-1 rounded-full bg-green-500/50" />
                                         </div>
-                                        {(() => {
-                                            const url = msg.text.match(/https?:\/\/[^\s]+/)?.[0];
-                                            return url ? <LinkPreviewCard url={url} /> : null;
-                                        })()}
                                     </div>
-                                ))}
+                                </div>
+                                <div
+                                    ref={chatScrollRef}
+                                    className="flex-1 overflow-y-auto p-4 space-y-3 text-[12px] lg:text-[13px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20"
+                                >
+                                    {messages.filter(m => m.sender !== 'SYSTEM' && !m.text.startsWith('SYSTEM:')).map((msg, i) => (
+                                        <div key={i} className="animate-in fade-in slide-in-from-left-1 duration-300 group">
+                                            <div className="flex items-baseline gap-2">
+                                                <span style={{ color: msg.color }} className="font-black text-[10px] lg:text-[11px] uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">{msg.sender}</span>
+                                                <span className="text-white font-medium break-words leading-relaxed drop-shadow-sm">{msg.text}</span>
+                                            </div>
+                                            {(() => {
+                                                const url = msg.text.match(/https?:\/\/[^\s]+/)?.[0];
+                                                return url ? <LinkPreviewCard url={url} /> : null;
+                                            })()}
+                                        </div>
+                                    ))}
+                                </div>
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        const input = e.currentTarget.elements.namedItem('chat-input') as HTMLInputElement;
+                                        if (input.value.trim() && onSendMessage) {
+                                            onSendMessage(input.value.trim());
+                                            input.value = '';
+                                        }
+                                    }}
+                                    className="p-3 bg-white/5 border-t border-white/5 flex gap-2"
+                                >
+                                    <input
+                                        name="chat-input"
+                                        type="text"
+                                        autoComplete="off"
+                                        placeholder="TYPE A MESSAGE..."
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-[11px] lg:text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-white/30 transition-all focus:bg-black/60 shadow-inner"
+                                        onKeyDown={(e) => e.stopPropagation()}
+                                    />
+                                </form>
                             </div>
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const input = e.currentTarget.elements.namedItem('chat-input') as HTMLInputElement;
-                                    if (input.value.trim() && onSendMessage) {
-                                        onSendMessage(input.value.trim());
-                                        input.value = '';
-                                    }
-                                }}
-                                className="p-3 bg-white/5 border-t border-white/5 flex gap-2"
-                            >
-                                <input
-                                    name="chat-input"
-                                    type="text"
-                                    autoComplete="off"
-                                    placeholder="TYPE A MESSAGE..."
-                                    className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-[11px] lg:text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-white/30 transition-all focus:bg-black/60 shadow-inner"
-                                    onKeyDown={(e) => e.stopPropagation()}
-                                />
-                            </form>
                         </div>
                     </div>
+                )
+            )}
+
+            {/* Minimized Chat Overlay - Visible in-game at above left corner when minimized */}
+            {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && isChatMinimized && (
+                <div className="absolute top-24 left-4 z-[100] pointer-events-none max-w-xs md:max-w-sm space-y-2 select-none">
+                    {messages
+                        .filter(m => m.sender !== 'SYSTEM' && !m.text.startsWith('SYSTEM:'))
+                        .slice(-3) // Show last 3 messages
+                        .map((msg, i) => (
+                            <div key={i} className="text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-left-2 duration-300 flex items-baseline gap-1.5">
+                                <span style={{ color: msg.color }} className="font-extrabold uppercase text-[10px] tracking-widest shrink-0">{msg.sender}:</span>
+                                <span className="break-words">{msg.text}</span>
+                            </div>
+                        ))}
                 </div>
             )}
         </>

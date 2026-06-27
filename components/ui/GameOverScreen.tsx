@@ -67,7 +67,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
                 }
             } catch (e) {}
 
-            if (!isDebugUsed || isDeveloper) {
+            if (isMultiplayer || !isDebugUsed || isDeveloper) {
                 saveGameStats(matchData);
             } else {
                 console.log("Stats NOT saved: debug cheats used.");

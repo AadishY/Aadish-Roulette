@@ -228,6 +228,7 @@ export default function App() {
   const effectiveReceivedItems = spGame.receivedItems as import('./types').ItemType[];
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [abortedByName, setAbortedByName] = useState<string | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isScoreboardOpen, setIsScoreboardOpen] = useState(false);
   const [showPerformancePopup, setShowPerformancePopup] = useState(false);
@@ -324,9 +325,64 @@ export default function App() {
     if (appState === 'GAME' && spGame.gameState.isMultiplayer) {
       if (spGame.gameState.turnOwner !== 'PLAYER') return;
       const item = spGame.player.items[index];
-      mp.sendAction(mp.room.id, { type: 'USE_ITEM', item, index });
+      
+      let deckCards: string[] | undefined;
+      let jackpotOutcome: 'JACKPOT' | 'NORMAL' | 'LOSE' | undefined;
+      let crushIndex: number | undefined;
+      let contractLoot: string[] | undefined;
+
+      if (item === 'DECK_CARD') {
+        const allTarotNames = [
+          'The Magician', 'The Hanged Man', 'The Hermit', 'The Moon', 'Judgment',
+          'Wheel of Fortune', 'The Sun', 'Death', 'The Tower', 'The Fool', 'Justice', 'Temperance'
+        ];
+        const shuffled = [...allTarotNames].sort(() => Math.random() - 0.5);
+        deckCards = shuffled.slice(0, 6);
+      } else if (item === 'JACKPOT') {
+        const rand = Math.random();
+        if (rand < 0.20) jackpotOutcome = 'JACKPOT';
+        else if (rand < 0.50) jackpotOutcome = 'NORMAL';
+        else jackpotOutcome = 'LOSE';
+      } else if (item === 'CRUSHER') {
+        if (spGame.dealer.items.length > 0) {
+          crushIndex = Math.floor(Math.random() * spGame.dealer.items.length);
+        }
+      } else if (item === 'CONTRACT') {
+        const activeCharms = spGame.player.luckycharmsUsed || 0;
+        const highTier = ['CHOKE', 'CIGS', 'SAW', 'GLASS', 'ADRENALINE'];
+        const lowTier = ['BEER', 'PHONE', 'INVERTER', 'BIG_INVERTER', 'CUFFS'];
+        const highWeight = 5 + (10 * activeCharms);
+        const pool: string[] = [];
+        highTier.forEach(i => {
+          for (let w = 0; w < highWeight; w++) pool.push(i);
+        });
+        lowTier.forEach(i => pool.push(i));
+        const item1 = pool[Math.floor(Math.random() * pool.length)];
+        const item2 = pool[Math.floor(Math.random() * pool.length)];
+        contractLoot = [item1, item2];
+      }
+
+      mp.sendAction(mp.room.id, {
+        type: 'USE_ITEM',
+        item,
+        index,
+        deckCards,
+        jackpotOutcome,
+        crushIndex,
+        contractLoot
+      });
+      await spGame.usePlayerItem(index, deckCards, jackpotOutcome, crushIndex, contractLoot as any);
+    } else {
+      await spGame.usePlayerItem(index);
     }
-    await spGame.usePlayerItem(index);
+  };
+
+  const handleCardClick = async (index: number) => {
+    if (appState === 'GAME' && spGame.gameState.isMultiplayer) {
+      if (spGame.gameState.turnOwner !== 'PLAYER') return;
+      mp.sendAction(mp.room.id, { type: 'SELECT_CARD', index });
+    }
+    await spGame.selectTarotCard(index);
   };
 
   const handlePickupGun = () => {
@@ -360,7 +416,7 @@ export default function App() {
   // Listen for remote actions
   useEffect(() => {
     if (appState === 'GAME' && spGame.gameState.isMultiplayer) {
-      mp.setOnAction(({ playerId, action }) => {
+      mp.setOnAction(async ({ playerId, action }) => {
         // Only process actions from OTHER players
         if (playerId !== mp.playerId) {
           console.log('Received remote action:', action);
@@ -370,7 +426,18 @@ export default function App() {
               spGame.fireShot('DEALER', action.target === 'PLAYER' ? 'DEALER' : 'PLAYER');
               break;
             case 'USE_ITEM':
-              spGame.processItemEffect('DEALER', action.item);
+              spGame.setDealer(d => {
+                const newItems = [...d.items];
+                const idx = action.index !== undefined ? action.index : newItems.indexOf(action.item);
+                if (idx !== -1) {
+                  newItems.splice(idx, 1);
+                }
+                return { ...d, items: newItems };
+              });
+              await spGame.processItemEffect('DEALER', action.item, action.deckCards, action.jackpotOutcome, action.crushIndex, action.contractLoot);
+              break;
+            case 'SELECT_CARD':
+              spGame.selectTarotCard(action.index);
               break;
             case 'PICKUP_GUN':
               spGame.pickupGun('DEALER');
@@ -401,6 +468,10 @@ export default function App() {
                 if (action.gameState.phase === 'PLAYER_TURN') invertedGameState.phase = 'DEALER_TURN';
                 else if (action.gameState.phase === 'DEALER_TURN') invertedGameState.phase = 'PLAYER_TURN';
               }
+
+              // Correct opponentName sync: opponent for client is host
+              const host = mp.room?.players?.find((p: any) => p.id === mp.room.hostId);
+              invertedGameState.opponentName = host ? host.name : 'OPPONENT';
 
               spGame.syncState({
                 player: action.dealerState, // Remote's dealer is our player
@@ -490,8 +561,7 @@ export default function App() {
       // Handle opponent disconnection mid-game
       mp.socket?.on('matchAborted', ({ abortedBy }: { abortedBy: string }) => {
         console.log(`Multiplayer match aborted: ${abortedBy} disconnected.`);
-        spGame.resetGame(true); // Reset game states cleanly
-        setAppState('LOBBY');   // Route back to lobby view
+        setAbortedByName(abortedBy);
       });
 
       return () => {
@@ -504,7 +574,7 @@ export default function App() {
   }, [mp.isConnected, mp.socket, mp.playerId, spGame]);
 
   // Shared utility: Generate a randomized chamber and item batches for multiplayer rounds
-  const generateMPBatch = useCallback((settings: any, playerCount: number) => {
+  const generateMPBatch = useCallback((settings: any, playerCount: number, hostCharms: number = 0, clientCharms: number = 0) => {
     const total = randomInt(2, 8);
     const maxLives = Math.floor(total / 2);
     let lives = randomInt(1, maxLives);
@@ -518,8 +588,8 @@ export default function App() {
     }
 
     const itemsCount = settings.itemsPerShipment === 9 ? randomInt(1, 8) : settings.itemsPerShipment;
-    const hostItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
-    const clientItems = generateLootBatch(itemsCount, false, false, 4, [], 0, 4, 4, settings, playerCount);
+    const hostItems = generateLootBatch(itemsCount, false, false, 4, [], hostCharms, 4, 4, settings, playerCount);
+    const clientItems = generateLootBatch(itemsCount, false, false, 4, [], clientCharms, 4, 4, settings, playerCount);
 
     return { chamber, hostItems, clientItems, lives, blanks };
   }, []);
@@ -528,14 +598,15 @@ export default function App() {
     if (mp.room && mp.playerId === mp.room.hostId) {
       const settings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
       const playerCount = mp.room?.players?.length || 2;
-      const { chamber, hostItems, clientItems } = generateMPBatch(settings, playerCount);
+      const { chamber, hostItems, clientItems } = generateMPBatch(settings, playerCount, 0, 0);
 
       const hpVal = settings.hp === 9 ? randomInt(2, 8) : settings.hp;
+      const hostStarts = Math.random() < 0.5;
       const gameData = {
         chamber,
         hostItems,
         clientItems,
-        hostStarts: true,
+        hostStarts,
         hpOverride: hpVal
       };
 
@@ -551,20 +622,23 @@ export default function App() {
           console.log("Batch end detected (HOST) - Generating new batch...");
           const settings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
           const playerCount = mp.room?.players?.length || 2;
-          const { chamber, hostItems, clientItems, lives, blanks } = generateMPBatch(settings, playerCount);
+          const hostCharms = spGame.player.luckycharmsUsed || 0;
+          const clientCharms = spGame.dealer.luckycharmsUsed || 0;
+          const { chamber, hostItems, clientItems, lives, blanks } = generateMPBatch(settings, playerCount, hostCharms, clientCharms);
 
+          const nextStarts = Math.random() < 0.5;
           const syncAction = {
             type: 'SYNC_ROUND',
             chamber,
             hostItems,
             clientItems,
-            nextTurnOwner: 'PLAYER'
+            nextTurnOwner: nextStarts ? 'PLAYER' : 'DEALER'
           };
 
           mp.sendAction(mp.room.id, syncAction);
           mp.sendMessage(mp.room.id, `SYSTEM: NEW BATCH REPLENISHED - ${lives} LIVE, ${blanks} BLANK`);
           spGame.setOverlayText('RELOADING NEW BATCH...');
-          spGame.startRound(false, false, undefined, chamber, hostItems, clientItems, 'PLAYER');
+          spGame.startRound(false, false, undefined, chamber, hostItems, clientItems, nextStarts ? 'PLAYER' : 'DEALER');
         } else {
           console.log("Batch end detected (CLIENT) - Waiting for host sync...");
           spGame.setOverlayText('WAITING FOR HOST...');
@@ -768,7 +842,7 @@ export default function App() {
         player={spGame.player}
         dealer={spGame.dealer}
         gameState={spGame.gameState}
-        onCardClick={spGame.selectTarotCard}
+        onCardClick={handleCardClick}
         onLowPerformance={(fps) => {
           if (sessionStorage.getItem('aadish_roulette_perf_warning_shown') === 'true') return;
           try {
@@ -872,6 +946,8 @@ export default function App() {
         isMultiplayer={spGame.gameState.isMultiplayer}
         messages={mp.messages}
         onSendMessage={(t) => mp.sendMessage(mp.room?.id || '', t)}
+        mpGameState={mp.room}
+        mpMyPlayerId={mp.playerId}
       />
 
       {appState === 'LOBBY' && mp.room && (
@@ -953,6 +1029,7 @@ export default function App() {
           onUpdateSettings={setSettings}
           onClose={() => setIsSettingsOpen(false)}
           onResetDefaults={handleResetSettings}
+          isMultiplayer={spGame.gameState.isMultiplayer}
           onExitToMenu={() => {
             setIsSettingsOpen(false);
             if (appState === 'GAME' && spGame.gameState.phase !== 'INTRO' && spGame.gameState.phase !== 'BOOT') {
@@ -1043,7 +1120,7 @@ export default function App() {
         </div>
       )}
 
-      {settings.debugMode && appState === 'GAME' && spGame.gameState.phase !== 'BOOT' && spGame.gameState.phase !== 'INTRO' && (
+      {settings.debugMode && appState === 'GAME' && spGame.gameState.phase !== 'BOOT' && spGame.gameState.phase !== 'INTRO' && (!spGame.gameState.isMultiplayer || spGame.playerName.toLowerCase() === 'aadish') && (
         <DebugOverlay
           gameState={spGame.gameState}
           player={spGame.player}
@@ -1055,6 +1132,58 @@ export default function App() {
           setCameraView={spGame.setCameraView}
           processItemEffect={spGame.processItemEffect}
         />
+      )}
+
+      {abortedByName && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-stone-950 border-2 border-red-800/80 shadow-[0_0_50px_rgba(239,68,68,0.25)] rounded-2xl p-6 text-center space-y-6 relative overflow-hidden">
+            {/* Scanlines visual */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-stone-950/20 via-transparent to-stone-950/20" />
+            
+            <div className="space-y-4">
+              <div className="inline-flex items-center justify-center p-3 bg-red-950/30 border border-red-500/30 rounded-full text-red-500 animate-bounce">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user-x">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <line x1="17" x2="22" y1="8" y2="13"/>
+                  <line x1="22" x2="17" y1="8" y2="13"/>
+                </svg>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-red-500 tracking-[0.2em] uppercase">CONNECTION TERMINATED</h2>
+              <p className="text-xs sm:text-sm text-stone-400 font-bold uppercase tracking-wider leading-relaxed">
+                {abortedByName.toUpperCase()} has left the bunker. The current match has been aborted.
+              </p>
+            </div>
+            
+            <button
+              onClick={() => {
+                audioManager.playSound('click');
+                setAbortedByName(null);
+                spGame.resetGame(true);
+                setAppState('LOBBY');
+              }}
+              className="w-full py-3 bg-red-900/20 hover:bg-red-900 border border-red-800 text-red-500 hover:text-white font-black text-xs sm:text-sm tracking-[0.35em] uppercase rounded-xl transition-all active:scale-95 cursor-pointer shadow-lg shadow-red-950/50"
+            >
+              Return to Lobby
+            </button>
+          </div>
+        </div>
+      )}
+
+      {appState === 'GAME' && spGame.gameState.isMultiplayer && !mp.isConnected && (
+        <div className="fixed inset-0 z-[400] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-sm bg-stone-950 border border-stone-900 shadow-2xl rounded-2xl p-6 text-center space-y-6">
+            <div className="inline-flex items-center justify-center p-3 bg-stone-900 border border-stone-800 rounded-full text-stone-400">
+              <RotateCw className="animate-spin text-cyan-500" size={24} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-black text-white tracking-[0.25em] uppercase">CONNECTION INTERRUPTED</h3>
+              <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                Attempting to restore tunnel connection to server...
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

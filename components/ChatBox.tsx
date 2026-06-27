@@ -69,7 +69,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                         </span>
                     </div>
                 ) : (
-                    messages.map((msg, i) => {
+                    messages
+                        .filter(m => m.sender !== 'SYSTEM' && !m.text.startsWith('SYSTEM:'))
+                        .map((msg, i) => {
                         const isSystem = msg.sender === 'SYSTEM';
                         return (
                             <div 

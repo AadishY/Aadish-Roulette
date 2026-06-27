@@ -627,6 +627,13 @@ export const useGameLogic = () => {
     const mSettings = gameStateRef.current.roomSettings || { rounds: 1, hp: 4 };
     const winsNeeded = Math.ceil(mSettings.rounds / 2) || 1;
 
+    // Track stats
+    if (winner === 'PLAYER') {
+      matchStatsRef.current.roundsSurvived++;
+    }
+    if (!matchStatsRef.current.roundResults) matchStatsRef.current.roundResults = [];
+    matchStatsRef.current.roundResults.push(winner === 'PLAYER' ? 'WIN' : 'LOSS');
+
     // Increment wins locally first
     let pWin = (gameStateRef.current.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0);
     let oWin = (gameStateRef.current.multiModeState?.opponentWins || 0) + (winner === 'PLAYER' ? 0 : 1);
@@ -645,6 +652,7 @@ export const useGameLogic = () => {
 
     if (pWin >= winsNeeded || oWin >= winsNeeded) {
       setGameState(prev => ({ ...prev, winner, phase: 'GAME_OVER' }));
+      matchStatsRef.current.result = winner === 'PLAYER' ? 'WIN' : 'LOSS';
       setIsProcessing(false);
       return;
     }
@@ -758,7 +766,14 @@ export const useGameLogic = () => {
     });
   };
 
-  const processItemEffect = async (user: TurnOwner, item: ItemType): Promise<boolean> => {
+  const processItemEffect = async (
+    user: TurnOwner,
+    item: ItemType,
+    deckCardsOverride?: string[],
+    jackpotOutcomeOverride?: 'JACKPOT' | 'NORMAL' | 'LOSE',
+    crushIndexOverride?: number,
+    contractLootOverride?: ItemType[]
+  ): Promise<boolean> => {
     if (item === 'CUFFS') {
       const opponent = user === 'PLAYER' ? dealerRef.current : playerRef.current;
       // Check if opponent is already cuffed OR if we just skipped their turn via cuffs
@@ -887,7 +902,8 @@ export const useGameLogic = () => {
           (v) => setAnim(p => ({ ...p, triggerContract: typeof v === 'function' ? v(p.triggerContract) : v })),
           addLog, setOverlayText, setOverlayColor,
           gameState.isHardMode, gameState.isMultiplayer,
-          handleHardModeRoundEnd, handleMPRoundEnd
+          handleHardModeRoundEnd, handleMPRoundEnd, handleNormalModeRoundEnd,
+          contractLootOverride
         );
         break;
 
@@ -911,25 +927,30 @@ export const useGameLogic = () => {
         await ItemActions.handleCrusher(
           user, player, dealer, setPlayer, setDealer,
           (v) => setAnim(p => ({ ...p, triggerCrusher: typeof v === 'function' ? v(p.triggerCrusher) : v })),
-          addLog, setOverlayText
+          addLog, setOverlayText,
+          crushIndexOverride
         );
         break;
 
       case 'JACKPOT': {
         // Roll the jackpot outcome
-        const rand = Math.random();
         let outcome: 'JACKPOT' | 'NORMAL' | 'LOSE';
         
-        // Allow forcing outcomes for debugging
-        if ((window as any).__debugJackpotForcedOutcome) {
-          outcome = (window as any).__debugJackpotForcedOutcome;
+        if (jackpotOutcomeOverride) {
+          outcome = jackpotOutcomeOverride;
         } else {
-          if (rand < 0.20) {
-            outcome = 'JACKPOT';
-          } else if (rand < 0.50) {
-            outcome = 'NORMAL';
+          const rand = Math.random();
+          // Allow forcing outcomes for debugging
+          if ((window as any).__debugJackpotForcedOutcome) {
+            outcome = (window as any).__debugJackpotForcedOutcome;
           } else {
-            outcome = 'LOSE';
+            if (rand < 0.20) {
+              outcome = 'JACKPOT';
+            } else if (rand < 0.50) {
+              outcome = 'NORMAL';
+            } else {
+              outcome = 'LOSE';
+            }
           }
         }
 
@@ -946,15 +967,17 @@ export const useGameLogic = () => {
         // Let the spin happen
         await wait(3500);
 
+        const setOwner = user === 'PLAYER' ? setPlayer : setDealer;
+
         if (outcome === 'JACKPOT') {
           addLog("JACKPOT WIN! IMMUNE TO NEXT 3 SHOTS", 'safe');
-          setOverlayText("✨ JACKPOT WIN! ✨\n3 SHOT IMMUNITY");
-          setPlayer(p => ({ ...p, jackpotImmunityShots: 3 }));
+          setOverlayText(`✨ JACKPOT WIN! ✨\n3 SHOT IMMUNITY FOR ${userName.toUpperCase()}`);
+          setOwner(p => ({ ...p, jackpotImmunityShots: 3 }));
           audioManager.playJackpotIntro();
         } else if (outcome === 'NORMAL') {
           addLog("NORMAL WIN! IMMUNE TO NEXT 1 SHOT", 'safe');
-          setOverlayText("👍 NORMAL WIN! 👍\n1 SHOT IMMUNITY");
-          setPlayer(p => ({ ...p, jackpotImmunityShots: (p.jackpotImmunityShots || 0) + 1 }));
+          setOverlayText(`👍 NORMAL WIN! 👍\n1 SHOT IMMUNITY FOR ${userName.toUpperCase()}`);
+          setOwner(p => ({ ...p, jackpotImmunityShots: (p.jackpotImmunityShots || 0) + 1 }));
         } else {
           addLog("NO WIN. TRY AGAIN", 'neutral');
           setOverlayText("❌ LOSE ❌\nBETTER LUCK NEXT TIME");
@@ -1015,8 +1038,13 @@ export const useGameLogic = () => {
           'Wheel of Fortune', 'The Sun', 'Death', 'The Tower', 'The Fool', 'Justice', 'Temperance'
         ];
         
-        const shuffled = [...allTarotNames].sort(() => Math.random() - 0.5);
-        const selectedNames = shuffled.slice(0, 6);
+        let selectedNames: TarotCard['name'][];
+        if (deckCardsOverride) {
+          selectedNames = deckCardsOverride as TarotCard['name'][];
+        } else {
+          const shuffled = [...allTarotNames].sort(() => Math.random() - 0.5);
+          selectedNames = shuffled.slice(0, 6);
+        }
         const cardPowers: Record<TarotCard['name'], string> = {
           'The Magician': 'Gain a random item',
           'The Hanged Man': 'Lose 1 HP',
@@ -1059,7 +1087,13 @@ export const useGameLogic = () => {
     return roundEnded;
   };
 
-  const usePlayerItem = async (index: number) => {
+  const usePlayerItem = async (
+    index: number,
+    deckCardsOverride?: string[],
+    jackpotOutcomeOverride?: 'JACKPOT' | 'NORMAL' | 'LOSE',
+    crushIndexOverride?: number,
+    contractLootOverride?: ItemType[]
+  ) => {
     if (gameStateRef.current.phase !== 'PLAYER_TURN') return;
     if (gameStateRef.current.turnOwner !== 'PLAYER') return; // Strict turn check
     if (isProcessing) return;
@@ -1085,11 +1119,16 @@ export const useGameLogic = () => {
 
     setIsProcessing(true);
 
+    // Track stats
+    const itemsMap = matchStatsRef.current.itemsUsed || {};
+    itemsMap[item] = (itemsMap[item] || 0) + 1;
+    matchStatsRef.current.itemsUsed = itemsMap;
+
     const newItems = [...playerRef.current.items];
     newItems.splice(index, 1);
     setPlayer(p => ({ ...p, items: newItems }));
 
-    await processItemEffect('PLAYER', item);
+    await processItemEffect('PLAYER', item, deckCardsOverride, jackpotOutcomeOverride, crushIndexOverride, contractLootOverride);
 
     setIsProcessing(false);
   };

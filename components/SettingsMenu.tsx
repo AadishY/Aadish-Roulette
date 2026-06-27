@@ -9,6 +9,7 @@ interface SettingsMenuProps {
     onResetDefaults: () => void;
     onExitToMenu?: () => void;
     showExitToMenu?: boolean;
+    isMultiplayer?: boolean;
 }
 
 // Custom Slider Component to prevent accidental clicks
@@ -82,7 +83,7 @@ const CustomSlider: React.FC<{
     );
 };
 
-export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSettings, onClose, onResetDefaults, onExitToMenu, showExitToMenu }) => {
+export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSettings, onClose, onResetDefaults, onExitToMenu, showExitToMenu, isMultiplayer }) => {
     const handleChange = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => {
         onUpdateSettings({ ...settings, [key]: value });
     };
@@ -268,44 +269,56 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </div>
 
                     {/* Debug Group */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-red-500 font-extrabold tracking-[0.2em] uppercase text-[9px] sm:text-[10px]">Developer</h3>
-                            <div className="h-[1px] flex-1 bg-red-950/30" />
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-red-950/10 border border-red-900/30 rounded-xl">
-                            <div>
-                                <span className="text-stone-300 font-bold tracking-widest text-[9px] sm:text-[10px] uppercase block">Debug Overlay</span>
-                                <span className="text-[8px] sm:text-[9px] text-stone-500 font-bold uppercase tracking-wider block mt-0.5">Enables cheats, item management, and chamber editor</span>
-                                {(() => {
-                                    const loggedInUser = localStorage.getItem('aadish_roulette_logged_in_user');
-                                    let isDev = false;
-                                    if (loggedInUser) {
-                                        try {
-                                            const u = JSON.parse(loggedInUser);
-                                            isDev = u.username?.toLowerCase() === (import.meta.env.VITE_DEV_USERNAME || 'aadish').toLowerCase();
-                                        } catch(e) {}
-                                    }
-                                    return isDev ? (
-                                        <span className="text-[8px] text-green-500 font-extrabold uppercase tracking-wider block mt-1">
-                                            ✓ DEVELOPER: STATS WILL BE SAVED
-                                        </span>
-                                    ) : (
-                                        <span className="text-[8px] text-red-500 font-extrabold uppercase tracking-wider block mt-1 animate-pulse">
-                                            ⚠ WARNING: STATS WILL NOT BE SAVED IN THIS MATCH
-                                        </span>
-                                    );
-                                })()}
+                    {(!isMultiplayer || (() => {
+                        const loggedInUser = localStorage.getItem('aadish_roulette_logged_in_user');
+                        let isDev = false;
+                        if (loggedInUser) {
+                            try {
+                                const u = JSON.parse(loggedInUser);
+                                isDev = u.username?.toLowerCase() === (import.meta.env.VITE_DEV_USERNAME || 'aadish').toLowerCase();
+                            } catch(e) {}
+                        }
+                        return isDev;
+                    })()) && (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-red-500 font-extrabold tracking-[0.2em] uppercase text-[9px] sm:text-[10px]">Developer</h3>
+                                <div className="h-[1px] flex-1 bg-red-950/30" />
                             </div>
-                            <button
-                                onClick={() => handleChange('debugMode', !settings.debugMode)}
-                                className={`px-3 py-1.5 text-[9px] sm:text-[10px] font-black tracking-widest uppercase transition-all rounded-lg border active:scale-95 cursor-pointer ${settings.debugMode ? 'bg-red-600 hover:bg-red-500 text-white border-red-500' : 'bg-transparent hover:bg-stone-900 text-stone-400 border-stone-800'}`}
-                            >
-                                {settings.debugMode ? 'Enabled' : 'Disabled'}
-                            </button>
+
+                            <div className="flex items-center justify-between p-3 bg-red-950/10 border border-red-900/30 rounded-xl">
+                                <div>
+                                    <span className="text-stone-300 font-bold tracking-widest text-[9px] sm:text-[10px] uppercase block">Debug Overlay</span>
+                                    <span className="text-[8px] sm:text-[9px] text-stone-500 font-bold uppercase tracking-wider block mt-0.5">Enables cheats, item management, and chamber editor</span>
+                                    {(() => {
+                                        const loggedInUser = localStorage.getItem('aadish_roulette_logged_in_user');
+                                        let isDev = false;
+                                        if (loggedInUser) {
+                                            try {
+                                                const u = JSON.parse(loggedInUser);
+                                                isDev = u.username?.toLowerCase() === (import.meta.env.VITE_DEV_USERNAME || 'aadish').toLowerCase();
+                                            } catch(e) {}
+                                        }
+                                        return isDev ? (
+                                            <span className="text-[8px] text-green-500 font-extrabold uppercase tracking-wider block mt-1">
+                                                ✓ DEVELOPER: STATS WILL BE SAVED
+                                            </span>
+                                        ) : (
+                                            <span className="text-[8px] text-red-500 font-extrabold uppercase tracking-wider block mt-1 animate-pulse">
+                                                ⚠ WARNING: STATS WILL NOT BE SAVED IN THIS MATCH
+                                            </span>
+                                        );
+                                    })()}
+                                </div>
+                                <button
+                                    onClick={() => handleChange('debugMode', !settings.debugMode)}
+                                    className={`px-3 py-1.5 text-[9px] sm:text-[10px] font-black tracking-widest uppercase transition-all rounded-lg border active:scale-95 cursor-pointer ${settings.debugMode ? 'bg-red-600 hover:bg-red-500 text-white border-red-500' : 'bg-transparent hover:bg-stone-900 text-stone-400 border-stone-800'}`}
+                                >
+                                    {settings.debugMode ? 'Enabled' : 'Disabled'}
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="p-3 sm:p-4 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex flex-row gap-2.5 sm:gap-3 shrink-0">
