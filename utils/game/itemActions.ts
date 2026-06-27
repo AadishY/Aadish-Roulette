@@ -166,11 +166,13 @@ export const handleContract = async (
         }
 
         await wait(800); // Wait for pain
+        if (setOverlayColor) setOverlayColor('none');
 
     // 2. Grant Loot
     const activeCharmsCount = user === 'PLAYER' ? (player.luckycharmsUsed || 0) : (dealer.luckycharmsUsed || 0);
     const newItems = contractLootOverride || getContractLoot(activeCharmsCount);
     const itemNames = newItems.join(' & ');
+    const userName = user === 'PLAYER' ? 'YOU' : (user === 'DEALER' ? 'OPPONENT' : user);
 
     if (user === 'PLAYER') {
         setPlayer(p => {
@@ -178,15 +180,6 @@ export const handleContract = async (
             const combined = [...current, ...newItems].slice(0, MAX_ITEMS);
             return { ...p, items: combined, luckycharmsUsed: 0 };
         });
-        if (setOverlayText) {
-            setOverlayText('🩸 BLOOD ACCEPTED 🩸');
-            setTimeout(() => {
-                if (setOverlayText) {
-                    setOverlayText('OFFERING RECEIVED...');
-                    setTimeout(() => setOverlayText?.(null), 2000);
-                }
-            }, 2500);
-        }
     } else {
         setDealer(d => {
             const combined = [...d.items, ...newItems].slice(0, MAX_ITEMS);
@@ -194,7 +187,17 @@ export const handleContract = async (
         });
     }
 
-    addLog(`${user} SACRIFICED HP FOR: ${itemNames}`, 'danger');
+    if (setOverlayText) {
+        setOverlayText(`🩸 BLOOD ACCEPTED 🩸\n${userName} SACRIFICED 1 HP`);
+        setTimeout(() => {
+            if (setOverlayText) {
+                setOverlayText(`${userName} OFFERING:\n${itemNames}`);
+                setTimeout(() => setOverlayText?.(null), 2500);
+            }
+        }, 2500);
+    }
+
+    addLog(`${userName} SACRIFICED HP FOR: ${itemNames}`, 'danger');
     await wait(1000);
 };
 
@@ -338,7 +341,8 @@ export const handlePhone = async (
     gameState: GameState,
     setTriggerPhone: StateSetter<number>,
     addLog: (text: string, type: LogEntry['type']) => void,
-    setOverlayText?: StateSetter<string | null>
+    setOverlayText?: StateSetter<string | null>,
+    phoneFutureIndexOverride?: number
 ) => {
     setTriggerPhone(p => p + 1);
     // audioManager.playSound('grab', { playbackRate: 0.8 }); // Heavy plastic
@@ -365,7 +369,7 @@ export const handlePhone = async (
             addLog("DEALER CHECKS PHONE", 'dealer');
         }
     } else {
-        const randomIndex = available[Math.floor(Math.random() * available.length)];
+        const randomIndex = phoneFutureIndexOverride !== undefined ? phoneFutureIndexOverride : available[Math.floor(Math.random() * available.length)];
         const actualShell = gameState.chamber[randomIndex];
         const offset = randomIndex - current;
 

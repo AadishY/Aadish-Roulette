@@ -20,7 +20,7 @@ import { ChatBox } from './components/ChatBox';
 import { MultiplayerSelection } from './components/MultiplayerSelection';
 import { generateLootBatch } from './utils/game/inventory';
 import { randomInt } from './utils/gameUtils';
-import { ShellType, ItemType } from './types';
+import { ShellType, ItemType, TurnOwner } from './types';
 
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -273,6 +273,49 @@ export default function App() {
 
   const [isHardModeSelected, setIsHardModeSelected] = useState(false);
 
+  // Global dynamic stickers list preloaded at startup
+  const [stickersList, setStickersList] = useState<string[]>([]);
+  useEffect(() => {
+    const preloadStickers = async () => {
+      const found: string[] = [];
+      let i = 1;
+      let consecutiveFails = 0;
+      while (consecutiveFails < 3 && i < 100) {
+        const webpName = `sticker${i}.webp`;
+        const gifName = `sticker${i}.gif`;
+        try {
+          // Probe webp with strict Content-Type header checking (prevents Vite redirect fallbacks)
+          const resWebp = await fetch(`/sticker/${webpName}`, { method: 'HEAD' });
+          const ctWebp = resWebp.headers.get('content-type') || '';
+          if (resWebp.ok && ctWebp.startsWith('image/')) {
+            found.push(webpName);
+            const img = new Image();
+            img.src = `/sticker/${webpName}`;
+            consecutiveFails = 0;
+          } else {
+            // Probe gif with strict Content-Type header checking
+            const resGif = await fetch(`/sticker/${gifName}`, { method: 'HEAD' });
+            const ctGif = resGif.headers.get('content-type') || '';
+            if (resGif.ok && ctGif.startsWith('image/')) {
+              found.push(gifName);
+              const img = new Image();
+              img.src = `/sticker/${gifName}`;
+              consecutiveFails = 0;
+            } else {
+              consecutiveFails++;
+            }
+          }
+        } catch (e) {
+          consecutiveFails++;
+        }
+        i++;
+      }
+      console.log('Preloaded stickers:', found);
+      setStickersList(found);
+    };
+    preloadStickers();
+  }, []);
+
   // Dealer AI only for singleplayer
   useDealerAI({
     gameState: spGame.gameState,
@@ -349,6 +392,7 @@ export default function App() {
       let jackpotOutcome: 'JACKPOT' | 'NORMAL' | 'LOSE' | undefined;
       let crushIndex: number | undefined;
       let contractLoot: string[] | undefined;
+      let phoneFutureIndex: number | undefined;
 
       if (item === 'DECK_CARD') {
         const allTarotNames = [
@@ -379,6 +423,16 @@ export default function App() {
         const item1 = pool[Math.floor(Math.random() * pool.length)];
         const item2 = pool[Math.floor(Math.random() * pool.length)];
         contractLoot = [item1, item2];
+      } else if (item === 'PHONE') {
+        const checkLimit = spGame.gameState.chamber.length;
+        const current = spGame.gameState.currentShellIndex;
+        const available = [];
+        for (let i = current + 2; i < checkLimit; i++) {
+          available.push(i);
+        }
+        if (available.length > 0) {
+          phoneFutureIndex = available[Math.floor(Math.random() * available.length)];
+        }
       }
 
       mp.sendAction(mp.room.id, {
@@ -388,9 +442,10 @@ export default function App() {
         deckCards,
         jackpotOutcome,
         crushIndex,
-        contractLoot
+        contractLoot,
+        phoneFutureIndex
       });
-      await spGame.usePlayerItem(index, deckCards, jackpotOutcome, crushIndex, contractLoot as any);
+      await spGame.usePlayerItem(index, deckCards, jackpotOutcome, crushIndex, contractLoot as any, phoneFutureIndex);
     } else {
       await spGame.usePlayerItem(index);
     }
@@ -411,7 +466,9 @@ export default function App() {
             'CHOKE', 'REMOTE', 'BIG_INVERTER', 'CONTRACT', 'LUCKYCHARM', 'FLASHBANG',
             'CRUSHER', 'TOTEM', 'MIRROR', 'DECK_CARD', 'JACKPOT'
           ];
-          cardRandoms.magicianItem = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+          const playerCount = mp.room?.players?.length || 2;
+          const filteredItems = playerCount <= 2 ? ITEMS.filter(item => item !== 'REMOTE') : ITEMS;
+          cardRandoms.magicianItem = filteredItems[Math.floor(Math.random() * filteredItems.length)];
         } else if (chosenCard.name === 'Judgment') {
           cardRandoms.judgmentSuccess = Math.random() < 0.5;
         } else if (chosenCard.name === 'The Moon') {
@@ -514,7 +571,7 @@ export default function App() {
                 }
                 return { ...d, items: newItems };
               });
-              await spGame.processItemEffect('DEALER', action.item, action.deckCards, action.jackpotOutcome, action.crushIndex, action.contractLoot);
+              await spGame.processItemEffect('DEALER', action.item, action.deckCards, action.jackpotOutcome, action.crushIndex, action.contractLoot, action.phoneFutureIndex);
               break;
             case 'SELECT_CARD':
               spGame.selectTarotCard(action.index, action.cardRandoms);
@@ -691,7 +748,19 @@ export default function App() {
       [chamber[i], chamber[j]] = [chamber[j], chamber[i]];
     }
 
-    const itemsCount = settings.itemsPerShipment === 9 ? randomInt(1, 8) : settings.itemsPerShipment;
+    let itemsCount = settings.itemsPerShipment;
+    if (settings.itemsPerShipment === 9) {
+      // Weighted roll: 1 (20%), 2 (20%), 3 (20%), 4 (15%), 5 (15%), 6 (5%), 7 (3%), 8 (2%)
+      const r = Math.random();
+      if (r < 0.20) itemsCount = 1;
+      else if (r < 0.40) itemsCount = 2;
+      else if (r < 0.60) itemsCount = 3;
+      else if (r < 0.75) itemsCount = 4;
+      else if (r < 0.90) itemsCount = 5;
+      else if (r < 0.95) itemsCount = 6;
+      else if (r < 0.98) itemsCount = 7;
+      else itemsCount = 8;
+    }
     const hostItems = generateLootBatch(itemsCount, false, false, 4, [], hostCharms, 4, 4, settings, playerCount);
     const clientItems = generateLootBatch(itemsCount, false, false, 4, [], clientCharms, 4, 4, settings, playerCount);
 
@@ -759,6 +828,55 @@ export default function App() {
           spGame.startRound(isNewRound, false, undefined, chamber, hostItems, clientItems, nextStarts ? 'PLAYER' : 'DEALER', hpVal);
         } else {
           console.log("Batch end detected (CLIENT) - Waiting for host sync...");
+          spGame.setOverlayText('WAITING FOR HOST...');
+        }
+      });
+
+      spGame.setOnMPRoundEnd(async (winner: TurnOwner) => {
+        const isHost = mp.playerId === mp.room.hostId;
+        const currentTotalWins = (spGame.gameState.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0) + (winner === 'DEALER' ? 1 : 0);
+        const nextRoundNum = currentTotalWins + 1;
+
+        const mSettings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
+        const winsNeeded = Math.ceil(mSettings.rounds / 2) || 1;
+
+        // If match is over, don't start a new round
+        const pWin = (spGame.gameState.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0);
+        const oWin = (spGame.gameState.multiModeState?.opponentWins || 0) + (winner === 'PLAYER' ? 0 : 1);
+        if (pWin >= winsNeeded || oWin >= winsNeeded) {
+          return;
+        }
+
+        if (isHost) {
+          const settings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
+          const playerCount = mp.room?.players?.length || 2;
+          const { chamber, hostItems, clientItems } = generateMPBatch(settings, playerCount, 0, 0);
+
+          const hpVal = settings.hp === 9 ? randomInt(2, 8) : settings.hp;
+          // Alternate starting turn for the next round
+          const lastTurnOwner = spGame.gameState.turnOwner;
+          const nextStarts = lastTurnOwner === 'PLAYER' ? 'DEALER' : 'PLAYER';
+
+          lastTotalWins.current = currentTotalWins;
+
+          const syncAction = {
+            type: 'SYNC_ROUND',
+            chamber,
+            hostItems,
+            clientItems,
+            nextTurnOwner: nextStarts,
+            resetItems: true,
+            hp: hpVal,
+            roundNum: nextRoundNum
+          };
+
+          mp.sendAction(mp.room.id, syncAction);
+          mp.sendMessage(mp.room.id, `SYSTEM: ROUND ${nextRoundNum} STARTED!`);
+
+          spGame.setOverlayText(`ROUND ${nextRoundNum}`);
+          spGame.startRound(true, false, undefined, chamber, hostItems, clientItems, nextStarts, hpVal, { playerWins: pWin, opponentWins: oWin });
+        } else {
+          console.log("Client waiting for next round host sync...");
           spGame.setOverlayText('WAITING FOR HOST...');
         }
       });
@@ -1067,6 +1185,7 @@ export default function App() {
         onSendMessage={(t) => mp.sendMessage(mp.room?.id || '', t)}
         mpGameState={mp.room}
         mpMyPlayerId={mp.playerId}
+        stickers={stickersList}
       />
 
       {appState === 'LOBBY' && mp.room && (
@@ -1095,6 +1214,7 @@ export default function App() {
                 messages={mp.messages}
                 onSendMessage={(t) => mp.sendMessage(mp.room.id, t)}
                 playerName={spGame.playerName}
+                stickers={stickersList}
               />
             </div>
           </div>
@@ -1165,6 +1285,44 @@ export default function App() {
         <TutorialGuide
           onClose={() => setIsGuideOpen(false)}
         />
+      )}
+
+      {/* Server Offline / Disconnected during match overlay */}
+      {appState === 'GAME' && spGame.gameState.isMultiplayer && !mp.isConnected && (
+        <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-md bg-stone-950 border-2 border-red-600/50 shadow-[0_0_50px_rgba(239,68,68,0.15)] rounded-2xl p-6 text-center space-y-6 relative overflow-hidden">
+            {/* CRT scanlines effect */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-stone-950/20 via-transparent to-stone-950/20" />
+            
+            <div className="space-y-2">
+              <div className="inline-flex items-center justify-center p-3 bg-red-950/30 border border-red-500/30 rounded-full text-red-500 animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wifi-off">
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                  <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.5"/>
+                  <path d="M5 12.5a10.94 10.94 0 0 1 5.83-2.84"/>
+                  <path d="M12 5a18.9 18.9 0 0 1 7.72 2.22"/>
+                  <path d="M4.28 7.22A18.95 18.95 0 0 1 12 5"/>
+                </svg>
+              </div>
+              <h2 className="text-lg font-black text-red-500 tracking-[0.2em] uppercase">LINK DISCONNECTED</h2>
+              <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest leading-relaxed">
+                THE CORRIDOR CONNECTION WAS TERMINATED. SERVER IS OFFLINE OR YOUR CONNECTION FAILED.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                audioManager.playSound('click');
+                mp.disconnect();
+                setAppState('MENU');
+                spGame.resetGame(true);
+              }}
+              className="w-full bg-stone-900 hover:bg-stone-850 border border-stone-800 hover:border-red-500/50 rounded-xl py-3 text-[10px] font-black tracking-[0.25em] text-stone-400 hover:text-red-400 uppercase active:scale-95 transition-all duration-150 cursor-pointer shadow-lg"
+            >
+              RETURN TO DECK
+            </button>
+          </div>
+        </div>
       )}
 
       {showPerformancePopup && (

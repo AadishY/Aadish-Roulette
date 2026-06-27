@@ -8,19 +8,16 @@ interface ChatBoxProps {
     messages: ChatMessage[];
     onSendMessage: (text: string) => void;
     playerName: string;
+    stickers?: string[];
 }
 
-const EMOJIS = [
-    '🔫', '🍺', '🚬', '🪓', '📞', 
-    '💬', '🤖', '💀', '🩸', '🃏', 
-    '🎲', '⛓️', '🔍', '🛡️', '💥', 
-    '❓', '⚠️', '❤️', '💔', '👍'
-];
-
-export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playerName }) => {
+export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playerName, stickers = [] }) => {
     const [inputText, setInputText] = useState('');
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showStickerPicker, setShowStickerPicker] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Dynamic sticker detection (probes both webp and gif) and preloading
+
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -34,7 +31,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
             audioManager.playSound('click');
             onSendMessage(inputText.trim());
             setInputText('');
-            setShowEmojiPicker(false);
+            setShowStickerPicker(false);
         }
     };
 
@@ -42,7 +39,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
         <div className="flex flex-col h-full w-full bg-stone-950 font-mono text-stone-300 md:border-l border-stone-900 overflow-hidden relative">
             {/* Header */}
             <div className="p-3 sm:p-6 border-b border-stone-900 bg-stone-900/10 flex justify-between items-center relative select-none shrink-0">
-                <span className="text-[9px] sm:text-[10px] font-black tracking-[0.25em] text-stone-500 uppercase flex items-center gap-1.5">
+                <span className="text-[9px] sm:text-[10px] font-black tracking-[0.25em] text-stone-550 uppercase flex items-center gap-1.5">
                     <Terminal size={10} className="text-cyan-500 animate-pulse sm:w-[12px] sm:h-[12px]" />
                     COMMUNICATION CHANNEL
                 </span>
@@ -67,7 +64,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                     </div>
                 ) : (
                     messages
-                        .filter(m => m.sender === 'SYSTEM' ? (m.text.includes('joined') || m.text.includes('left') || m.text.includes('reconnected')) : !m.text.startsWith('SYSTEM:'))
+                        .filter(m => m.sender === 'SYSTEM' 
+                            ? (m.text.includes('joined') || m.text.includes('left') || m.text.includes('reconnected')) 
+                            : !m.text.startsWith('SYSTEM:')) // Lobby displays stickers inline in the feed list
                         .map((msg, i) => {
                         const isSystem = msg.sender === 'SYSTEM';
                         return (
@@ -77,7 +76,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                                     isSystem 
                                         ? 'py-1 border-y border-stone-900/35 my-1 bg-stone-950/40 px-2 rounded-lg italic text-amber-500/80 font-medium' 
                                         : 'group'
-                                }`}
+                                    }`}
                             >
                                 {!isSystem ? (
                                     <>
@@ -87,9 +86,19 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                                         >
                                             {msg.sender}:
                                         </span>
-                                        <span className="text-stone-300 font-medium select-text break-all">
-                                            {msg.text}
-                                        </span>
+                                        {msg.text.startsWith('[STICKER]:') ? (
+                                            <div className="my-1.5 p-1 bg-stone-900/10 border border-stone-900/30 rounded-lg w-[90px] h-[90px] sm:w-[130px] sm:h-[130px] select-none">
+                                                <img 
+                                                    src={`/sticker/${msg.text.split(':')[1]}`} 
+                                                    alt="Sticker" 
+                                                    className="w-full h-full object-contain rounded-md" 
+                                                />
+                                            </div>
+                                        ) : (
+                                            <span className="text-stone-300 font-medium select-text break-all">
+                                                {msg.text}
+                                            </span>
+                                        )}
                                         {(() => {
                                             const url = msg.text.match(/https?:\/\/[^\s]+/)?.[0];
                                             return url ? <LinkPreviewCard url={url} /> : null;
@@ -122,11 +131,12 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                         type="button"
                         onClick={() => {
                             audioManager.playSound('click');
-                            setShowEmojiPicker(!showEmojiPicker);
+                            setShowStickerPicker(!showStickerPicker);
                         }}
                         className={`absolute right-2.5 p-1 transition-colors rounded-lg cursor-pointer ${
-                            showEmojiPicker ? 'text-cyan-400' : 'text-stone-500 hover:text-cyan-400'
+                            showStickerPicker ? 'text-cyan-400' : 'text-stone-550 hover:text-cyan-400'
                         }`}
+                        title="Send Sticker"
                     >
                         <Smile size={14} className="sm:w-[16px] sm:h-[16px]" />
                     </button>
@@ -138,29 +148,35 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, playe
                     <Send size={12} className="sm:w-[14px] sm:h-[14px]" />
                 </button>
 
-                {/* Emoji Picker Overlay */}
-                {showEmojiPicker && (
+                {/* Sticker Picker Overlay */}
+                {showStickerPicker && (
                     <>
                         <div 
                             className="fixed inset-0 z-40 cursor-default" 
-                            onClick={() => setShowEmojiPicker(false)} 
+                            onClick={() => setShowStickerPicker(false)} 
                         />
-                        <div className="absolute bottom-16 sm:bottom-20 right-3 z-50 p-2 bg-stone-950/95 border border-stone-900 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col gap-1.5 w-44 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200">
-                            <span className="text-[7px] font-black text-stone-550 tracking-[0.2em] border-b border-stone-900/60 pb-1 uppercase select-none block">
-                                Tactical Emojis
+                        <div className="absolute bottom-16 sm:bottom-20 right-3 z-50 p-2 sm:p-3 bg-stone-950/95 border border-stone-900 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col gap-1.5 w-48 sm:w-56 backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <span className="text-[7px] sm:text-[8px] font-black text-stone-550 tracking-[0.2em] border-b border-stone-900/60 pb-1 uppercase select-none block">
+                                Tactical Stickers
                             </span>
-                            <div className="grid grid-cols-5 gap-1">
-                                {EMOJIS.map((emoji) => (
+                            <div className="grid grid-cols-4 gap-1.5 overflow-y-auto max-h-48 custom-scrollbar pr-0.5">
+                                {stickers.map((stk) => (
                                     <button
-                                        key={emoji}
+                                        key={stk}
                                         type="button"
                                         onClick={() => {
                                             audioManager.playSound('click');
-                                            setInputText(prev => prev + emoji);
+                                            onSendMessage('[STICKER]:' + stk);
+                                            setShowStickerPicker(false);
                                         }}
-                                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-900/60 active:scale-90 transition-all text-sm sm:text-base cursor-pointer"
+                                        className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center rounded border border-stone-900 bg-stone-950 hover:bg-stone-900/80 hover:border-cyan-500/55 p-1 active:scale-95 transition-all cursor-pointer"
+                                        title={stk}
                                     >
-                                        {emoji}
+                                        <img 
+                                            src={`/sticker/${stk}`} 
+                                            alt={stk} 
+                                            className="w-full h-full object-contain rounded" 
+                                        />
                                     </button>
                                 ))}
                             </div>

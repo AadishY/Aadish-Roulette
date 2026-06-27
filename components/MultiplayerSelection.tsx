@@ -352,6 +352,30 @@ export const MultiplayerSelection: React.FC<MultiplayerSelectionProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Proper Kicking Message Overlay */}
+            {error && error.toLowerCase().includes('kick') && (
+                <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="w-[360px] sm:w-[400px] bg-stone-950 border-2 border-red-500/30 p-6 rounded-xl shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center space-y-4 font-mono select-none">
+                        <div className="inline-flex p-3 bg-red-950/40 border border-red-500/40 text-red-500 rounded-full animate-bounce">
+                            <AlertTriangle size={28} />
+                        </div>
+                        <h2 className="text-red-500 text-lg font-black tracking-widest uppercase">DISMISSED FROM BUNKER</h2>
+                        <p className="text-[11px] text-stone-400 uppercase leading-relaxed">
+                            You have been expelled from the simulation corridor by the corridor host.
+                        </p>
+                        <button
+                            onClick={() => {
+                                audioManager.playSound('click');
+                                clearError();
+                            }}
+                            className="w-full py-2.5 bg-red-950/40 hover:bg-red-900 border border-red-800 hover:border-red-400 text-red-400 hover:text-white font-black text-xs tracking-widest rounded-xl transition-all cursor-pointer"
+                        >
+                            ACKNOWLEDGE PROTOCOL
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

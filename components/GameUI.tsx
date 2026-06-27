@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { GameState, PlayerState, LogEntry, TurnOwner, ItemType, AimTarget, ShellType, CameraView, GameSettings, ChatMessage } from '../types';
-import { Settings as SettingsIcon, Skull } from 'lucide-react';
+import { Settings as SettingsIcon, Skull, Smile } from 'lucide-react';
 import { audioManager } from '../utils/audioManager';
 import { StatusDisplay } from './ui/StatusDisplay';
 import { Inventory } from './ui/Inventory';
@@ -55,6 +55,7 @@ interface GameUIProps {
     onSendMessage?: (text: string) => void;
     mpGameState?: any;
     mpMyPlayerId?: string | null;
+    stickers?: string[];
 }
 
 const RenderColoredText = ({ text }: { text: string }) => {
@@ -110,12 +111,56 @@ export const GameUI: React.FC<GameUIProps> = ({
     messages = [],
     onSendMessage,
     mpGameState,
-    mpMyPlayerId
+    mpMyPlayerId,
+    stickers = []
 }) => {
     const [inputName, setInputName] = useState(playerName || '');
-    const [isChatMinimized, setIsChatMinimized] = useState(false);
+    const [isChatMinimized, setIsChatMinimized] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
     const prevMsgLength = useRef(messages.length);
+
+    const [isStickersOpen, setIsStickersOpen] = useState(false);
+    const [activeStickers, setActiveStickers] = useState<{ id: string; sender: string; color: string; filename: string }[]>([]);
+    const lastStickerMsgIndex = useRef(-1);
+    const stickerTimeoutsRef = useRef<any[]>([]);
+
+    // Cleanup active timeout references on unmount
+    useEffect(() => {
+        return () => {
+            stickerTimeoutsRef.current.forEach(clearTimeout);
+            stickerTimeoutsRef.current = [];
+        };
+    }, []);
+
+    // Sticker message listeners (displays transparently on left side, fades after 8s, max 3 limit)
+    useEffect(() => {
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            if (msg.text && msg.text.startsWith('[STICKER]:') && i > lastStickerMsgIndex.current) {
+                lastStickerMsgIndex.current = i;
+                const filename = msg.text.split(':')[1];
+                const newSticker = {
+                    id: `${msg.timestamp || Date.now()}-${i}-${Math.random()}`,
+                    sender: msg.sender,
+                    color: msg.color || '#fff',
+                    filename
+                };
+                
+                setActiveStickers(prev => {
+                    const updated = [...prev, newSticker];
+                    if (updated.length > 3) {
+                        return updated.slice(updated.length - 3);
+                    }
+                    return updated;
+                });
+
+                const tId = setTimeout(() => {
+                    setActiveStickers(prev => prev.filter(s => s.id !== newSticker.id));
+                }, 8000);
+                stickerTimeoutsRef.current.push(tId);
+            }
+        }
+    }, [messages]);
 
     useEffect(() => {
         if (isChatMinimized && messages.length > prevMsgLength.current) {
@@ -395,7 +440,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                 )}
 
                 {/* Extraction / Looting logic remains inside scaled UI for alignment with depth */}
-                {gameState.phase === 'STEALING' && (
+                {/* Stealing Screen Overlay */}
+                {gameState.phase === 'STEALING' && gameState.turnOwner === 'PLAYER' && (
                     <div className="absolute inset-0 z-[110] flex flex-col items-center justify-center bg-red-950/20 backdrop-blur-[16px] px-6 pointer-events-auto animate-in fade-in duration-700 overflow-hidden">
                         {/* Atmospheric Overlays */}
                         <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.3),transparent_70%)]" />
@@ -593,7 +639,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
                             {/* Inventory */}
                             <div className="pointer-events-auto">
-                                {gameState.phase === 'STEALING' ? (
+                                {gameState.phase === 'STEALING' && gameState.turnOwner === 'PLAYER' ? (
                                     <Inventory
                                         player={dealer} // Show DEALER items to steal
                                         dealer={player} // (Swap context)
@@ -638,103 +684,182 @@ export const GameUI: React.FC<GameUIProps> = ({
 
             {/* Global Chat Overlay - Visible whenever game is active (Multiplayer only) */}
             {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && (
-                isChatMinimized ? (
-                    <div className="absolute bottom-4 left-4 z-[100] pointer-events-auto select-none">
-                        <button
-                            onClick={() => {
-                                audioManager.playSound('click');
-                                setIsChatMinimized(false);
-                            }}
-                            className="relative bg-stone-950/90 border border-cyan-500/30 hover:border-cyan-400 rounded-xl px-4 py-2.5 text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-cyan-500 hover:text-cyan-400 backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300 active:scale-95 cursor-pointer flex items-center gap-2 group"
-                        >
-                            {/* Pulse background decoration */}
-                            <span className="absolute inset-0 rounded-xl border border-cyan-500/20 animate-ping opacity-75 pointer-events-none group-hover:animate-none" />
-                            
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                            <span>ChatBox</span>
+                <>
+                    {/* Render ChatBox & Stickers toggle buttons when both are minimized */}
+                    {isChatMinimized && !isStickersOpen && (
+                        <div className="absolute bottom-4 left-4 z-[100] pointer-events-auto select-none flex flex-col items-start gap-2">
+                            {/* Stickers Toggle Button (Stacked above ChatBox toggle button) */}
+                            <button
+                                onClick={() => {
+                                    audioManager.playSound('click');
+                                    setIsStickersOpen(true);
+                                    setIsChatMinimized(true);
+                                }}
+                                className="bg-stone-950/90 border border-cyan-500/30 hover:border-cyan-400 rounded-xl p-2.5 sm:p-3 text-cyan-500 hover:text-cyan-400 backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300 active:scale-95 cursor-pointer flex items-center justify-center group"
+                                title="Stickers"
+                            >
+                                <Smile size={14} className="animate-pulse text-cyan-500 sm:w-[16px] sm:h-[16px]" />
+                            </button>
 
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[8px] font-black text-white items-center justify-center leading-none">
-                                        {unreadCount}
+                            {/* ChatBox Toggle Button */}
+                            <button
+                                onClick={() => {
+                                    audioManager.playSound('click');
+                                    setIsChatMinimized(false);
+                                    setIsStickersOpen(false);
+                                }}
+                                className="relative bg-stone-950/90 border border-cyan-500/30 hover:border-cyan-400 rounded-xl px-4 py-2.5 text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-cyan-500 hover:text-cyan-400 backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)] hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300 active:scale-95 cursor-pointer flex items-center gap-2 group"
+                            >
+                                <span className="absolute inset-0 rounded-xl border border-cyan-500/20 animate-ping opacity-75 pointer-events-none group-hover:animate-none" />
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>ChatBox</span>
+
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[8px] font-black text-white items-center justify-center leading-none">
+                                            {unreadCount}
+                                        </span>
                                     </span>
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                ) : (
-                    <div className="absolute bottom-4 left-4 z-[100] w-[260px] sm:w-[320px] md:w-[360px] h-[180px] sm:h-[240px] md:h-[300px] pointer-events-auto transition-all duration-300">
-                        <div className="h-full flex flex-col justify-end">
-                            <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
-                                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 border-b border-white/5 flex justify-between items-center select-none">
-                                    <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">ChatBoxk</span>
-                                    <div className="flex items-center gap-3">
-                                        <button 
-                                            onClick={() => {
-                                                audioManager.playSound('click');
-                                                setIsChatMinimized(true);
-                                            }}
-                                            className="text-stone-500 hover:text-white transition-colors text-[8px] sm:text-[9px] uppercase tracking-widest font-black cursor-pointer bg-transparent border-none outline-none"
-                                        >
-                                            Minimize
-                                        </button>
-                                        <div className="flex gap-1">
-                                            <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                                            <div className="w-1 h-1 rounded-full bg-green-500/50" />
+                                )}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Chat Overlay Active (Hides stickers button) */}
+                    {!isChatMinimized && (
+                        <div className="absolute bottom-4 left-4 z-[100] w-[260px] sm:w-[320px] md:w-[360px] h-[180px] sm:h-[240px] md:h-[300px] pointer-events-auto transition-all duration-300 animate-in fade-in duration-200">
+                            <div className="h-full flex flex-col justify-end">
+                                <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
+                                    <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 border-b border-white/5 flex justify-between items-center select-none">
+                                        <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">ChatBox</span>
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => {
+                                                    audioManager.playSound('click');
+                                                    setIsChatMinimized(true);
+                                                }}
+                                                className="text-stone-550 hover:text-white transition-colors text-[8px] sm:text-[9px] uppercase tracking-widest font-black cursor-pointer bg-transparent border-none outline-none"
+                                            >
+                                                Minimize
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div
+                                        ref={chatScrollRef}
+                                        className="flex-1 overflow-y-auto p-2.5 sm:p-4 space-y-2 sm:space-y-3 text-[10px] sm:text-[11px] md:text-xs scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20"
+                                    >
+                                        {messages
+                                            .filter(m => m.sender !== 'SYSTEM' && m.text && !m.text.startsWith('SYSTEM:') && !m.text.startsWith('[STICKER]:'))
+                                            .map((msg, i) => (
+                                                <div key={i} className="animate-in fade-in slide-in-from-left-1 duration-300 group">
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span style={{ color: msg.color }} className="font-black text-[9px] sm:text-[10px] md:text-[11px] uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">{msg.sender}</span>
+                                                        <span className="text-white font-medium break-words leading-relaxed drop-shadow-sm">{msg.text}</span>
+                                                    </div>
+                                                    {(() => {
+                                                        const url = msg.text.match(/https?:\/\/[^\s]+/)?.[0];
+                                                        return url ? <LinkPreviewCard url={url} /> : null;
+                                                    })()}
+                                                </div>
+                                            ))}
+                                    </div>
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            const input = e.currentTarget.elements.namedItem('chat-input') as HTMLInputElement;
+                                            if (input.value.trim() && onSendMessage) {
+                                                onSendMessage(input.value.trim());
+                                                input.value = '';
+                                            }
+                                        }}
+                                        className="p-2 sm:p-3 bg-white/5 border-t border-white/5 flex gap-2"
+                                    >
+                                        <input
+                                            name="chat-input"
+                                            type="text"
+                                            autoComplete="off"
+                                            placeholder="TYPE A MESSAGE..."
+                                            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[9px] sm:text-[10px] md:text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-white/30 transition-all focus:bg-black/60 shadow-inner"
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                        />
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Sticker Selection Overlay (Hides Chat overlay, shows Chat button next to it) */}
+                    {isStickersOpen && (
+                        <>
+                            {/* Sticker Panel overlay container */}
+                            <div className="absolute bottom-4 left-4 z-[100] w-[260px] sm:w-[320px] md:w-[360px] h-[180px] sm:h-[240px] md:h-[300px] pointer-events-auto transition-all duration-300 animate-in fade-in duration-200">
+                                <div className="h-full flex flex-col justify-end">
+                                    <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all hover:border-white/10">
+                                        <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 border-b border-white/5 flex justify-between items-center select-none">
+                                            <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">Stickers</span>
+                                            <div className="flex items-center gap-3">
+                                                <button 
+                                                    onClick={() => {
+                                                        audioManager.playSound('click');
+                                                        setIsStickersOpen(false);
+                                                    }}
+                                                    className="text-stone-550 hover:text-white transition-colors text-[8px] sm:text-[9px] uppercase tracking-widest font-black cursor-pointer bg-transparent border-none outline-none"
+                                                >
+                                                    Minimize
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-3 sm:p-4 custom-scrollbar scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {stickers.map((stk) => (
+                                                    <button
+                                                        key={stk}
+                                                        onClick={() => {
+                                                            audioManager.playSound('click');
+                                                            if (onSendMessage) onSendMessage('[STICKER]:' + stk);
+                                                            setIsStickersOpen(false);
+                                                        }}
+                                                        className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center rounded border border-white/10 bg-black/40 hover:bg-white/5 hover:border-cyan-500/50 p-1.5 transition-all active:scale-95 cursor-pointer"
+                                                        title={stk}
+                                                    >
+                                                        <img src={`/sticker/${stk}`} alt={stk} className="w-full h-full object-contain rounded" />
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div
-                                    ref={chatScrollRef}
-                                    className="flex-1 overflow-y-auto p-2.5 sm:p-4 space-y-2 sm:space-y-3 text-[10px] sm:text-[11px] md:text-xs scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20"
-                                >
-                                    {messages.filter(m => m.sender !== 'SYSTEM' && !m.text.startsWith('SYSTEM:')).map((msg, i) => (
-                                        <div key={i} className="animate-in fade-in slide-in-from-left-1 duration-300 group">
-                                            <div className="flex items-baseline gap-2">
-                                                <span style={{ color: msg.color }} className="font-black text-[9px] sm:text-[10px] md:text-[11px] uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity whitespace-nowrap">{msg.sender}</span>
-                                                <span className="text-white font-medium break-words leading-relaxed drop-shadow-sm">{msg.text}</span>
-                                            </div>
-                                            {(() => {
-                                                const url = msg.text.match(/https?:\/\/[^\s]+/)?.[0];
-                                                return url ? <LinkPreviewCard url={url} /> : null;
-                                            })()}
-                                        </div>
-                                    ))}
-                                </div>
-                                <form
-                                    onSubmit={(e) => {
-                                        e.preventDefault();
-                                        const input = e.currentTarget.elements.namedItem('chat-input') as HTMLInputElement;
-                                        if (input.value.trim() && onSendMessage) {
-                                            onSendMessage(input.value.trim());
-                                            input.value = '';
-                                        }
-                                    }}
-                                    className="p-2 sm:p-3 bg-white/5 border-t border-white/5 flex gap-2"
-                                >
-                                    <input
-                                        name="chat-input"
-                                        type="text"
-                                        autoComplete="off"
-                                        placeholder="TYPE A MESSAGE..."
-                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[9px] sm:text-[10px] md:text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-white/30 transition-all focus:bg-black/60 shadow-inner"
-                                        onKeyDown={(e) => e.stopPropagation()}
-                                    />
-                                </form>
                             </div>
-                        </div>
-                    </div>
-                )
+
+                            {/* ChatBox Toggle Button shown next to Sticker overlay so user can switch back */}
+                            <div className="absolute bottom-4 left-[280px] sm:left-[340px] md:left-[380px] z-[100] pointer-events-auto select-none">
+                                <button
+                                    onClick={() => {
+                                        audioManager.playSound('click');
+                                        setIsChatMinimized(false);
+                                        setIsStickersOpen(false);
+                                    }}
+                                    className="bg-stone-950/90 border border-cyan-500/30 hover:border-cyan-400 rounded-xl px-4 py-2.5 text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-cyan-500 hover:text-cyan-400 backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)] active:scale-95 transition-all duration-300 cursor-pointer flex items-center gap-2 group"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    <span>ChatBox</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </>
             )}
 
-            {/* Minimized Chat Overlay - Visible in-game at above left corner when minimized */}
+            {/* Minimized Chat Overlay - Visible in-game at above left corner when minimized (Filters out sticker logs) */}
             {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && isChatMinimized && (
                 <div className="absolute top-28 left-4 z-[100] pointer-events-none max-w-xs md:max-w-sm space-y-2 select-none">
                     {messages
-                        .filter(m => m.sender !== 'SYSTEM' && !m.text.startsWith('SYSTEM:'))
+                        .filter(m => m.sender !== 'SYSTEM' && m.text && !m.text.startsWith('SYSTEM:') && !m.text.startsWith('[STICKER]:'))
                         .slice(-5) // Show last 5 messages
                         .map((msg, i) => (
                             <div key={i} className="text-white text-xs font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] animate-in fade-in slide-in-from-left-2 duration-300 flex items-baseline gap-1.5">
@@ -742,6 +867,22 @@ export const GameUI: React.FC<GameUIProps> = ({
                                 <span className="break-words">{msg.text}</span>
                             </div>
                         ))}
+                </div>
+            )}
+
+            {/* Transparent Active Stickers Overlay - rendered on left side, auto fades after 5s, max 3 limit */}
+            {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && activeStickers.length > 0 && (
+                <div className="absolute top-[320px] left-4 z-[100] pointer-events-none space-y-3 select-none flex flex-col items-start bg-transparent">
+                    {activeStickers.map((stk) => (
+                        <div key={stk.id} className="animate-in fade-in slide-in-from-left-3 duration-300 flex flex-col items-start bg-transparent">
+                            <span style={{ color: stk.color }} className="font-extrabold uppercase text-[8px] tracking-widest drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.95)]">
+                                {stk.sender}
+                            </span>
+                            <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent">
+                                <img src={`/sticker/${stk.filename}`} alt="Sticker" className="w-full h-full object-contain bg-transparent" />
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
         </>

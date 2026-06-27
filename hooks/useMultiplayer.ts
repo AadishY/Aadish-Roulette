@@ -117,6 +117,11 @@ export function useMultiplayer() {
             }
         });
 
+        newSocket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+            setIsConnected(false);
+        });
+
         newSocket.on('joinedRoom', ({ room, playerId }) => {
             setRoom(room);
             setPlayerId(playerId);

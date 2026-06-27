@@ -13,6 +13,7 @@ export const useGameLogic = () => {
   const [playerName, setPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const onBatchEndRef = useRef<((keepTurn: boolean) => void) | null>(null);
+  const onMPRoundEndRef = useRef<((winner: TurnOwner) => void) | null>(null);
 
   const [gameState, setGameState] = useState<GameState>({
     phase: 'BOOT',
@@ -352,7 +353,8 @@ export const useGameLogic = () => {
       lives = chamber.filter(s => s === 'LIVE').length;
       blanks = chamber.filter(s => s === 'BLANK').length;
     } else {
-      const total = randomInt(2, 8);
+      const isNormalRound1 = !isHM && !gameStateRef.current.isMultiplayer && (gameStateRef.current.normalModeState?.round || 1) === 1;
+      const total = isNormalRound1 ? randomInt(2, 4) : randomInt(2, 8);
       const maxLives = Math.floor(total / 2);
       lives = randomInt(1, maxLives);
       if (lives < maxLives && Math.random() > 0.4) {
@@ -488,7 +490,7 @@ export const useGameLogic = () => {
       resetItems, effectiveState, setPlayer, setDealer, setGameState,
       setReceivedItems, setShowLootOverlay, dealerRef.current.hp,
       pItemsOverride, dItemsOverride,
-      player.items, dealer.items,
+      playerRef.current.items, dealerRef.current.items,
       playerRef.current.luckycharmsUsed || 0,
       dealerRef.current.luckycharmsUsed || 0,
       playerRef.current.hp,
@@ -680,7 +682,13 @@ export const useGameLogic = () => {
       return;
     }
 
-    // Next Round
+    if (onMPRoundEndRef.current) {
+      onMPRoundEndRef.current(winner);
+      setIsProcessing(false);
+      return;
+    }
+
+    // Next Round (Singleplayer)
     const nextRoundNum = pWin + oWin + 1;
     setOverlayColor('none');
     setOverlayText(`ROUND ${nextRoundNum}`);
@@ -703,7 +711,7 @@ export const useGameLogic = () => {
       forceClear, gameStateRef.current, setPlayer, setDealer, setGameState,
       setReceivedItems, setShowLootOverlay, dealerRef.current.hp,
       undefined, undefined,
-      player.items, dealer.items,
+      playerRef.current.items, dealerRef.current.items,
       playerRef.current.luckycharmsUsed || 0,
       dealerRef.current.luckycharmsUsed || 0,
       playerRef.current.hp,
@@ -783,7 +791,8 @@ export const useGameLogic = () => {
     deckCardsOverride?: string[],
     jackpotOutcomeOverride?: 'JACKPOT' | 'NORMAL' | 'LOSE',
     crushIndexOverride?: number,
-    contractLootOverride?: ItemType[]
+    contractLootOverride?: ItemType[],
+    phoneFutureIndexOverride?: number
   ): Promise<boolean> => {
     if (item === 'CUFFS') {
       const opponent = user === 'PLAYER' ? dealerRef.current : playerRef.current;
@@ -863,7 +872,8 @@ export const useGameLogic = () => {
         await ItemActions.handlePhone(user, gameStateRef.current,
           (v) => setAnim(p => ({ ...p, triggerPhone: typeof v === 'function' ? v(p.triggerPhone) : v })),
           addLog,
-          setOverlayText
+          setOverlayText,
+          phoneFutureIndexOverride
         );
         break;
 
@@ -1037,7 +1047,8 @@ export const useGameLogic = () => {
               roundEnded = true;
             }
             if (!roundEnded) {
-              await wait(1000);
+              // Wait 2.8 seconds between each item's animation so the current one completes first
+              await wait(2800);
             }
           }
         }
@@ -1103,7 +1114,8 @@ export const useGameLogic = () => {
     deckCardsOverride?: string[],
     jackpotOutcomeOverride?: 'JACKPOT' | 'NORMAL' | 'LOSE',
     crushIndexOverride?: number,
-    contractLootOverride?: ItemType[]
+    contractLootOverride?: ItemType[],
+    phoneFutureIndexOverride?: number
   ) => {
     if (gameStateRef.current.phase !== 'PLAYER_TURN') return;
     if (gameStateRef.current.turnOwner !== 'PLAYER') return; // Strict turn check
@@ -1139,7 +1151,7 @@ export const useGameLogic = () => {
     newItems.splice(index, 1);
     setPlayer(p => ({ ...p, items: newItems }));
 
-    await processItemEffect('PLAYER', item, deckCardsOverride, jackpotOutcomeOverride, crushIndexOverride, contractLootOverride);
+    await processItemEffect('PLAYER', item, deckCardsOverride, jackpotOutcomeOverride, crushIndexOverride, contractLootOverride, phoneFutureIndexOverride);
 
     setIsProcessing(false);
   };
@@ -1638,6 +1650,7 @@ export const useGameLogic = () => {
     setOverlayText,
     matchStats: matchStatsRef.current,
     setOnBatchEnd: (cb: (keepTurn: boolean) => void) => { onBatchEndRef.current = cb; },
+    setOnMPRoundEnd: (cb: (winner: TurnOwner) => void) => { onMPRoundEndRef.current = cb; },
     startRound,
     handleHardModeRoundEnd,
     handleMPRoundEnd,

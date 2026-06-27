@@ -183,7 +183,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({
                                     <span className="text-xs sm:text-sm font-black text-cyan-400">{room.settings.rounds}</span>
                                 </div>
                                 <input
-                                    type="range" min="1" max="7" value={room.settings.rounds}
+                                    type="range" min="1" max="7" step="2" value={room.settings.rounds}
                                     disabled={!isHost}
                                     onChange={(e) => handleSettingChange('rounds', parseInt(e.target.value))}
                                     className="w-full accent-cyan-500 cursor-pointer h-1.5 bg-stone-900 rounded-lg appearance-none opacity-85 hover:opacity-100 disabled:opacity-40 transition-opacity"

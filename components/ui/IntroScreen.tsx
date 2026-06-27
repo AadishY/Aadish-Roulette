@@ -672,6 +672,36 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                         </div>
                         
                         <div className="space-y-3.5 sm:space-y-4.5 text-left flex-1 min-h-0 overflow-y-auto pr-1.5 select-text scrollbar-thin text-[10px] sm:text-xs md:text-sm text-stone-400 custom-scrollbar">
+                            {/* Pinned Announcement */}
+                            <div className="space-y-2.5 bg-cyan-950/20 border border-cyan-500/40 p-3.5 sm:p-5 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-[pulse_4s_ease-in-out_infinite]">
+                                <div className="flex items-center gap-2 border-b border-cyan-900 pb-1.5">
+                                    <span className="px-2 py-0.5 bg-cyan-500 text-stone-950 text-[9px] font-black rounded uppercase tracking-widest select-none">PINNED</span>
+                                    <span className="text-cyan-400 font-black text-xs sm:text-sm tracking-wider uppercase">MULTIPLAYER IS OUT!</span>
+                                </div>
+                                <p className="leading-relaxed text-stone-300 text-[11px] sm:text-xs">
+                                    Lobby matches, item steals, tarot card draws, cuffed sequences, and real-time interactive game synchronization are fully live! Challenge opponents on mobile and desktop devices.
+                                </p>
+                            </div>
+
+                            {/* New Changelog Entry */}
+                            <div className="space-y-2.5 bg-stone-950 border border-stone-900/60 p-3.5 sm:p-5 rounded-lg">
+                                <span className="text-stone-200 font-black block border-b border-stone-900 pb-1 text-[11px] sm:text-xs md:text-sm tracking-wider">[June 27, 2026 - Performance profiles & Turn Keeping fixes (v1.4.3)]</span>
+                                <ul className="list-none space-y-2 pl-0.5">
+                                    <li className="flex items-start gap-2.5">
+                                        <span className="px-1.5 py-0.5 bg-cyan-950/50 border border-cyan-800/40 text-cyan-400 text-[8px] font-black rounded-md uppercase tracking-widest shrink-0 select-none">ADDED</span>
+                                        <span className="leading-relaxed">GPU Thermal Throttling: Automatically caps rendering to 24 FPS in all menu and lobby states, and utilizes Linear Tone Mapping in Balanced performance modes to decrease mobile device heat.</span>
+                                    </li>
+                                    <li className="flex items-start gap-2.5">
+                                        <span className="px-1.5 py-0.5 bg-green-950/50 border border-green-800/40 text-green-400 text-[8px] font-black rounded-md uppercase tracking-widest shrink-0 select-none">FIXED</span>
+                                        <span className="leading-relaxed">Mobile Pointing Toggles: Reworked dual-target pointing on touch screens, requiring a clear selection confirmation tap instead of instantly firing.</span>
+                                    </li>
+                                    <li className="flex items-start gap-2.5">
+                                        <span className="px-1.5 py-0.5 bg-green-950/50 border border-green-800/40 text-green-400 text-[8px] font-black rounded-md uppercase tracking-widest shrink-0 select-none">FIXED</span>
+                                        <span className="leading-relaxed">Turn Retaining on Last Shell: In multiplayer, if a player shoots themselves with a blank on the last shell in the chamber, they now correctly retain their turn for the next batch.</span>
+                                    </li>
+                                </ul>
+                            </div>
+
                             <div className="space-y-2.5 bg-stone-950 border border-stone-900/60 p-3.5 sm:p-5 rounded-lg animate-pulse-slow">
                                 <span className="text-stone-200 font-black block border-b border-stone-900 pb-1 text-[11px] sm:text-xs md:text-sm tracking-wider">[June 22, 2026 - Server Performance & Memory Leaks Cleanups (v1.4.2)]</span>
                                 <ul className="list-none space-y-2 pl-0.5">

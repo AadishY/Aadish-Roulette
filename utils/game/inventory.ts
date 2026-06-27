@@ -325,7 +325,14 @@ export const distributeItems = async (
         const currentStage = gameState.hardModeState?.round || 1;
         if (currentStage === 1) amount = 2;
         else if (currentStage === 2) amount = 2;
-        else if (currentStage === 3) amount = randomInt(1, 4);
+        else if (currentStage === 3) {
+            // Weighted roll for 1-4 items: 1 (35%), 2 (35%), 3 (20%), 4 (10%)
+            const r = Math.random();
+            if (r < 0.35) amount = 1;
+            else if (r < 0.70) amount = 2;
+            else if (r < 0.90) amount = 3;
+            else amount = 4;
+        }
         else amount = 4;
     } else {
         // NORMAL MODE LOGIC
@@ -334,7 +341,13 @@ export const distributeItems = async (
             if (currentRound === 1) {
                 amount = 0; // No shipment
             } else {
-                amount = randomInt(2, 4); // Items with same randomness in number
+                // Round 2: start with 2 items, then 3, then 3, then 4, and so on for each shell batch
+                const roundNum = forceClear ? 1 : gameState.roundCount + 1;
+                if (roundNum === 1) {
+                    amount = 2;
+                } else {
+                    amount = Math.floor((roundNum - 2) / 2) + 3;
+                }
             }
         } else {
             const roundNum = forceClear ? 1 : gameState.roundCount + 1;
