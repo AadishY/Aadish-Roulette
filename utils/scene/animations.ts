@@ -1385,6 +1385,18 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                             const name = deckCards[idx].name;
                             const frontTex = createCardTexture(name, false);
                             const backTex = createCardTexture(name, true);
+
+                            // Proper cleanup of old materials and textures to prevent memory leaks
+                            if (mesh.material[4]) {
+                                const oldMat = mesh.material[4] as THREE.MeshStandardMaterial;
+                                if (oldMat.map) oldMat.map.dispose();
+                                oldMat.dispose();
+                            }
+                            if (mesh.material[5]) {
+                                const oldMat = mesh.material[5] as THREE.MeshStandardMaterial;
+                                if (oldMat.map) oldMat.map.dispose();
+                                oldMat.dispose();
+                            }
                             
                             mesh.material[4] = new THREE.MeshStandardMaterial({
                                 map: frontTex,
@@ -1485,8 +1497,10 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
                         // Card has been selected
                         if (idx === selectedCardIndex) {
                             const targetZ = isPlayer ? 2.5 : -2.5;
-                            const targetPos = new THREE.Vector3(0, 1.8, targetZ);
-                            const startPos = new THREE.Vector3(startX, 0.2, startZ);
+                            if (!scene.userData._targetPosTemp) scene.userData._targetPosTemp = new THREE.Vector3();
+                            if (!scene.userData._startPosTemp) scene.userData._startPosTemp = new THREE.Vector3();
+                            const targetPos = scene.userData._targetPosTemp.set(0, 1.8, targetZ);
+                            const startPos = scene.userData._startPosTemp.set(startX, 0.2, startZ);
 
                             // Make sure revealed card is lit up from within
                             if (frontMat) {

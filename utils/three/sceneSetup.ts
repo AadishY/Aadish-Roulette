@@ -22,6 +22,11 @@ export const cleanScene = (scene: THREE.Scene) => {
                 });
             }
         }
+
+        // Dispose of light shadow maps to prevent WebGL memory leaks
+        if ((object as any).isLight && (object as any).shadow && (object as any).shadow.map) {
+            (object as any).shadow.map.dispose();
+        }
     });
 };
 

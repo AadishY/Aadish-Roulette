@@ -222,8 +222,10 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     const gunDampingCurve = isMobile ? 5.5 : 4.5; // Slightly lower for smoother glide
     const gunDamping = 1 - Math.exp(-gunDampingCurve * dt);
 
-    const targetPos = targets.targetPos.clone();
-    const targetRot = targets.targetRot.clone();
+    if (!scene.userData._targetPosTemp) scene.userData._targetPosTemp = new THREE.Vector3();
+    if (!scene.userData._targetRotTemp) scene.userData._targetRotTemp = new THREE.Euler();
+    const targetPos = scene.userData._targetPosTemp.copy(targets.targetPos);
+    const targetRot = scene.userData._targetRotTemp.copy(targets.targetRot);
 
     if (cameraView !== 'TABLE') {
         const swayX = mouse.x * 0.15;
@@ -338,7 +340,8 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     camera.position.lerp(targetCamPos, 1 - Math.exp(-5.0 * dt));
     // Dynamic lookAt with sway
-    const lookAtPos = new THREE.Vector3(0, 2, -5);
+    if (!scene.userData._lookAtPosTemp) scene.userData._lookAtPosTemp = new THREE.Vector3(0, 2, -5);
+    const lookAtPos = scene.userData._lookAtPosTemp.set(0, 2, -5);
     if (animState.playerHit) {
         lookAtPos.set(-0.5, 3.8, -8);
     } else if (cameraView === 'TABLE') {

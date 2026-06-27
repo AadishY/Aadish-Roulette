@@ -156,10 +156,14 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             if (sceneRef.current) {
                 // Proper cleanup
                 cleanScene(sceneRef.current.scene);
+                try {
+                    sceneRef.current.renderer.forceContextLoss();
+                } catch (e) {}
                 sceneRef.current.renderer.dispose();
                 if (containerRef.current.contains(sceneRef.current.renderer.domElement)) {
                     containerRef.current.removeChild(sceneRef.current.renderer.domElement);
                 }
+                sceneRef.current = null;
             }
 
             const context = initThreeScene(containerRef.current, propsRef.current);
@@ -435,7 +439,11 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             resizeObserver.disconnect();
             if (sceneRef.current) {
                 cleanScene(sceneRef.current.scene);
+                try {
+                    sceneRef.current.renderer.forceContextLoss();
+                } catch (e) {}
                 sceneRef.current.renderer.dispose();
+                sceneRef.current = null;
             }
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
