@@ -77,18 +77,21 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
 
     // === NAME TAG ===
     const canvas = document.createElement('canvas');
-    canvas.width = 256; canvas.height = 64;
+    canvas.width = 1024; canvas.height = 256;
     const ctx = canvas.getContext('2d');
     if (ctx) {
         ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(0, 0, 256, 64);
+        ctx.fillRect(0, 0, 1024, 256);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 28px monospace';
+        ctx.font = 'bold 112px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(name.toUpperCase(), 128, 32);
+        ctx.fillText(name.toUpperCase(), 512, 128);
     }
     const nameTex = new THREE.CanvasTexture(canvas);
+    nameTex.minFilter = THREE.LinearMipmapLinearFilter;
+    nameTex.magFilter = THREE.LinearFilter;
+    nameTex.anisotropy = 16;
     const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true }));
     nameSprite.position.set(0, 11.5, 0);
     nameSprite.scale.set(4, 1, 1);
