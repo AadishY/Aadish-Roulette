@@ -234,7 +234,9 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                     const isTotem = item === 'TOTEM';
                     const isUsageDisabled = disabled || gameState.phase !== 'PLAYER_TURN' || isGunHeld || isCuffDisabled || isProcessing || player.isFlashbanged || isTotem;
                     const isSelected = selectedIdx === idx;
-                    const isHovered = (hoveredIdx === idx && (!isUsageDisabled || isTotem) && !isMobileView) || (isLongPressing && hoveredIdx === idx) || (isMobileView && isSelected);
+                    const isMouseHovered = hoveredIdx === idx;
+                    const isHovered = ((isMouseHovered && (!isUsageDisabled || isTotem)) || (isLongPressing && hoveredIdx === idx) || (isMobileView && isSelected));
+                    const showTooltip = isMouseHovered && !isMobileView;
                     const glowColor = GLOW_COLORS[item];
                     
                     let activeStyle = {};
@@ -390,7 +392,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
                             <div className={`${isPotato 
                                 ? "absolute bottom-[190%] md:bottom-[115%] left-1/2 -translate-x-1/2 w-48 bg-black border border-stone-800 p-2 text-[10px] text-center pointer-events-none z-[100] text-stone-300 shadow-md"
                                 : "absolute bottom-[190%] md:bottom-[115%] left-1/2 -translate-x-1/2 w-48 bg-stone-950/98 border border-stone-800 rounded-lg p-2.5 text-[10px] text-center pointer-events-none z-[100] text-stone-300 shadow-[0_15px_30px_rgba(0,0,0,0.9)] animate-in fade-in zoom-in-95 duration-150"
-                            } ${isHovered && !isMobileView ? 'md:block' : 'hidden'} hidden`}>
+                            } ${showTooltip ? 'md:block' : 'hidden'} hidden`}>
                                 <div className="font-black text-white mb-1.5 tracking-widest text-[11px] uppercase border-b border-white/5 pb-1">
                                     {ITEM_NAMES[item]}
                                 </div>
