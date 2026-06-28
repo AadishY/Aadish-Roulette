@@ -153,10 +153,12 @@
 
 /* Custom horizontal flex layouts for Multiplayer Lobby */
 .lobby-main-view {
-    flex: 2;
+    flex: 1;
+    min-width: 0;
 }
 .lobby-chat-view {
-    flex: 1;
+    width: 320px;
+    flex-shrink: 0;
 }
 .lobby-settings-column {
     flex: 1.4;
@@ -171,19 +173,19 @@
         padding: 2px !important;
     }
     
-    .lobby-three-cols-container * {
+    .lobby-main-view * {
         font-size: 8px !important;
         line-height: 1.1 !important;
     }
     
-    .lobby-three-cols-container .text-2xl,
-    .lobby-three-cols-container .text-xl,
-    .lobby-three-cols-container .text-3xl {
+    .lobby-main-view .text-2xl,
+    .lobby-main-view .text-xl,
+    .lobby-main-view .text-3xl {
         font-size: 11px !important;
     }
     
-    .lobby-three-cols-container button,
-    .lobby-three-cols-container .interactive {
+    .lobby-main-view button,
+    .lobby-main-view .interactive {
         min-height: 20px !important;
         min-width: 0px !important;
         padding-left: 4px !important;
@@ -193,49 +195,76 @@
         border-radius: 4px !important;
     }
 
-    .lobby-three-cols-container svg {
+    .lobby-main-view svg {
         width: 8px !important;
         height: 8px !important;
     }
 
-    .lobby-three-cols-container .p-2,
-    .lobby-three-cols-container .p-3,
-    .lobby-three-cols-container .p-4,
-    .lobby-three-cols-container .p-6,
-    .lobby-three-cols-container .p-2\.5,
-    .lobby-three-cols-container .p-3\.5 {
+    .lobby-main-view .p-2,
+    .lobby-main-view .p-3,
+    .lobby-main-view .p-4,
+    .lobby-main-view .p-6,
+    .lobby-main-view .p-2\.5,
+    .lobby-main-view .p-3\.5 {
         padding: 3px !important;
     }
 
-    .lobby-three-cols-container .py-2,
-    .lobby-three-cols-container .py-2\.5,
-    .lobby-three-cols-container .py-4 {
+    .lobby-main-view .py-2,
+    .lobby-main-view .py-2\.5,
+    .lobby-main-view .py-4 {
         padding-top: 2px !important;
         padding-bottom: 2px !important;
     }
 
-    .lobby-three-cols-container .px-3,
-    .lobby-three-cols-container .px-4,
-    .lobby-three-cols-container .px-6 {
+    .lobby-main-view .px-3,
+    .lobby-main-view .px-4,
+    .lobby-main-view .px-6 {
         padding-left: 3px !important;
         padding-right: 3px !important;
     }
 
-    .lobby-three-cols-container .gap-3,
-    .lobby-three-cols-container .gap-4,
-    .lobby-three-cols-container .gap-6,
-    .lobby-three-cols-container .gap-1\.5,
-    .lobby-three-cols-container .gap-2,
-    .lobby-three-cols-container .gap-2\.5 {
+    .lobby-main-view .gap-3,
+    .lobby-main-view .gap-4,
+    .lobby-main-view .gap-6,
+    .lobby-main-view .gap-1\.5,
+    .lobby-main-view .gap-2,
+    .lobby-main-view .gap-2\.5 {
         gap: 2.5px !important;
     }
 
     /* Column proportions for small viewports */
     .lobby-main-view {
-        flex: 2.25 !important;
+        flex: 1 !important;
+        min-width: 0 !important;
     }
     .lobby-chat-view {
-        flex: 0.75 !important;
+        width: 210px !important;
+        flex-shrink: 0 !important;
+    }
+    .lobby-chat-view button {
+        width: 26px !important;
+        height: 26px !important;
+        min-height: 26px !important;
+        min-width: 26px !important;
+        padding: 0 !important;
+        border-radius: 6px !important;
+    }
+    .lobby-chat-view svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+    .lobby-chat-view input {
+        height: 26px !important;
+        font-size: 8px !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+        border-radius: 6px !important;
+    }
+    .lobby-chat-view form {
+        padding: 6px !important;
+        gap: 4px !important;
     }
     .lobby-settings-column {
         flex: 1.15 !important;
@@ -244,27 +273,27 @@
         flex: 0.85 !important;
     }
 
-    .lobby-three-cols-container .space-y-4,
-    .lobby-three-cols-container .space-y-3\.5,
-    .lobby-three-cols-container .space-y-2 {
+    .lobby-main-view .space-y-4,
+    .lobby-main-view .space-y-3\.5,
+    .lobby-main-view .space-y-2 {
         margin-top: 0px !important;
     }
-    .lobby-three-cols-container .space-y-4 > * + * {
+    .lobby-main-view .space-y-4 > * + * {
         margin-top: 16px !important;
     }
-    .lobby-three-cols-container .space-y-3\.5 > * + * {
+    .lobby-main-view .space-y-3\.5 > * + * {
         margin-top: 14px !important;
     }
-    .lobby-three-cols-container .space-y-2 > * + * {
+    .lobby-main-view .space-y-2 > * + * {
         margin-top: 6px !important;
     }
 
-    .lobby-three-cols-container .h-10,
-    .lobby-three-cols-container .h-12 {
+    .lobby-main-view .h-10,
+    .lobby-main-view .h-12 {
         height: 22px !important;
     }
     
-    .lobby-three-cols-container .w-44 {
+    .lobby-main-view .w-44 {
         width: 110px !important;
     }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aadish-roulette-v3';
+const CACHE_NAME = 'aadish-roulette-v4';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

@@ -757,15 +757,15 @@ export default function App() {
 
     let itemsCount = settings.itemsPerShipment;
     if (settings.itemsPerShipment === 9) {
-      // Weighted roll: 1 (20%), 2 (20%), 3 (20%), 4 (15%), 5 (15%), 6 (5%), 7 (3%), 8 (2%)
+      // Weighted roll: 1 (5%), 2 (25%), 3 (25%), 4 (20%), 5 (15%), 6 (7%), 7 (2.5%), 8 (0.5%)
       const r = Math.random();
-      if (r < 0.20) itemsCount = 1;
-      else if (r < 0.40) itemsCount = 2;
-      else if (r < 0.60) itemsCount = 3;
+      if (r < 0.05) itemsCount = 1;
+      else if (r < 0.30) itemsCount = 2;
+      else if (r < 0.55) itemsCount = 3;
       else if (r < 0.75) itemsCount = 4;
       else if (r < 0.90) itemsCount = 5;
-      else if (r < 0.95) itemsCount = 6;
-      else if (r < 0.98) itemsCount = 7;
+      else if (r < 0.97) itemsCount = 6;
+      else if (r < 0.995) itemsCount = 7;
       else itemsCount = 8;
     }
     const hostItems = generateLootBatch(itemsCount, false, false, 4, [], hostCharms, 4, 4, settings, playerCount);

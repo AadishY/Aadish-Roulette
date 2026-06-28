@@ -878,13 +878,13 @@ export const GameUI: React.FC<GameUIProps> = ({
 
             {/* Transparent Active Stickers Overlay - rendered on left side, auto fades after 8s, max 3 limit */}
             {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && activeStickers.length > 0 && (
-                <div className="absolute top-[210px] sm:top-[300px] left-4 z-[100] pointer-events-none space-y-3 select-none flex flex-col items-start bg-transparent">
+                <div className="absolute bottom-[90px] sm:bottom-[120px] left-4 z-[100] pointer-events-none space-y-3 select-none flex flex-col-reverse items-start bg-transparent">
                     {activeStickers.map((stk) => (
                         <div key={stk.id} className="animate-in fade-in slide-in-from-left-3 duration-300 flex flex-col items-start bg-transparent">
                             <span style={{ color: stk.color }} className="font-extrabold uppercase text-[8px] tracking-widest drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.95)]">
                                 {stk.sender}
                             </span>
-                            <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent">
+                            <div className="w-[28px] h-[28px] sm:w-[100px] sm:h-[100px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent">
                                 <img src={`/sticker/${stk.filename}`} alt="Sticker" className="w-full h-full object-contain bg-transparent" />
                             </div>
                         </div>
@@ -900,7 +900,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <span className="font-extrabold uppercase text-[7px] tracking-widest text-amber-400 drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.95)]">
                                 {playerName} IMMUNITY ({player.jackpotImmunityShots})
                             </span>
-                            <div className="w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent border border-amber-500/40 rounded-lg p-1 bg-amber-950/20">
+                            <div className="w-[40px] h-[40px] sm:w-[90px] sm:h-[90px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent border border-amber-500/40 rounded-lg p-1 bg-amber-950/20">
                                 <img src="/sticker/sticker9.gif" alt="Jackpot Pinned" className="w-full h-full object-contain bg-transparent" />
                             </div>
                         </div>
@@ -910,7 +910,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <span className="font-extrabold uppercase text-[7px] tracking-widest text-stone-400 drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.95)]">
                                 {isMultiplayer ? getOpponentName() : 'DEALER'} IMMUNITY ({dealer.jackpotImmunityShots})
                             </span>
-                            <div className="w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent border border-stone-500/40 rounded-lg p-1 bg-stone-950/20">
+                            <div className="w-[40px] h-[40px] sm:w-[90px] sm:h-[90px] object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] mt-0.5 bg-transparent border border-stone-500/40 rounded-lg p-1 bg-stone-950/20">
                                 <img src="/sticker/sticker9.gif" alt="Jackpot Pinned" className="w-full h-full object-contain bg-transparent" />
                             </div>
                         </div>
