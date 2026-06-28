@@ -738,16 +738,16 @@ export const GameUI: React.FC<GameUIProps> = ({
                     {!isChatMinimized && (
                         <div className="absolute bottom-4 left-4 z-[100] w-[260px] sm:w-[320px] md:w-[360px] h-[180px] sm:h-[240px] md:h-[300px] pointer-events-auto transition-all duration-300 animate-in fade-in duration-200">
                             <div className="h-full flex flex-col justify-end">
-                                <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/5 rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/10">
-                                    <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 border-b border-white/5 flex justify-between items-center select-none">
-                                        <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-500 uppercase">ChatBox</span>
+                                <div className="bg-gradient-to-t from-black/80 to-black/40 backdrop-blur-2xl border border-white/[0.02] rounded-xl overflow-hidden flex flex-col h-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] group/chat transition-all hover:border-white/[0.05]">
+                                    <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 border-b border-white/[0.02] flex justify-between items-center select-none">
+                                        <span className="text-[9px] sm:text-[10px] font-black tracking-[0.3em] text-stone-550 uppercase">ChatBox</span>
                                         <div className="flex items-center gap-3">
                                             <button 
                                                 onClick={() => {
                                                     audioManager.playSound('click');
                                                     setIsChatMinimized(true);
                                                 }}
-                                                className="text-stone-550 hover:text-white transition-colors text-[8px] sm:text-[9px] uppercase tracking-widest font-black cursor-pointer bg-transparent border-none outline-none"
+                                                className="text-stone-600 hover:text-cyan-400 transition-colors text-[7px] sm:text-[8px] uppercase tracking-wider font-bold cursor-pointer bg-transparent border-none outline-none"
                                             >
                                                 Minimize
                                             </button>
@@ -788,7 +788,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                             type="text"
                                             autoComplete="off"
                                             placeholder="TYPE A MESSAGE..."
-                                            className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[9px] sm:text-[10px] md:text-xs text-stone-100 placeholder:text-stone-600 focus:outline-none focus:border-white/30 transition-all focus:bg-black/60 shadow-inner"
+                                            className="flex-1 bg-black/40 border border-white/[0.04] rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-[9px] sm:text-[10px] md:text-xs text-stone-100 placeholder:text-stone-755 focus:outline-none focus:border-white/15 transition-all focus:bg-black/50 shadow-inner"
                                             onKeyDown={(e) => e.stopPropagation()}
                                         />
                                     </form>
@@ -878,7 +878,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
             {/* Transparent Active Stickers Overlay - rendered on left side, auto fades after 8s, max 3 limit */}
             {isMultiplayer && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && activeStickers.length > 0 && (
-                <div className="absolute top-[320px] left-4 z-[100] pointer-events-none space-y-3 select-none flex flex-col items-start bg-transparent">
+                <div className="absolute top-[210px] sm:top-[300px] left-4 z-[100] pointer-events-none space-y-3 select-none flex flex-col items-start bg-transparent">
                     {activeStickers.map((stk) => (
                         <div key={stk.id} className="animate-in fade-in slide-in-from-left-3 duration-300 flex flex-col items-start bg-transparent">
                             <span style={{ color: stk.color }} className="font-extrabold uppercase text-[8px] tracking-widest drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.95)]">
