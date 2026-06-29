@@ -382,13 +382,13 @@ export default function App() {
         spGame.setAimTarget(intendedAim);
         spGame.setCameraView('GUN');
         if (mp.room) {
-          mp.sendAction(mp.room.id, { type: 'HOVER_TARGET', target: intendedAim });
+          mp.sendImmediateAction(mp.room.id, { type: 'HOVER_TARGET', target: intendedAim });
         }
         return;
       }
 
       if (mp.room) {
-        mp.sendAction(mp.room.id, { type: 'SHOOT', shooterId: myId, targetId: targetPlayerId, target });
+        mp.sendImmediateAction(mp.room.id, { type: 'SHOOT', shooterId: myId, targetId: targetPlayerId, target });
       }
       await spGame.fireShot('PLAYER', target);
       return;
@@ -401,13 +401,13 @@ export default function App() {
       spGame.setCameraView('GUN');
       
       if (appState === 'GAME' && spGame.gameState.isMultiplayer && mp.room) {
-        mp.sendAction(mp.room.id, { type: 'HOVER_TARGET', target: intendedAim });
+        mp.sendImmediateAction(mp.room.id, { type: 'HOVER_TARGET', target: intendedAim });
       }
       return;
     }
 
     if (appState === 'GAME' && spGame.gameState.isMultiplayer && mp.room) {
-      mp.sendAction(mp.room.id, { type: 'SHOOT', shooter: 'PLAYER', target });
+      mp.sendImmediateAction(mp.room.id, { type: 'SHOOT', shooter: 'PLAYER', target });
     }
     await spGame.fireShot('PLAYER', target);
   };
@@ -616,7 +616,8 @@ export default function App() {
   const handleHoverTarget = (target: any) => {
     if (appState === 'GAME' && spGame.gameState.isMultiplayer && mp.room) {
       if (spGame.gameState.turnOwner === 'PLAYER') {
-        mp.sendAction(mp.room.id, { type: 'HOVER_TARGET', target });
+        // Bypass batcher — aim must arrive with minimal latency
+        mp.sendImmediateAction(mp.room.id, { type: 'HOVER_TARGET', target });
       }
     }
     spGame.setAimTarget(target);
@@ -695,8 +696,19 @@ export default function App() {
                 break;
               case 'HOVER_TARGET': {
                 let aim: AimTarget = action.target;
+                // Fix perspective: PLAYER3's SELF maps to LEFT from this client's view;
+                // PLAYER3's OPPONENT maps to OPPONENT (the front player, which is DEALER here too)
                 if (relSender === 'PLAYER3') {
-                  aim = action.target === 'SELF' ? 'LEFT' : 'OPPONENT';
+                  if (action.target === 'SELF') aim = 'LEFT';
+                  else if (action.target === 'LEFT') aim = 'SELF'; // their left might be our right in some layouts
+                  else aim = 'OPPONENT';
+                } else if (relSender === 'PLAYER4') {
+                  if (action.target === 'SELF') aim = 'RIGHT';
+                  else aim = 'OPPONENT';
+                } else if (relSender === 'DEALER') {
+                  // Opponent is aiming — invert SELF/OPPONENT
+                  if (action.target === 'SELF') aim = 'OPPONENT';
+                  else if (action.target === 'OPPONENT') aim = 'SELF';
                 }
                 spGame.setAimTarget(aim);
                 break;
@@ -827,6 +839,8 @@ export default function App() {
 
           switch (action.type) {
             case 'SHOOT':
+              // Pre-set aimTarget so the gun visually points at the right place before shot animation
+              spGame.setAimTarget(action.target === 'PLAYER' ? 'SELF' : 'OPPONENT');
               spGame.fireShot('DEALER', action.target === 'PLAYER' ? 'DEALER' : 'PLAYER');
               break;
             case 'USE_ITEM':
@@ -849,9 +863,14 @@ export default function App() {
             case 'STEAL_ITEM':
               spGame.stealItem(action.index, 'DEALER');
               break;
-            case 'HOVER_TARGET':
-              spGame.setAimTarget(action.target);
+            case 'HOVER_TARGET': {
+              // Invert SELF/OPPONENT since this is from the opponent's perspective
+              let remoteAim: AimTarget = action.target;
+              if (action.target === 'SELF') remoteAim = 'OPPONENT';
+              else if (action.target === 'OPPONENT') remoteAim = 'SELF';
+              spGame.setAimTarget(remoteAim);
               break;
+            }
             case 'SYNC_ROUND':
               const iAmHost = mp.playerId === (mp.room?.hostId || '');
               spGame.setOverlayText(action.resetItems ? `ROUND ${(action.roundNum || 1)}` : 'RELOADING NEW BATCH...');
@@ -1480,11 +1499,17 @@ export default function App() {
     }
   }, [mp.room, appState, spGame.setGameState]);
 
-  // Sync state broadcast from host to stay in sync
+  // Sync state broadcast from host to keep clients in sync
+  // Throttled to at most once per 350ms to prevent spam during rapid item-use chains
+  const lastSyncBroadcastRef = useRef(0);
   useEffect(() => {
     if (appState === 'GAME' && spGame.gameState.isMultiplayer && mp.room?.hostId === mp.playerId) {
-      // Throttle/Condition: Only sync when not in the middle of a vital animation and not in GAME_OVER phase
       if (!spGame.isProcessing && spGame.gameState.phase !== 'RESOLVING' && spGame.gameState.phase !== 'GAME_OVER') {
+        const now = Date.now();
+        // Throttle: skip if last broadcast was <350ms ago (debug item spamming protection)
+        if (now - lastSyncBroadcastRef.current < 350) return;
+        lastSyncBroadcastRef.current = now;
+
         const playerCount = mp.room?.players?.length || 2;
         const isMulti = playerCount >= 3;
         if (isMulti) {
@@ -1498,11 +1523,12 @@ export default function App() {
           }
           const turnOwnerId = room?.players && turnOwnerIndex !== -1 ? room.players[turnOwnerIndex]?.id : '';
 
+          // Key names MUST match the receiver: playerState/dealerState/player3State/player4State
           mp.sendAction(mp.room.id, {
             type: 'SYNC_THREE_PLAYER_STATE',
-            player1State: spGame.player,
-            player2State: spGame.player3,
-            player3State: spGame.dealer,
+            playerState: spGame.player,
+            dealerState: spGame.dealer,
+            player3State: spGame.player3,
             player4State: spGame.player4,
             gameState: {
               ...spGame.gameState,
@@ -1519,7 +1545,8 @@ export default function App() {
         }
       }
     }
-  }, [spGame.player.hp, spGame.dealer.hp, spGame.player3?.hp, spGame.player4?.hp, spGame.gameState.phase, spGame.gameState.turnOwner, spGame.gameState.winner, spGame.isProcessing, spGame.player.items.length, spGame.dealer.items.length, spGame.player3?.items.length, spGame.player4?.items.length]);
+  // Include item content (joined) so debug item changes trigger a broadcast immediately
+  }, [spGame.player.hp, spGame.dealer.hp, spGame.player3?.hp, spGame.player4?.hp, spGame.gameState.phase, spGame.gameState.turnOwner, spGame.gameState.winner, spGame.isProcessing, spGame.player.items.join(','), spGame.dealer.items.join(','), spGame.player3?.items?.join(','), spGame.player4?.items?.join(',')]);
 
   // --- DISCORD RICH PRESENCE UPDATER ---
   useEffect(() => {
@@ -2052,12 +2079,13 @@ export default function App() {
               const playerCount = mp.room?.players?.length || 2;
               const isMulti = playerCount >= 3;
               if (isMulti) {
-                mp.sendAction(mp.room.id, {
+                // Key names match the receiver: playerState/dealerState/player3State/player4State
+                mp.sendImmediateAction(mp.room.id, {
                   type: 'DEBUG_SYNC_THREE_PLAYER',
                   senderId: mp.playerId,
-                  player1State: type === 'PLAYER' ? state : spGame.player,
-                  player2State: type === 'PLAYER3' ? state : spGame.player3,
-                  player3State: type === 'DEALER' ? state : spGame.dealer,
+                  playerState: type === 'PLAYER' ? state : spGame.player,
+                  dealerState: type === 'DEALER' ? state : spGame.dealer,
+                  player3State: type === 'PLAYER3' ? state : spGame.player3,
                   player4State: type === 'PLAYER4' ? state : spGame.player4,
                   gameState: type === 'GAMESTATE' ? state : spGame.gameState
                 });

@@ -230,6 +230,12 @@ export function useMultiplayer() {
         }
     };
 
+    // Bypass batcher entirely for latency-sensitive events (aim, shoot)
+    // These must arrive at peers immediately — a 100ms batch delay causes visible desync
+    const sendImmediateAction = (roomId: string, action: any) => {
+        socket?.emit('gameAction', { roomId, action });
+    };
+
     const kickPlayer = (roomId: string, targetPlayerId: string) => {
         socket?.emit('kickPlayer', { roomId, targetPlayerId });
     };
@@ -272,6 +278,7 @@ export function useMultiplayer() {
         startGame,
         sendMessage,
         sendAction,
+        sendImmediateAction,
         setOnAction
     };
 }
