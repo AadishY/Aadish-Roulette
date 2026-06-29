@@ -212,12 +212,18 @@ export const createGunModel = (scene: THREE.Scene) => {
 
 export const createProjectiles = (scene: THREE.Scene) => {
     const bulletGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.5);
-    const bulletMat = new THREE.MeshStandardMaterial({ color: 0xffffaa, emissive: 0xffaa00, emissiveIntensity: 5 });
+    // MeshBasicMaterial: no lighting pass needed — eliminates GPU shader-compile stall on first live shot
+    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffee66 });
     const bulletMesh = new THREE.Mesh(bulletGeo, bulletMat);
     bulletMesh.rotation.x = Math.PI / 2; bulletMesh.visible = false;
     scene.add(bulletMesh);
 
-    // Create 3 shell casings for multi-shell system
+    // Shared materials — compiled once at scene init, reused by all shells
+    const shellBodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.4 });
+    const shellBaseMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.3 });
+    const shellBodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.45, 12);
+    const shellBaseGeo = new THREE.CylinderGeometry(0.125, 0.125, 0.1, 12);
+
     const shellCasings: THREE.Mesh[] = [];
     const shellVelocities: THREE.Vector3[] = [];
 
@@ -229,14 +235,9 @@ export const createProjectiles = (scene: THREE.Scene) => {
     ];
 
     for (let i = 0; i < 3; i++) {
-        const shellCasing = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.12, 0.12, 0.45, 12),
-            new THREE.MeshStandardMaterial({ color: 0xb91c1c })
-        );
-        const shellBase = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.125, 0.125, 0.1, 12),
-            new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8 })
-        );
+        // Clone body mat per shell so colour can be changed independently (red/blue)
+        const shellCasing = new THREE.Mesh(shellBodyGeo, shellBodyMat.clone());
+        const shellBase = new THREE.Mesh(shellBaseGeo, shellBaseMat);
         shellBase.position.y = -0.22;
         shellCasing.add(shellBase);
         shellCasing.rotation.z = Math.PI / 2;

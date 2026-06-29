@@ -4,6 +4,9 @@ import { audioManager } from './audioManager';
 import { updateItemAnimations, updateBlood, updateSparks, updateBullet, updateShell } from './scene/animations';
 import { performanceMonitor } from './performanceMonitor';
 
+// Pre-allocated scratch vectors — reused across frames to avoid GC pressure
+const _vKick = new THREE.Vector3();
+
 export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
     const { turnOwner, aimTarget, cameraView, settings, animState, gameState, player, dealer } = props;
@@ -348,9 +351,9 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     if (scene.userData.lastRecoil === undefined) scene.userData.lastRecoil = animState.triggerRecoil;
     if (animState.triggerRecoil > scene.userData.lastRecoil) {
         scene.userData.lastRecoil = animState.triggerRecoil;
-        // Complex Kick Impulse (Visceral)
-        const kickDir = new THREE.Vector3(0, 0, 1.6).applyEuler(gunGroup.rotation);
-        gunGroup.position.add(kickDir);
+        // Reuse pre-allocated vector — no alloc on gun fire
+        _vKick.set(0, 0, 1.6).applyEuler(gunGroup.rotation);
+        gunGroup.position.add(_vKick);
         gunGroup.rotation.x += 0.75;
         gunGroup.rotation.z += (Math.random() - 0.5) * 0.4;
         scene.userData.cameraShake = 0.8;
@@ -698,21 +701,32 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
         }
 
         // ENHANCED RED EYES - Skip for Player Model
+        // Cache eye lights and pupils once to avoid per-frame instanceof checks
         if (!gameState.isMultiplayer) {
-            headGroup.children.forEach((child: THREE.Object3D) => {
-                if (child instanceof THREE.PointLight) {
-                    const basePulse = 4.0 + Math.sin(time * 4) * 2.0;
-                    const heartbeat = Math.sin(time * 8) > 0.7 ? 3.0 : 0;
-                    const randomFlicker = Math.random() > 0.85 ? Math.random() * 4 : 0;
-                    child.intensity = (basePulse + heartbeat + randomFlicker) * brightnessMult;
-                    child.color.setRGB(1, 0, 0);
-                }
-                if (child instanceof THREE.Mesh && (child.name === 'LEFT_PUPIL' || child.name === 'RIGHT_PUPIL')) {
-                    const mat = child.material as THREE.MeshBasicMaterial;
-                    const glowBase = 0.85 + Math.sin(time * 5) * 0.15;
-                    mat.color.setRGB(glowBase, 0, 0);
-                }
-            });
+            if (!scene.userData._cachedEyeLights) {
+                const eyeLights: THREE.PointLight[] = [];
+                const pupils: THREE.Mesh[] = [];
+                headGroup.children.forEach((child: THREE.Object3D) => {
+                    if (child instanceof THREE.PointLight) eyeLights.push(child);
+                    if (child instanceof THREE.Mesh && (child.name === 'LEFT_PUPIL' || child.name === 'RIGHT_PUPIL')) pupils.push(child as THREE.Mesh);
+                });
+                scene.userData._cachedEyeLights = eyeLights;
+                scene.userData._cachedPupils = pupils;
+            }
+            const eyeLights = scene.userData._cachedEyeLights as THREE.PointLight[];
+            const pupils = scene.userData._cachedPupils as THREE.Mesh[];
+            const basePulse = 4.0 + Math.sin(time * 4) * 2.0;
+            const heartbeat = Math.sin(time * 8) > 0.7 ? 3.0 : 0;
+            const randomFlicker = Math.random() > 0.85 ? Math.random() * 4 : 0;
+            const eyeIntensity = (basePulse + heartbeat + randomFlicker) * brightnessMult;
+            const glowBase = 0.85 + Math.sin(time * 5) * 0.15;
+            for (let _ei = 0; _ei < eyeLights.length; _ei++) {
+                eyeLights[_ei].intensity = eyeIntensity;
+                eyeLights[_ei].color.setRGB(1, 0, 0);
+            }
+            for (let _pi = 0; _pi < pupils.length; _pi++) {
+                (pupils[_pi].material as THREE.MeshBasicMaterial).color.setRGB(glowBase, 0, 0);
+            }
         }
     }
 
@@ -816,15 +830,16 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     // --- ITEM ANIMATIONS ---
     updateItemAnimations(context, props, time, dt);
 
-    // Muzzle Flash Randomness
+    // Muzzle Flash Randomness — index loop to avoid per-frame closure alloc
     if (muzzleFlash.visible) {
-        muzzleFlash.children.forEach((child) => {
-            const mesh = child as THREE.Mesh;
-            if ((mesh.material as THREE.Material).opacity > 0.01) {
+        for (let _fi = 0; _fi < muzzleFlash.children.length; _fi++) {
+            const mesh = muzzleFlash.children[_fi] as THREE.Mesh;
+            const mat = mesh.material as THREE.Material;
+            if (mat && mat.opacity > 0.01) {
                 mesh.scale.setScalar(1.0 + Math.random() * 0.5);
                 mesh.rotation.z += Math.random() * 0.5;
             }
-        });
+        }
     }
 
     updateBlood(bloodParticles, dt);

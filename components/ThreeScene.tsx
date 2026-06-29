@@ -112,6 +112,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     dealerModel,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    // Pre-allocated reusable vectors — avoids GC allocations inside gun-fire effects
+    const _recoilFwd = useRef(new THREE.Vector3());
 
     const propsRef = useRef({
         isSawed,
@@ -729,14 +731,15 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         if (animState.triggerRecoil === 0 || !sceneRef.current) return;
         const { gunGroup, bulletMesh, scene } = sceneRef.current;
         const recoilMult = animState.isLiveShot ? 1.0 : 0.3;
-        const forward = new THREE.Vector3(0, 0, 1).applyEuler(gunGroup.rotation);
+        // Reuse pre-allocated vector — no GC alloc on every shot
+        const forward = _recoilFwd.current.set(0, 0, 1).applyEuler(gunGroup.rotation);
         gunGroup.position.sub(forward.multiplyScalar(1.5 * recoilMult));
         gunGroup.rotation.x -= 0.5 * recoilMult;
         if (animState.isLiveShot) {
             bulletMesh.visible = true;
             bulletMesh.position.copy(gunGroup.position);
             bulletMesh.position.add(forward.normalize().multiplyScalar(isSawed ? 4 : 8));
-            bulletMesh.userData.velocity = forward.normalize();
+            bulletMesh.userData.velocity = forward.normalize().clone(); // clone once for velocity
         }
         scene.userData.cameraShake = animState.isLiveShot ? 1.5 : 0.2;
     }, [animState.triggerRecoil, isSawed, animState.isLiveShot]);

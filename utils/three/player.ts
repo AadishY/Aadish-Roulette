@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 type PlayerModelKey = 'DEFAULT' | 'AADISH' | 'ASP' | 'YASH' | 'YUVRAJ';
 
@@ -58,7 +59,11 @@ const shouldHideByName = (name: string): boolean => {
     return false;
 };
 
+const _dracoLoader = new DRACOLoader();
+_dracoLoader.setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
+_dracoLoader.preload(); // Compile WASM decoder eagerly
 const _sharedPlayerLoader = new GLTFLoader();
+_sharedPlayerLoader.setDRACOLoader(_dracoLoader);
 
 export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string, hp: number = 4, maxHp: number = 4, modelKey: PlayerModelKey = 'DEFAULT') => {
     const avatarGroup = new THREE.Group();

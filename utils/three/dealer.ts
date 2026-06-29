@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 type DebugHeadModel = 'DEFAULT' | 'YASH' | 'YUVRAJ' | 'ASP' | 'AADISH';
 
@@ -49,7 +50,11 @@ const MODEL_CONFIGS: Record<DebugHeadModel, ModelConfig> = {
 // ---------------------------------------------------------------------------
 // Shared singleton loader — avoids re-allocating GLTFLoader on every call
 // ---------------------------------------------------------------------------
+const _dracoLoader = new DRACOLoader();
+_dracoLoader.setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
+_dracoLoader.preload(); // Compile WASM decoder eagerly
 const _sharedLoader = new GLTFLoader();
+_sharedLoader.setDRACOLoader(_dracoLoader);
 
 // ---------------------------------------------------------------------------
 // Shared smoke canvas texture — generated once, reused across all sprites
