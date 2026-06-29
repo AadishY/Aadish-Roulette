@@ -198,10 +198,18 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
 
                             if (m instanceof THREE.MeshStandardMaterial) {
                                 if (isCustomModel) {
-                                    m.roughness = m.roughnessMap ? m.roughness : 0.74;
+                                    // Realistic head-scan materials under ACESFilmic @ ~1.8x exposure:
+                                    // - Low roughness so PBR specular responds naturally to the 3-point rig
+                                    // - Zero metalness (skin is not metallic)
+                                    // - Warm micro-emissive lift prevents washed-out darks under exposure
+                                    // - High envMapIntensity for natural skin sheen
+                                    // - fog OFF so scene fog doesn't grey-out the model
+                                    m.roughness = m.roughnessMap ? Math.min(m.roughness, 0.72) : 0.62;
                                     m.metalness = 0.0;
-                                    m.envMapIntensity = lowPerf ? 0.25 : 0.8;
-                                    m.fog = true;
+                                    m.envMapIntensity = lowPerf ? 0.35 : 1.1;
+                                    if (m.emissive) m.emissive.setHex(0x0a0704); // subtle warm lift
+                                    m.emissiveIntensity = 0.18;
+                                    m.fog = false;
                                     m.needsUpdate = true;
                                 } else {
                                     m.roughness = Math.max(0.68, m.roughness);
@@ -227,23 +235,29 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
 
             // Face lighting rig — differs by model type
             if (isCustomModel) {
-                // 3-point lighting for realistic head-scan color grading
-                // Warm key light — simulates a practical room lamp from upper-left
-                const keyLight = new THREE.PointLight(0xfff0d0, lowPerf ? 0.8 : 2.2, 8);
-                keyLight.position.set(-1.2, 2.8, 1.8);
+                // 3-point lighting rig tuned for ACESFilmic @ ~1.8x exposure
+                // Warm key light from upper-left — main skin illumination
+                const keyLight = new THREE.PointLight(0xfff5e0, lowPerf ? 1.2 : 3.2, 10);
+                keyLight.position.set(-1.2, 3.2, 2.2);
                 keyLight.name = 'KEY_LIGHT';
                 model.add(keyLight);
 
-                // Cool fill light — subtle blue-grey from the right to separate from background
-                const fillLight = new THREE.PointLight(0xc8d8ff, lowPerf ? 0.3 : 0.75, 7);
-                fillLight.position.set(1.8, 1.5, 1.2);
+                // Cool blue-grey fill from the right — opens shadows without flattening
+                const fillLight = new THREE.PointLight(0xc8d8ff, lowPerf ? 0.4 : 0.9, 9);
+                fillLight.position.set(1.8, 1.5, 1.6);
                 fillLight.name = 'FILL_LIGHT';
                 model.add(fillLight);
 
-                // Soft warm rim light from behind — gives edge separation on hair/shoulders
+                // Under-chin warm fill — eliminates harsh dark jaw shadow at camera angle
+                const chinLight = new THREE.PointLight(0xffeedd, lowPerf ? 0.2 : 0.5, 5);
+                chinLight.position.set(0, 0.2, 2.5);
+                chinLight.name = 'CHIN_LIGHT';
+                model.add(chinLight);
+
+                // Warm rim from behind — edge separation on hair / shoulders
                 if (!lowPerf) {
-                    const rimLight = new THREE.PointLight(0xffe8b0, 0.5, 6);
-                    rimLight.position.set(0, 2.0, -2.5);
+                    const rimLight = new THREE.PointLight(0xffe8b0, 0.8, 7);
+                    rimLight.position.set(0, 2.5, -2.5);
                     rimLight.name = 'RIM_LIGHT';
                     model.add(rimLight);
                 }
@@ -288,9 +302,9 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
         const createHandSprite = (): THREE.Sprite => {
             const mat = new THREE.SpriteMaterial({
                 map: smokeTex || undefined,
-                color: 0x030303, // Dark grey smoke/fog matching default env fog
+                color: 0x030303,
                 transparent: true,
-                // Reduce density near non-default heads so the model isn't obscured
+                // Non-default heads: fully transparent hand smoke — no dark blobs over skin
                 opacity: isCustomModel ? 0 : 0,
                 blending: THREE.NormalBlending,
                 depthWrite: false,
@@ -326,18 +340,18 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
             dealerGroup.add(spr);
         }
 
-        // Torso fog — only in full-quality mode
-        if (!balancedPerformance) {
+        // Torso fog — only in full-quality mode AND only for the default dealer model
+        // Non-default heads: skip entirely — dark fog sprites grey out realistic skin tone
+        if (!balancedPerformance && !isCustomModel) {
             const dealerFogGroup = new THREE.Group();
             dealerFogGroup.name = 'DEALER_TORSO_FOG';
 
             const createFogSprite = (): THREE.Sprite => {
                 const mat = new THREE.SpriteMaterial({
                     map: smokeTex || undefined,
-                    color: 0x010101, // Dark blackish/grey fog
+                    color: 0x010101,
                     transparent: true,
-                    // Much lower density for non-default heads to keep them visible
-                    opacity: isCustomModel ? 0.04 : 0.14,
+                    opacity: 0.14,
                     blending: THREE.NormalBlending,
                     depthWrite: false,
                 });

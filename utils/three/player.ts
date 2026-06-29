@@ -152,9 +152,17 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
 
                             if (m instanceof THREE.MeshStandardMaterial) {
                                 if (modelKey !== 'DEFAULT') {
-                                    m.roughness = m.roughnessMap ? m.roughness : 0.72;
+                                    // Realistic head-scan materials under ACESFilmic @ ~1.8x exposure:
+                                    // - Lower roughness for natural PBR specular under point lights
+                                    // - Zero metalness (skin/hair)
+                                    // - Warm micro-emissive lift prevents muddy darks at high exposure
+                                    // - High envMapIntensity for realistic skin sheen
+                                    // - fog OFF — scene fog greys out realistic skin tones
+                                    m.roughness = m.roughnessMap ? Math.min(m.roughness, 0.72) : 0.62;
                                     m.metalness = 0.0;
-                                    m.envMapIntensity = lowPerf ? 0.4 : 1.2;
+                                    m.envMapIntensity = lowPerf ? 0.35 : 1.1;
+                                    if (m.emissive) m.emissive.setHex(0x0a0704); // subtle warm lift
+                                    m.emissiveIntensity = 0.18;
                                     m.fog = false;
                                     m.needsUpdate = true;
                                 } else {
