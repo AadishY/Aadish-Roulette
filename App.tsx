@@ -371,7 +371,7 @@ export default function App() {
     if (isThreePlayer) {
       const playersList = mp.room?.players || [];
       const myId = mp.playerId || '';
-      const myIndex = playersList.findIndex(p => p.id === myId);
+      const myIndex = playersList.findIndex((p: any) => p.id === myId);
 
       let targetPlayerId = myId;
       if (target === 'DEALER') targetPlayerId = playersList[(myIndex + 2) % 3].id;
@@ -703,7 +703,7 @@ export default function App() {
               }
               case 'DEBUG_SYNC_THREE_PLAYER':
               case 'SYNC_THREE_PLAYER_STATE': {
-                const senderIndex = playersList.findIndex(p => p.id === playerId);
+                const senderIndex = playersList.findIndex((p: any) => p.id === playerId);
                 if (senderIndex !== -1) {
                   const size = playersList.length;
                   const absoluteStates: any[] = [];
@@ -718,7 +718,7 @@ export default function App() {
                     absoluteStates[(senderIndex + 2) % 3] = action.dealerState;
                   }
                   
-                  const myIndex = playersList.findIndex(p => p.id === myId);
+                  const myIndex = playersList.findIndex((p: any) => p.id === myId);
                   if (myIndex !== -1) {
                     const myState = absoluteStates[myIndex];
                     let frontState = null;
@@ -762,7 +762,7 @@ export default function App() {
                 break;
               }
               case 'SYNC_THREE_PLAYER_ROUND': {
-                const myIndex = playersList.findIndex(p => p.id === myId);
+                const myIndex = playersList.findIndex((p: any) => p.id === myId);
                 if (myIndex !== -1) {
                   const size = playersList.length;
                   const myItems = action[`items${myIndex}`] || [];
@@ -859,11 +859,26 @@ export default function App() {
               const dItems = iAmHost ? action.clientItems : action.hostItems;
               const clientNextTurn = action.nextTurnOwner === 'PLAYER' ? 'DEALER' : 'PLAYER';
               // @ts-ignore
-              spGame.startRound(action.resetItems || false, false, undefined, action.chamber, pItems, dItems, clientNextTurn, action.hp);
+              await spGame.startRound(action.resetItems || false, false, undefined, action.chamber, pItems, dItems, clientNextTurn, action.hp);
               break;
             case 'DEBUG_SYNC_PLAYER':
               spGame.setDealer(action.player);
               break;
+            case 'DEBUG_SYNC_PLAYER_MODEL': {
+              // Transient model override from a remote dev client — do not persist
+              spGame.setGameState(prev => {
+                const mpState = prev.multiplayerState || {};
+                const nextMpState = {
+                  ...mpState,
+                  debugPlayerModels: {
+                    ...(mpState.debugPlayerModels || {}),
+                    [action.playerId]: action.modelKey
+                  }
+                };
+                return { ...prev, multiplayerState: nextMpState } as any;
+              });
+              break;
+            }
             case 'DEBUG_SYNC_DEALER':
               spGame.setPlayer(action.dealer);
               break;
@@ -901,8 +916,8 @@ export default function App() {
               invertedGameState.opponentName = host ? host.name : 'OPPONENT';
 
               spGame.syncState({
-                player: action.dealerState, // Remote's dealer is our player
-                dealer: action.playerState, // Remote's player is our dealer
+                player: action.player2State, // Remote's player 2 (our local player)
+                dealer: action.player1State, // Remote's player 1 (host / our dealer)
                 gameState: invertedGameState
               });
               break;
@@ -1277,7 +1292,7 @@ export default function App() {
         }
       });
 
-      spGame.setOnMPRoundEnd(async (winner: TurnOwner) => {
+      spGame.setOnMPRoundEnd(async (winner: TurnOwner, pWinArg?: number, oWinArg?: number) => {
         const isHost = mp.playerId === mp.room.hostId;
         const playerCount = mp.room?.players?.length || 2;
         const isMulti = playerCount >= 3;
@@ -1367,7 +1382,7 @@ export default function App() {
             }));
 
             spGame.setOverlayText(`ROUND ${nextRoundNum}`);
-            spGame.startRound(
+            await spGame.startRound(
               true,
               false,
               undefined,
@@ -1387,15 +1402,15 @@ export default function App() {
           return;
         }
 
-        const currentTotalWins = (spGame.gameState.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0) + (winner === 'DEALER' ? 1 : 0);
+        const pWin = pWinArg !== undefined ? pWinArg : ((spGame.gameState.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0));
+        const oWin = oWinArg !== undefined ? oWinArg : ((spGame.gameState.multiModeState?.opponentWins || 0) + (winner === 'PLAYER' ? 0 : 1));
+        const currentTotalWins = pWin + oWin;
         const nextRoundNum = currentTotalWins + 1;
 
         const mSettings = mp.room.settings || { rounds: 3, hp: 2, itemsPerShipment: 2 };
         const winsNeeded = Math.ceil(mSettings.rounds / 2) || 1;
 
         // If match is over, don't start a new round
-        const pWin = (spGame.gameState.multiModeState?.playerWins || 0) + (winner === 'PLAYER' ? 1 : 0);
-        const oWin = (spGame.gameState.multiModeState?.opponentWins || 0) + (winner === 'PLAYER' ? 0 : 1);
         if (pWin >= winsNeeded || oWin >= winsNeeded) {
           return;
         }
@@ -1416,7 +1431,7 @@ export default function App() {
             chamber,
             hostItems,
             clientItems,
-            nextTurnOwner: nextStarts ? 'PLAYER' : 'DEALER',
+            nextTurnOwner: nextStarts,
             resetItems: true,
             hp: hpVal,
             roundNum: nextRoundNum
@@ -1426,7 +1441,7 @@ export default function App() {
           mp.sendMessage(mp.room.id, `SYSTEM: ROUND ${nextRoundNum} STARTED!`);
 
           spGame.setOverlayText(`ROUND ${nextRoundNum}`);
-          spGame.startRound(true, false, undefined, chamber, hostItems, clientItems, nextStarts ? 'PLAYER' : 'DEALER', hpVal, { playerWins: pWin, opponentWins: oWin });
+          await spGame.startRound(true, false, undefined, chamber, hostItems, clientItems, nextStarts, hpVal, { playerWins: pWin, opponentWins: oWin });
         } else {
           console.log("Client waiting for next round host sync...");
           spGame.setOverlayText('WAITING FOR HOST...');
@@ -1437,6 +1452,8 @@ export default function App() {
 
   const onLoadingComplete = () => {
     if (appState === 'LOADING_SP') {
+      // For singleplayer, force-reset any debug model overrides from the previous session.
+      setSettings(prev => ({ ...prev, debugHeadModel: 'DEFAULT' }));
       spGame.startGame(spGame.playerName, isHardModeSelected);
       setAppState('GAME');
     }
@@ -1483,9 +1500,9 @@ export default function App() {
 
           mp.sendAction(mp.room.id, {
             type: 'SYNC_THREE_PLAYER_STATE',
-            playerState: spGame.player,
-            dealerState: spGame.dealer,
-            player3State: spGame.player3,
+            player1State: spGame.player,
+            player2State: spGame.player3,
+            player3State: spGame.dealer,
             player4State: spGame.player4,
             gameState: {
               ...spGame.gameState,
@@ -1495,8 +1512,8 @@ export default function App() {
         } else {
           mp.sendAction(mp.room.id, {
             type: 'SYNC_STATE',
-            playerState: spGame.player,
-            dealerState: spGame.dealer,
+            player1State: spGame.player,
+            player2State: spGame.dealer,
             gameState: spGame.gameState
           });
         }
@@ -1654,37 +1671,39 @@ export default function App() {
         </div>
       </div>
 
-      <ThreeScene
-        isSawed={spGame.player.isSawedActive || spGame.dealer.isSawedActive}
-        isChokeActive={spGame.player.isChokeActive || spGame.dealer.isChokeActive}
-        isPlayerCuffed={spGame.player.isHandcuffed}
-        knownShell={spGame.knownShell}
-        onGunClick={() => { }}
-        aimTarget={spGame.aimTarget}
-        cameraView={spGame.cameraView}
-        animState={spGame.animState}
-        turnOwner={spGame.gameState.turnOwner}
-        settings={settings}
-        isHardMode={spGame.gameState.isHardMode}
-        player={spGame.player}
-        dealer={spGame.dealer}
-        player3={spGame.player3}
-        player4={spGame.player4}
-        gameState={spGame.gameState}
-        onCardClick={handleCardClick}
-        onLowPerformance={(fps) => {
-          if (sessionStorage.getItem('aadish_roulette_perf_warning_shown') === 'true') return;
-          try {
-            sessionStorage.setItem('aadish_roulette_perf_warning_shown', 'true');
-          } catch (e) {
-            console.warn("sessionStorage failed:", e);
-          }
-          setDetectedLowFps(Math.round(fps));
-          setShowPerformancePopup(true);
-        }}
-        isPaused={appState === 'MP_SELECTION' || appState === 'LOBBY' || appState === 'LOADING_MP'}
-        onUpdateNameTags={setNameTags}
-      />
+      {(appState === 'GAME' || appState === 'LOADING_SP' || appState === 'LOADING_GAME') && (
+        <ThreeScene
+          isSawed={spGame.player.isSawedActive || spGame.dealer.isSawedActive}
+          isChokeActive={spGame.player.isChokeActive || spGame.dealer.isChokeActive}
+          isPlayerCuffed={spGame.player.isHandcuffed}
+          knownShell={spGame.knownShell}
+          onGunClick={() => { }}
+          aimTarget={spGame.aimTarget}
+          cameraView={spGame.cameraView}
+          animState={spGame.animState}
+          turnOwner={spGame.gameState.turnOwner}
+          settings={settings}
+          isHardMode={spGame.gameState.isHardMode}
+          player={spGame.player}
+          dealer={spGame.dealer}
+          player3={spGame.player3}
+          player4={spGame.player4}
+          gameState={spGame.gameState}
+          onCardClick={handleCardClick}
+          onLowPerformance={(fps) => {
+            if (sessionStorage.getItem('aadish_roulette_perf_warning_shown') === 'true') return;
+            try {
+              sessionStorage.setItem('aadish_roulette_perf_warning_shown', 'true');
+            } catch (e) {
+              console.warn("sessionStorage failed:", e);
+            }
+            setDetectedLowFps(Math.round(fps));
+            setShowPerformancePopup(true);
+          }}
+          isPaused={false}
+          onUpdateNameTags={setNameTags}
+        />
+      )}
 
       {/* UI Overlay */}
       <GameUI
@@ -2016,11 +2035,20 @@ export default function App() {
           setPlayer3={spGame.setPlayer3}
           setPlayer4={spGame.setPlayer4}
           setGameState={spGame.setGameState}
+          settings={settings}
+          setSettings={setSettings}
           selectTarotCard={spGame.selectTarotCard}
           setCameraView={spGame.setCameraView}
           processItemEffect={spGame.processItemEffect}
           onSyncDebugState={(type, state) => {
             if (appState === 'GAME' && spGame.gameState.isMultiplayer) {
+              if (type === 'MULTIPLAYER_MODEL') {
+                // Use a non-persistent debug sync action so model overrides
+                // do not become permanent room state after the match ends.
+                mp.sendAction(mp.room.id, { type: 'DEBUG_SYNC_PLAYER_MODEL', playerId: state.playerId, modelKey: state.modelKey });
+                return;
+              }
+
               const playerCount = mp.room?.players?.length || 2;
               const isMulti = playerCount >= 3;
               if (isMulti) {

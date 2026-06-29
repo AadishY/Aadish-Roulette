@@ -1,6 +1,102 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-export const createDealerModel = (scene: THREE.Scene) => {
+type DebugHeadModel = 'DEFAULT' | 'YASH' | 'YUVRAJ' | 'ASP' | 'AADISH';
+
+// ---------------------------------------------------------------------------
+// Per-model configuration — adjust scale/position here for each GLB
+// ---------------------------------------------------------------------------
+
+interface ModelConfig {
+    path: string;
+    scale: number;                 // overall scale multiplier
+    positionOffset: THREE.Vector3; // applied after bounding-box centering
+}
+
+const resolveAssetPath = (assetPath: string) => {
+    const normalized = assetPath.replace(/^\/+/, '');
+    return `${import.meta.env.BASE_URL}${normalized}`;
+};
+
+const MODEL_CONFIGS: Record<DebugHeadModel, ModelConfig> = {
+    DEFAULT: {
+        path: 'head/dealer.glb',
+        scale: 2.4,
+        positionOffset: new THREE.Vector3(0, -5., -24.50),
+    },
+    ASP: {
+        path: 'head/aspdealer.glb',
+        scale: 2.5 ,
+        positionOffset: new THREE.Vector3(0, -2.8, -17.50),
+    },
+    YUVRAJ: {
+        path: 'head/yuvrajdealer.glb',
+        scale: 2.4,
+        positionOffset: new THREE.Vector3(0, -2.8, -16.9),
+    },
+    YASH: {
+        path: 'head/yashdealer.glb',
+        scale: 2.4,
+        positionOffset: new THREE.Vector3(0, -2.8, -17.83),
+    },
+    AADISH: {
+        path: 'head/aadishdealer.glb',
+        scale: 2.5 ,
+        positionOffset: new THREE.Vector3(0, -2.8, -17.70),
+    },
+};
+
+// ---------------------------------------------------------------------------
+// Shared singleton loader — avoids re-allocating GLTFLoader on every call
+// ---------------------------------------------------------------------------
+const _sharedLoader = new GLTFLoader();
+
+// ---------------------------------------------------------------------------
+// Shared smoke canvas texture — generated once, reused across all sprites
+// ---------------------------------------------------------------------------
+let _sharedSmokeTex: THREE.CanvasTexture | null = null;
+const getSmokeTex = (): THREE.CanvasTexture | null => {
+    if (_sharedSmokeTex) return _sharedSmokeTex;
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(32, 32, 32, 0, Math.PI * 2);
+    ctx.fill();
+    _sharedSmokeTex = new THREE.CanvasTexture(canvas);
+    return _sharedSmokeTex;
+};
+
+// ---------------------------------------------------------------------------
+// O(1) mesh-name filter using a Set instead of chained .includes() calls
+// ---------------------------------------------------------------------------
+const HIDDEN_NAME_FRAGMENTS = new Set([
+    'smoke','bg','background','wall','floor','room',
+    'collider','bbox','helper','camera','light','lamp',
+    'stage','backdrop','env','environment','grid','ground',
+    'ceil','ceiling',
+]);
+
+const shouldHideByName = (name: string): boolean => {
+    const lower = name.toLowerCase();
+    for (const frag of HIDDEN_NAME_FRAGMENTS) {
+        if (lower.includes(frag)) return true;
+    }
+    return false;
+};
+
+// ---------------------------------------------------------------------------
+// Main export
+// By default 'DEFAULT' (dealer.glb) is used.
+// Pass a different DebugHeadModel via the debug settings to switch models.
+// ---------------------------------------------------------------------------
+export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadModel = 'DEFAULT') => {
     // Check if dealer already exists
     const existingDealer = scene.getObjectByName('DEALER');
     if (existingDealer) return existingDealer as THREE.Group;
@@ -11,328 +107,253 @@ export const createDealerModel = (scene: THREE.Scene) => {
     const settings = scene.userData.settings || {};
     const ultraPerformance = !!settings.ultraPerformance;
     const balancedPerformance = !!settings.balancedPerformance;
+    const lowPerf = ultraPerformance || balancedPerformance;
+    const isCustomModel = debugHeadModel !== 'DEFAULT';
 
-    // Materials
-    const voidMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const teethMat = ultraPerformance 
-        ? new THREE.MeshBasicMaterial({ color: 0xffffcc }) 
-        : (balancedPerformance 
-            ? new THREE.MeshLambertMaterial({ color: 0xffffcc }) 
-            : new THREE.MeshStandardMaterial({ color: 0xffffcc, roughness: 0.4, metalness: 0.1 }));
+    // Resolve per-model config (fallback to DEFAULT if key is unknown)
+    const config: ModelConfig = MODEL_CONFIGS[debugHeadModel] ?? MODEL_CONFIGS.DEFAULT;
 
-    // Creates a gruesome skin texture with blood/grime
-    const createDirtySkinTexture = () => {
-        if (ultraPerformance) return null;
-        const canvas = document.createElement('canvas');
-        canvas.width = 512; canvas.height = 512;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
+    // Placeholder so look-at code never crashes before load completes
+    const dummyHead = new THREE.Group();
+    dummyHead.name = 'HEAD';
+    dealerGroup.add(dummyHead);
 
-        // Pale dead skin base
-        ctx.fillStyle = '#e0c0b0';
-        ctx.fillRect(0, 0, 512, 512);
+    // Load the selected GLB asynchronously
+    _sharedLoader.load(
+        resolveAssetPath(config.path),
+        (gltf) => {
+            // Use gltf.scene directly — avoids expensive deep-clone on large GLBs
+            const model: THREE.Group = gltf.scene;
 
-        // Dirty noise
-        for (let i = 0; i < 5000; i++) {
-            const val = Math.random();
-            ctx.fillStyle = val > 0.5 ? 'rgba(100, 80, 70, 0.15)' : 'rgba(50, 40, 30, 0.2)';
-            ctx.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 4, 2 + Math.random() * 4);
+            dealerGroup.remove(dummyHead);
+
+            model.traverse((obj: THREE.Object3D) => {
+                // Suppress embedded lights / cameras / helpers
+                if (obj instanceof THREE.Light || obj instanceof THREE.Camera || (obj as any).isHelper) {
+                    obj.visible = false;
+                    if ('intensity' in obj) (obj as any).intensity = 0;
+                    return;
+                }
+
+                if (shouldHideByName(obj.name)) {
+                    obj.visible = false;
+                    return;
+                }
+
+                // Only hide clearly background-like meshes. The dealer body can be
+                // large, so keep the threshold high enough to avoid removing the main model.
+                if (obj instanceof THREE.Mesh && obj.geometry) {
+                    try {
+                        const bbox = new THREE.Box3().setFromObject(obj);
+                        const size = new THREE.Vector3();
+                        bbox.getSize(size);
+                        const isVeryLarge = size.x > 16 || size.y > 16 || size.z > 16;
+                        const isFlatPlane = (size.x > 12 && size.y < 1.5) || (size.z > 12 && size.y < 1.5);
+                        if ((isVeryLarge || isFlatPlane) && /bg|background|wall|floor|room|stage|backdrop|env|environment|plane/i.test(obj.name)) {
+                            console.warn(`[GLB-HIDE] Dealer GLB "${config.path}" hiding mesh`, obj.name || '(unnamed)', `size=${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
+                            obj.visible = false;
+                            return;
+                        }
+                    } catch (e) {
+                        // If bounding calc fails, continue without hiding
+                    }
+                }
+
+                if (obj instanceof THREE.Mesh) {
+                    // Shadows disabled in low-perf modes; dealer never needs receiveShadow
+                    obj.castShadow = !lowPerf;
+                    obj.receiveShadow = false;
+
+                    if (obj.material) {
+                        const mats: THREE.Material[] = Array.isArray(obj.material)
+                            ? obj.material
+                            : [obj.material];
+
+                        for (const mat of mats) {
+                            const m = mat as THREE.MeshStandardMaterial;
+
+                            // Ensure all maps use correct color spaces
+                            if (m.map) {
+                                m.map.colorSpace = THREE.SRGBColorSpace;
+                                m.map.needsUpdate = true;
+                            }
+                            // Normal / roughness / AO maps must stay Linear
+                            if (m.normalMap) {
+                                m.normalMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                m.normalMap.needsUpdate = true;
+                            }
+                            if (m.roughnessMap) {
+                                m.roughnessMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                m.roughnessMap.needsUpdate = true;
+                            }
+
+                            if (m.transparent || m.opacity < 0.9) {
+                                m.depthWrite = false;
+                            }
+
+                            if (m instanceof THREE.MeshStandardMaterial) {
+                                if (isCustomModel) {
+                                    m.roughness = m.roughnessMap ? m.roughness : 0.74;
+                                    m.metalness = 0.0;
+                                    m.envMapIntensity = lowPerf ? 0.25 : 0.8;
+                                    m.fog = true;
+                                    m.needsUpdate = true;
+                                } else {
+                                    m.roughness = Math.max(0.68, m.roughness);
+                                    m.metalness = Math.min(0.06, m.metalness);
+                                    m.envMapIntensity = lowPerf ? 0.15 : 0.35;
+                                    m.fog = true;
+                                    m.needsUpdate = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Name as HEAD so look-at animations target it
+            model.name = 'HEAD';
+            dealerGroup.add(model);
+
+            // Bust the stale HEAD cache — sceneLogic caches dealerGroup.getObjectByName('HEAD')
+            // on the first frame, which at that point is still the dummy placeholder. Clearing it
+            // here forces a fresh lookup now that the real model is in the scene.
+            delete scene.userData.cachedHeadGroup;
+
+            // Face lighting rig — differs by model type
+            if (isCustomModel) {
+                // 3-point lighting for realistic head-scan color grading
+                // Warm key light — simulates a practical room lamp from upper-left
+                const keyLight = new THREE.PointLight(0xfff0d0, lowPerf ? 0.8 : 2.2, 8);
+                keyLight.position.set(-1.2, 2.8, 1.8);
+                keyLight.name = 'KEY_LIGHT';
+                model.add(keyLight);
+
+                // Cool fill light — subtle blue-grey from the right to separate from background
+                const fillLight = new THREE.PointLight(0xc8d8ff, lowPerf ? 0.3 : 0.75, 7);
+                fillLight.position.set(1.8, 1.5, 1.2);
+                fillLight.name = 'FILL_LIGHT';
+                model.add(fillLight);
+
+                // Soft warm rim light from behind — gives edge separation on hair/shoulders
+                if (!lowPerf) {
+                    const rimLight = new THREE.PointLight(0xffe8b0, 0.5, 6);
+                    rimLight.position.set(0, 2.0, -2.5);
+                    rimLight.name = 'RIM_LIGHT';
+                    model.add(rimLight);
+                }
+            } else {
+                // Default dealer: original pulsed red face light
+                const faceLight = new THREE.PointLight(0xff0000, lowPerf ? 0 : 2.0, 5);
+                faceLight.position.set(0, 2.2, 1.25);
+                faceLight.name = 'FACE_LIGHT';
+                model.add(faceLight);
+            }
+
+            // Apply per-model scale.
+            model.scale.setScalar(config.scale);
+
+            // Center the GLB using its bounding box so the dealer stays visible in the scene.
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.x = -center.x + config.positionOffset.x;
+            model.position.y = -box.min.y + config.positionOffset.y;
+            model.position.z = -center.z + config.positionOffset.z;
+
+            // Keep the loaded model fully visible by avoiding any large group-level offset.
+            dealerGroup.position.set(0, 0, 0);
+        },
+        undefined,
+        (error: ErrorEvent | Error) => {
+            console.warn(`[Dealer] Failed to load GLB "${config.path}":`, error);
         }
-
-        // Blood splatters
-        for (let i = 0; i < 25; i++) {
-            const cx = Math.random() * 512;
-            const cy = Math.random() * 512;
-            const r = 5 + Math.random() * 40;
-
-            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-            grad.addColorStop(0, 'rgba(120, 0, 0, 0.6)');
-            grad.addColorStop(1, 'rgba(80, 0, 0, 0)');
-
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.magFilter = THREE.NearestFilter;
-        tex.minFilter = THREE.NearestFilter;
-        return tex;
-    };
-
-    const dirtySkinTex = createDirtySkinTexture();
-    const skullMat = ultraPerformance 
-        ? new THREE.MeshBasicMaterial({ color: 0xffddcc }) 
-        : (balancedPerformance 
-            ? new THREE.MeshLambertMaterial({ map: dirtySkinTex || undefined, color: 0xffddcc }) 
-            : new THREE.MeshStandardMaterial({ map: dirtySkinTex || undefined, color: 0xffddcc, roughness: 0.6, metalness: 0.1 }));
-
-    // === HEAD ===
-    const headGroup = new THREE.Group();
-    headGroup.name = "HEAD"; // Important for animation
-
-    // Distorted Sphere Head - LARGER
-    const skullGeo = new THREE.SphereGeometry(2.1, 64, 64);
-    const posAttribute = skullGeo.attributes.position;
-    for (let i = 0; i < posAttribute.count; i++) {
-        const x = posAttribute.getX(i);
-        const y = posAttribute.getY(i);
-        const z = posAttribute.getZ(i);
-
-        // More intense distortion
-        const noise = Math.sin(x * 3.0) * Math.cos(y * 3.0) * 0.06 +
-            Math.cos(z * 2.5) * 0.06;
-
-        // Scale slightly based on noise
-        const scale = 1.0 + noise;
-        posAttribute.setXYZ(i, x * scale, y * scale, z * scale);
-    }
-    skullGeo.computeVertexNormals();
-    skullGeo.scale(1.0, 1.2, 0.95); // Elongated
-
-    const skull = new THREE.Mesh(skullGeo, skullMat);
-    skull.castShadow = true;
-    headGroup.add(skull);
-
-    // === EYES ===
-    const createOvalEye = (rx: number, ry: number) => {
-        const shape = new THREE.Shape();
-        shape.ellipse(0, 0, rx, ry, 0, Math.PI * 2, false, 0);
-        return new THREE.ShapeGeometry(shape);
-    };
-
-    const lEye = new THREE.Mesh(createOvalEye(0.65, 0.8), voidMat);
-    lEye.position.set(-1.2, 0.6, 1.8);
-    lEye.rotation.z = 0.15;
-    lEye.rotation.y = -0.3;
-    headGroup.add(lEye);
-
-    const rEye = new THREE.Mesh(createOvalEye(0.65, 0.8), voidMat);
-    rEye.position.set(1.2, 0.6, 1.8);
-    rEye.rotation.z = -0.15;
-    rEye.rotation.y = 0.3;
-    headGroup.add(rEye);
-
-    // Red glowing pupils - SLIT SHAPE (Smaller)
-    const pupilMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const pupilGeo = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8);
-
-    const lPupil = new THREE.Mesh(pupilGeo, pupilMat);
-    lPupil.position.set(-1.2, 0.6, 1.9);
-    lPupil.rotation.z = 0.1;
-    lPupil.name = 'LEFT_PUPIL';
-    headGroup.add(lPupil);
-
-    const rPupil = new THREE.Mesh(pupilGeo, pupilMat);
-    rPupil.position.set(1.2, 0.6, 1.9);
-    rPupil.rotation.z = -0.1;
-    rPupil.name = 'RIGHT_PUPIL';
-    headGroup.add(rPupil);
-
-    // Pupil glow (Reduced)
-    const glowMat = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-        transparent: true,
-        opacity: 0.6
-    });
-
-    const lGlow = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), glowMat);
-    lGlow.position.set(-1.2, 0.6, 1.95);
-    lGlow.name = 'LEFT_GLOW';
-    headGroup.add(lGlow);
-
-    const rGlow = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), glowMat);
-    rGlow.position.set(1.2, 0.6, 1.95);
-    rGlow.name = 'RIGHT_GLOW';
-    headGroup.add(rGlow);
-
-    // Add general face glow light
-    const faceLight = new THREE.PointLight(0xff0000, 2.0, 5);
-    faceLight.position.set(0, 0, 2.5);
-    faceLight.name = "FACE_LIGHT";
-    headGroup.add(faceLight);
-
-    // === MOUTH - Jagged Horror Grin ===
-    const grinShape = new THREE.Shape();
-    grinShape.moveTo(-1.5, 0.3);
-    // Jagged bottom lip
-    grinShape.bezierCurveTo(-0.6, -1.0, 0.6, -1.0, 1.5, 0.3);
-    // Jagged top lip connection
-    grinShape.bezierCurveTo(0.8, -0.4, -0.8, -0.4, -1.5, 0.3);
-
-    const grinGeo = new THREE.ExtrudeGeometry(grinShape, { depth: 0.5, bevelEnabled: false });
-    const mouthVoid = new THREE.Mesh(grinGeo, voidMat);
-    mouthVoid.position.set(0, -0.8, 1.6);
-    mouthVoid.scale.set(1.1, 1, 1);
-    mouthVoid.rotation.x = 0.15;
-    headGroup.add(mouthVoid);
-
-    // === TEETH ===
-    const gumMat = ultraPerformance 
-        ? new THREE.MeshBasicMaterial({ color: 0x220000 }) 
-        : (balancedPerformance 
-            ? new THREE.MeshLambertMaterial({ color: 0x220000 }) 
-            : new THREE.MeshStandardMaterial({ color: 0x220000, roughness: 0.3 }));
-    const gum = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.3, 0.6), gumMat);
-    gum.position.set(0, -1.4, 1.6);
-    headGroup.add(gum);
-
-    // Sharp uneven teeth - MORE JAGGED
-    for (let i = 0; i < 16; i++) {
-        const t = (i / 15) * 2 - 1; // -1 to 1
-
-        // Upper
-        const h = 0.5 + Math.random() * 0.4;
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.08, h, 4), teethMat);
-        cone.position.set(t * 1.3, -0.8, 2.1);
-        cone.rotation.x = Math.PI - 0.2;
-        cone.rotation.z = (Math.random() - 0.5) * 0.5;
-        headGroup.add(cone);
-
-        // Lower
-        const h2 = 0.4 + Math.random() * 0.4;
-        const cone2 = new THREE.Mesh(new THREE.ConeGeometry(0.07, h2, 4), teethMat);
-        cone2.position.set(t * 1.1 + (Math.random() - 0.5) * 0.1, -1.4, 2.05);
-        cone2.rotation.z = (Math.random() - 0.5) * 0.5;
-        headGroup.add(cone2);
-    }
-
-    dealerGroup.add(headGroup);
-
-    // === BODY ===
-    // Dark, ill-fitting suit - Buckshot style (Black/Dark Grey)
-    const suitMat = ultraPerformance 
-        ? new THREE.MeshBasicMaterial({ color: 0x080808 }) 
-        : (balancedPerformance 
-            ? new THREE.MeshLambertMaterial({ color: 0x080808 }) 
-            : new THREE.MeshStandardMaterial({
-                color: 0x080808, // Almost black
-                roughness: 0.5,  // Worn fabric (Reduced for highlights)
-                metalness: 0.1,
-                emissive: 0x000000,
-                emissiveIntensity: 0
-            }));
-
-    // Neck - thicker
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 1.0), skullMat);
-    neck.position.set(0, -1.8, 0);
-    neck.castShadow = true;
-    dealerGroup.add(neck);
-
-    // Shoulders - Hunched and Broad
-    const shoulders = new THREE.Mesh(
-        new THREE.BoxGeometry(5.5, 1.5, 2.0),
-        suitMat
     );
-    shoulders.position.set(0, -2.5, 0);
-    // Hunch effect
-    shoulders.rotation.x = 0.2;
-    shoulders.castShadow = true;
-    dealerGroup.add(shoulders);
 
-    // Upper Torso - Bulky
-    const upperTorso = new THREE.Mesh(
-        new THREE.BoxGeometry(4.2, 3.0, 1.8),
-        suitMat
-    );
-    upperTorso.position.set(0, -4.5, 0.2);
-    upperTorso.castShadow = true;
-    dealerGroup.add(upperTorso);
-
-    // Mid Torso
-    const midTorso = new THREE.Mesh(
-        new THREE.BoxGeometry(3.5, 2.5, 1.6),
-        suitMat
-    );
-    midTorso.position.set(0, -6.5, 0.2);
-    midTorso.castShadow = true;
-    dealerGroup.add(midTorso);
-
-    // Arms - Re-rigged to connect properly
-    const upperArmGeo = new THREE.CylinderGeometry(0.6, 0.5, 3.0);
-
-    const lUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    lUpperArm.position.set(-3.5, -3.2, 0.2); // Lower attachment
-    lUpperArm.rotation.z = 0.3;
-    lUpperArm.rotation.x = 0; // Vertical
-    lUpperArm.castShadow = true;
-    dealerGroup.add(lUpperArm);
-
-    const rUpperArm = new THREE.Mesh(upperArmGeo, suitMat);
-    rUpperArm.position.set(3.5, -3.2, 0.2);
-    rUpperArm.rotation.z = -0.3;
-    rUpperArm.rotation.x = 0;
-    rUpperArm.castShadow = true;
-    dealerGroup.add(rUpperArm);
-
-    // Forearms - Reaching forward onto the table
-    // Forearms - Reaching forward onto the table
-    const forearmGeo = new THREE.CylinderGeometry(0.5, 0.4, 3.5);
-
-    const lForearm = new THREE.Mesh(forearmGeo, suitMat);
-    // Adjusted to reach from shoulder to table (WIDER STANCE)
-    // Pulling back: Z 2.5 -> 1.5. Raising: Y -4.0 -> -3.6
-    lForearm.position.set(-3.8, -3.6, 1.5);
-    lForearm.rotation.x = -Math.PI / 2 + 0.6; // Steeper angle
-    lForearm.rotation.z = -0.2; // Angled outward
-    lForearm.castShadow = true;
-    lForearm.name = 'LEFT_FOREARM';
-    dealerGroup.add(lForearm);
-
-    const rForearm = new THREE.Mesh(forearmGeo, suitMat);
-    rForearm.position.set(3.8, -3.6, 1.5);
-    rForearm.rotation.x = -Math.PI / 2 + 0.6;
-    rForearm.rotation.z = 0.2; // Angled outward
-    rForearm.castShadow = true;
-    rForearm.name = 'RIGHT_FOREARM';
-    dealerGroup.add(rForearm);
-
-    // Hands - Resting on table in front of dealer
-    // Target Absolute Y: -0.7 (Table Surface)
-    // Calculation: 3.0 + (localY * 0.9) = -0.7 => localY = -4.1
-    // Target Absolute Z: -5.5 (Closer to dealer)
-    // Calculation: -8.0 + (localZ * 0.9) = -5.5 => localZ = 2.7
-    const handGeo = new THREE.BoxGeometry(1.2, 0.6, 1.6);
-
-    const lHand = new THREE.Mesh(handGeo, skullMat);
-    lHand.position.set(-3.5, -4.15, 2.7);
-    lHand.rotation.x = 0.0; // Flat on table
-    lHand.rotation.z = 0.2;
-    lHand.castShadow = true;
-    lHand.name = 'LEFT_HAND';
-    dealerGroup.add(lHand);
-
-    const rHand = new THREE.Mesh(handGeo, skullMat);
-    rHand.position.set(3.5, -4.15, 2.7);
-    rHand.rotation.x = 0.0;
-    rHand.rotation.z = -0.2;
-    rHand.castShadow = true;
-    rHand.name = 'RIGHT_HAND';
-    dealerGroup.add(rHand);
-
-    // Fingers - Sprawled on table
-    const fingerGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.9);
-    for (let i = 0; i < 4; i++) {
-        // Left fingers
-        const lFinger = new THREE.Mesh(fingerGeo, skullMat);
-        // Z offset relative to hand Z (2.7) + length
-        lFinger.position.set(-3.9 + i * 0.25, -4.35, 3.6);
-        lFinger.rotation.x = Math.PI / 2;
-        lFinger.rotation.y = 0.2;
-        dealerGroup.add(lFinger);
-
-        // Right fingers
-        const rFinger = new THREE.Mesh(fingerGeo, skullMat);
-        rFinger.position.set(3.1 + i * 0.25, -4.35, 3.6);
-        rFinger.rotation.x = Math.PI / 2;
-        rFinger.rotation.y = -0.2; // splay
-        dealerGroup.add(rFinger);
-    }
-
-    // Position the entire dealer group
+    // Group-level transform (identical for all models)
     dealerGroup.position.set(0, 3.0, -8);
-    dealerGroup.scale.set(0.9, 0.9, 0.9); // Larger size
+    dealerGroup.scale.set(0.9, 0.9, 0.9);
+
+    // ---------------------------------------------------------------------------
+    // Atmospheric smoke sprites
+    // Skipped entirely in ultra-performance; reduced count in balanced mode
+    // ---------------------------------------------------------------------------
+    if (!ultraPerformance) {
+        const smokeTex = getSmokeTex();
+
+        const createHandSprite = (): THREE.Sprite => {
+            const mat = new THREE.SpriteMaterial({
+                map: smokeTex || undefined,
+                color: 0x030303, // Dark grey smoke/fog matching default env fog
+                transparent: true,
+                // Reduce density near non-default heads so the model isn't obscured
+                opacity: isCustomModel ? 0 : 0,
+                blending: THREE.NormalBlending,
+                depthWrite: false,
+            });
+            const spr = new THREE.Sprite(mat);
+            spr.scale.set(2.4, 1.8, 1);
+            return spr;
+        };
+
+        const smokeCount = balancedPerformance ? 2 : 4; // fewer sprites in balanced mode
+
+        // Left hand area
+        for (let i = 0; i < smokeCount; i++) {
+            const spr = createHandSprite();
+            spr.position.set(
+                -3.5 + (Math.random() - 0.5) * 1.5,
+                -4.15 + 0.1 + (Math.random() - 0.5) * 0.3,
+                2.7 + (Math.random() - 0.5) * 1.8
+            );
+            spr.scale.setScalar(2.0 + Math.random() * 0.8);
+            dealerGroup.add(spr);
+        }
+
+        // Right hand area
+        for (let i = 0; i < smokeCount; i++) {
+            const spr = createHandSprite();
+            spr.position.set(
+                3.5 + (Math.random() - 0.5) * 1.5,
+                -4.15 + 0.1 + (Math.random() - 0.5) * 0.3,
+                2.7 + (Math.random() - 0.5) * 1.8
+            );
+            spr.scale.setScalar(2.0 + Math.random() * 0.8);
+            dealerGroup.add(spr);
+        }
+
+        // Torso fog — only in full-quality mode
+        if (!balancedPerformance) {
+            const dealerFogGroup = new THREE.Group();
+            dealerFogGroup.name = 'DEALER_TORSO_FOG';
+
+            const createFogSprite = (): THREE.Sprite => {
+                const mat = new THREE.SpriteMaterial({
+                    map: smokeTex || undefined,
+                    color: 0x010101, // Dark blackish/grey fog
+                    transparent: true,
+                    // Much lower density for non-default heads to keep them visible
+                    opacity: isCustomModel ? 0.04 : 0.14,
+                    blending: THREE.NormalBlending,
+                    depthWrite: false,
+                });
+                const spr = new THREE.Sprite(mat);
+                spr.scale.set(7.0, 5.5, 1.0);
+                return spr;
+            };
+
+            for (let i = 0; i < 6; i++) {
+                const spr = createFogSprite();
+                spr.position.set(
+                    (Math.random() - 0.5) * 6.5,
+                    -2.5 + (Math.random() - 0.5) * 3.5,
+                    -2.0 + (Math.random() - 0.5) * 3.5
+                );
+                spr.scale.setScalar(5.5 + Math.random() * 2.5);
+                dealerFogGroup.add(spr);
+            }
+            dealerGroup.add(dealerFogGroup);
+        }
+    }
 
     scene.add(dealerGroup);
     return dealerGroup;

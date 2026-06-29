@@ -327,6 +327,9 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                             <LogOut size={12} /> Exit
                         </button>
                     )}
+                    <button onClick={onResetDefaults} className="flex-1 h-10 border border-stone-700 bg-stone-900/80 text-stone-300 hover:text-white hover:bg-stone-800/90 px-3 font-black tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all rounded-xl text-[9px] sm:text-[10px] uppercase cursor-pointer">
+                        <RotateCcw size={12} /> Reset Settings
+                    </button>
                     <button onClick={onClose} className="flex-[1.5] h-10 bg-white text-black font-black px-4 hover:bg-stone-200 transition-all tracking-[0.25em] rounded-xl text-[10px] sm:text-xs uppercase shadow-xl cursor-pointer">
                         Return to Game
                     </button>

@@ -9,6 +9,7 @@ export type ShellType = 'LIVE' | 'BLANK';
 export type TurnOwner = 'PLAYER' | 'DEALER' | 'PLAYER3' | 'PLAYER4';
 export type CameraView = 'PLAYER' | 'DEALER' | 'GUN' | 'TABLE' | 'STEAL_UI' | 'DEALER_GUN' | 'PLAYER3_GUN' | 'PLAYER4_GUN';
 export type AimTarget = 'OPPONENT' | 'SELF' | 'IDLE' | 'CHOOSING' | 'LEFT' | 'RIGHT';
+export type PlayerModelKey = 'DEFAULT' | 'YASH' | 'YUVRAJ' | 'ASP' | 'AADISH';
 
 export interface GameState {
   phase: 'BOOT' | 'INTRO' | 'LOAD' | 'PLAYER_TURN' | 'DEALER_TURN' | 'PLAYER3_TURN' | 'PLAYER4_TURN' | 'RESOLVING' | 'GAME_OVER' | 'LOOTING' | 'STEALING' | 'CARD_SELECT';
@@ -58,6 +59,7 @@ export interface MultiplayerGameState {
   roomId: string;
   settings: RoomSettings;
   turnIndex: number; // For 4-player scalability
+  debugPlayerModels?: Record<string, PlayerModelKey>;
 }
 
 export interface MultiplayerPlayer extends PlayerState {
@@ -155,6 +157,12 @@ export interface GameSettings {
   musicVolume: number;
   sfxVolume: number;
   debugMode?: boolean;
+  debugHeadModel?: PlayerModelKey;
+  debugPlayerModels?: {
+    DEALER?: PlayerModelKey;
+    PLAYER3?: PlayerModelKey;
+    PLAYER4?: PlayerModelKey;
+  };
   ultraPerformance?: boolean;
   balancedPerformance?: boolean;
 }
@@ -188,7 +196,7 @@ export interface SceneContext {
   chokeMesh?: THREE.Mesh | THREE.Group;
   bloodParticles: THREE.Points;
   sparkParticles: THREE.Points;
-  dustParticles: THREE.Points;
+  dustParticles: THREE.Points | null;
   baseLights: { light: THREE.Light, baseIntensity: number }[];
   underLight?: THREE.PointLight;
   ejectedShells?: THREE.Group[]; // Pool of ejected shells on table

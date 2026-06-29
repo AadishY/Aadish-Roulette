@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext, PlayerState, GameState } from '../types';
+import { CameraView, TurnOwner, AimTarget, AnimationState, GameSettings, SceneContext, PlayerState, GameState, PlayerModelKey } from '../types';
 
 import { updateScene } from '../utils/sceneLogic';
 import { initThreeScene, cleanScene } from '../utils/three/sceneSetup';
@@ -26,6 +26,7 @@ interface ThreeSceneProps {
     onLowPerformance?: (fps: number) => void;
     isPaused?: boolean;
     onUpdateNameTags?: (tags: { name: string, x: number, y: number, visible: boolean }[]) => void;
+    dealerModel?: PlayerModelKey;
 }
 
 const calculatePixelScale = (settings: GameSettings, width: number) => {
@@ -53,7 +54,11 @@ const calculatePixelScale = (settings: GameSettings, width: number) => {
         mobilePixelScale = settings.ultraPerformance ? 4.0 : (settings.balancedPerformance ? 3.0 : 2.2);
     }
 
-    return (isMob || isTab) ? mobilePixelScale : (settings.ultraPerformance ? 5.0 : (settings.balancedPerformance ? 4.0 : (settings.pixelScale || 3)));
+    const baseScale = (isMob || isTab) ? mobilePixelScale : (settings.ultraPerformance ? 5.0 : (settings.balancedPerformance ? 4.0 : (settings.pixelScale || 3)));
+    if (settings.debugHeadModel && settings.debugHeadModel !== 'DEFAULT') {
+        return Math.max(1.0, baseScale * 0.45);
+    }
+    return baseScale;
 };
 
 const syncResolution = (container: HTMLDivElement, sceneContext: SceneContext, settings: GameSettings) => {
@@ -103,7 +108,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
     onCardClick,
     onLowPerformance,
     isPaused = false,
-    onUpdateNameTags
+    onUpdateNameTags,
+    dealerModel,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -127,7 +133,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
         onGunClick,
         onLowPerformance,
         isPaused,
-        onUpdateNameTags
+        onUpdateNameTags,
+        dealerModel,
     });
 
     useEffect(() => {
@@ -151,11 +158,13 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             onGunClick,
             onLowPerformance,
             isPaused,
-            onUpdateNameTags
+            onUpdateNameTags,
+            dealerModel,
         };
-    }, [isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, knownShell, isHardMode, player, dealer, player3, player4, gameState, onCardClick, onGunClick, onLowPerformance, isPaused, onUpdateNameTags]);
+    }, [isSawed, isChokeActive, isPlayerCuffed, aimTarget, cameraView, animState, turnOwner, settings, knownShell, isHardMode, player, dealer, player3, player4, gameState, onCardClick, onGunClick, onLowPerformance, isPaused, onUpdateNameTags, dealerModel]);
 
     const sceneRef = useRef<SceneContext | null>(null);
+    const tagProjectionVec = useRef(new THREE.Vector3());
 
 
 
@@ -166,12 +175,12 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             if (!containerRef.current) return;
 
             if (sceneRef.current) {
-                // Proper cleanup
+                // Proper cleanup without forcing a context loss, which can leave the
+                // next renderer initialization in an invalid state.
                 cleanScene(sceneRef.current.scene);
                 try {
-                    sceneRef.current.renderer.forceContextLoss();
+                    sceneRef.current.renderer.dispose();
                 } catch (e) {}
-                sceneRef.current.renderer.dispose();
                 if (containerRef.current.contains(sceneRef.current.renderer.domElement)) {
                     containerRef.current.removeChild(sceneRef.current.renderer.domElement);
                 }
@@ -317,95 +326,52 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
 
             updateScene(sceneRef.current, propsRef.current, time, delta);
 
-            // Project 3D positions of heads to HTML coordinates for crisp overlays
-            if (sceneRef.current) {
+            if (sceneRef.current && propsRef.current.onUpdateNameTags) {
                 const { scene, camera } = sceneRef.current;
-                const tempV = new THREE.Vector3();
+                const tempV = tagProjectionVec.current;
                 const tagsList: { name: string, x: number, y: number, visible: boolean }[] = [];
 
-                 scene.traverse((obj) => {
-                    if (obj.name === 'DEALER') {
-                        const head = obj.getObjectByName('HEAD');
-                        if (head) {
-                            tempV.setFromMatrixPosition(head.matrixWorld);
-                            // Position slightly above the head (Y=2.4)
-                            tempV.y += 2.4;
-                            tempV.project(camera);
+                const addHeadTag = (parentName: string, label: string) => {
+                    const parent = scene.getObjectByName(parentName);
+                    if (!parent) return;
+                    const head = parent.getObjectByName('HEAD');
+                    if (!head) return;
 
-                            const x = (tempV.x * 0.5 + 0.5) * 100;
-                            const y = (tempV.y * -0.5 + 0.5) * 100;
+                    tempV.setFromMatrixPosition(head.matrixWorld);
+                    tempV.y += 2.4;
+                    tempV.project(camera);
 
-                            // Visible if in front of screen plane
-                            const visible = tempV.z <= 1.0;
+                    const x = (tempV.x * 0.5 + 0.5) * 100;
+                    const y = (tempV.y * -0.5 + 0.5) * 100;
+                    const visible = tempV.z <= 1.0;
 
-                            tagsList.push({
-                                name: propsRef.current.gameState.opponentName || 'OPPONENT',
-                                x,
-                                y,
-                                visible
-                            });
-                        }
-                    } else if (obj.name === 'PLAYER3') {
-                        const head = obj.getObjectByName('HEAD');
-                        if (head) {
-                            tempV.setFromMatrixPosition(head.matrixWorld);
-                            tempV.y += 2.4;
-                            tempV.project(camera);
+                    tagsList.push({ name: label, x, y, visible });
+                };
 
-                            const x = (tempV.x * 0.5 + 0.5) * 100;
-                            const y = (tempV.y * -0.5 + 0.5) * 100;
-                            const visible = tempV.z <= 1.0;
+                const players = propsRef.current.gameState.multiplayerState?.players || [];
+                const myId = propsRef.current.gameState.localPlayerId || '';
+                const myIndex = players.findIndex((p: any) => p.id === myId);
 
-                            const players = propsRef.current.gameState.multiplayerState?.players || [];
-                            const myId = propsRef.current.gameState.localPlayerId || '';
-                            const myIndex = players.findIndex((p: any) => p.id === myId);
-                            let player3Name = 'OPPONENT 2';
-                            if (myIndex !== -1) {
-                                const size = players.length >= 4 ? 4 : 3;
-                                const sideOpponent = players[(myIndex + 1) % size];
-                                if (sideOpponent) player3Name = sideOpponent.name;
-                            }
+                addHeadTag('DEALER', propsRef.current.gameState.opponentName || 'OPPONENT');
 
-                            tagsList.push({
-                                name: player3Name,
-                                x,
-                                y,
-                                visible
-                            });
-                        }
-                    } else if (obj.name === 'PLAYER4') {
-                        const head = obj.getObjectByName('HEAD');
-                        if (head) {
-                            tempV.setFromMatrixPosition(head.matrixWorld);
-                            tempV.y += 2.4;
-                            tempV.project(camera);
-
-                            const x = (tempV.x * 0.5 + 0.5) * 100;
-                            const y = (tempV.y * -0.5 + 0.5) * 100;
-                            const visible = tempV.z <= 1.0;
-
-                            const players = propsRef.current.gameState.multiplayerState?.players || [];
-                            const myId = propsRef.current.gameState.localPlayerId || '';
-                            const myIndex = players.findIndex((p: any) => p.id === myId);
-                            let player4Name = 'OPPONENT 3';
-                            if (myIndex !== -1 && players.length >= 4) {
-                                const rightOpponent = players[(myIndex + 3) % 4];
-                                if (rightOpponent) player4Name = rightOpponent.name;
-                            }
-
-                            tagsList.push({
-                                name: player4Name,
-                                x,
-                                y,
-                                visible
-                            });
-                        }
-                    }
-                });
-
-                if (propsRef.current.onUpdateNameTags) {
-                    propsRef.current.onUpdateNameTags(tagsList);
+                let player3Name = 'OPPONENT 2';
+                if (myIndex !== -1) {
+                    const size = players.length >= 4 ? 4 : 3;
+                    const sideOpponent = players[(myIndex + 1) % size];
+                    if (sideOpponent) player3Name = sideOpponent.name;
                 }
+                addHeadTag('PLAYER3', player3Name);
+
+                if (players.length >= 4) {
+                    let player4Name = 'OPPONENT 3';
+                    if (myIndex !== -1) {
+                        const rightOpponent = players[(myIndex + 3) % 4];
+                        if (rightOpponent) player4Name = rightOpponent.name;
+                    }
+                    addHeadTag('PLAYER4', player4Name);
+                }
+
+                propsRef.current.onUpdateNameTags(tagsList);
             }
         };
 
@@ -552,14 +518,13 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
             if (sceneRef.current) {
                 cleanScene(sceneRef.current.scene);
                 try {
-                    sceneRef.current.renderer.forceContextLoss();
+                    sceneRef.current.renderer.dispose();
                 } catch (e) {}
-                sceneRef.current.renderer.dispose();
                 sceneRef.current = null;
             }
             if (containerRef.current) containerRef.current.innerHTML = '';
         };
-    }, [gameState.isMultiplayer, gameState.isThreePlayer, gameState.multiplayerState?.players?.map(p => p.id).join(','), settings.ultraPerformance, settings.balancedPerformance, isPaused]); // Rebuild scene when switching SP/MP, toggling performance profiles, or unpausing the game
+    }, [gameState.isMultiplayer, gameState.isThreePlayer, gameState.multiplayerState?.players?.map(p => p.id).join(','), JSON.stringify(gameState.multiplayerState?.debugPlayerModels || {}), settings.ultraPerformance, settings.balancedPerformance, settings.debugHeadModel, JSON.stringify(settings.debugPlayerModels), isPaused, dealerModel]); // Rebuild scene when switching SP/MP, toggling perf/head override, or unpausing the game
 
     // Separate effect for Pixel Scale / Resolution updates (No Rebuild)
     useEffect(() => {

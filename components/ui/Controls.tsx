@@ -25,6 +25,7 @@ interface ControlsProps {
     currentAimTarget?: AimTarget;
     isMultiplayer?: boolean;
     isThreePlayer?: boolean;
+    isFourPlayer?: boolean;
     mpGameState?: GameStateData | null;
     mpMyPlayerId?: string | null;
     onMpShoot?: (targetId: string) => void;
@@ -41,6 +42,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
     currentAimTarget = 'IDLE',
     isMultiplayer = false,
     isThreePlayer = false,
+    isFourPlayer = false,
     mpGameState,
     mpMyPlayerId,
     onMpShoot,
@@ -96,14 +98,16 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                 {/* Shooting */}
                 {isGunHeld && (
                     <>
-                        {isThreePlayer ? (() => {
+                        {isThreePlayer || isFourPlayer ? (() => {
                             if (!mpGameState || !Array.isArray((mpGameState as any).players)) return null;
                             const players = (mpGameState as any).players;
                             const myIndex = players.findIndex((p: any) => p.id === mpMyPlayerId);
-                            if (myIndex === -1 || players.length < 3) return null;
-                            const frontOpponent = players[(myIndex + 2) % 3];
-                            const sideOpponent = players[(myIndex + 1) % 3];
-                            if (!frontOpponent || !sideOpponent) return null;
+                            const size = players.length;
+                            if (myIndex === -1 || size < 3) return null;
+                            const frontOpponent = players[(myIndex + 2) % size];
+                            const sideOpponent = players[(myIndex + 1) % size];
+                            const leftOpponent = sideOpponent;
+                            const rightOpponent = size >= 4 ? players[(myIndex + 3) % size] : null;
                             const sidePos = myIndex === 1 ? 'right' : 'left';
 
                             const isMobile = window.matchMedia('(pointer: coarse)').matches;
@@ -136,28 +140,30 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                 <div className="grid grid-cols-3 gap-3 max-w-md w-full justify-center items-center">
                                     {/* Row 1: Front Player */}
                                     <div className="col-start-2 flex justify-center">
-                                        <button
-                                            onClick={() => {
-                                                audioManager.playSound('click');
-                                                handleChooseOpponent('DEALER', 'OPPONENT', frontOpponent.id);
-                                            }}
-                                            disabled={isProcessing}
-                                            onMouseEnter={() => !isMobile && !isProcessing && onHoverTarget('OPPONENT')}
-                                            onMouseLeave={() => !isMobile && !isProcessing && onHoverTarget('CHOOSING')}
-                                            className={`${shootFrontBtnClass} w-full justify-center`}
-                                        >
-                                            <Target size={14} />
-                                            {frontOpponent.name.toUpperCase()}
-                                        </button>
+                                        {frontOpponent && (
+                                            <button
+                                                onClick={() => {
+                                                    audioManager.playSound('click');
+                                                    handleChooseOpponent('DEALER', 'OPPONENT', frontOpponent.id);
+                                                }}
+                                                disabled={isProcessing}
+                                                onMouseEnter={() => !isMobile && !isProcessing && onHoverTarget('OPPONENT')}
+                                                onMouseLeave={() => !isMobile && !isProcessing && onHoverTarget('CHOOSING')}
+                                                className={`${shootFrontBtnClass} w-full justify-center`}
+                                            >
+                                                <Target size={14} />
+                                                {frontOpponent.name.toUpperCase()}
+                                            </button>
+                                        )}
                                     </div>
 
                                     {/* Row 2: Left Player, Self, Right Player */}
                                     <div className="col-start-1 row-start-2 flex justify-center">
-                                        {sidePos === 'left' && (
+                                        {((size === 4 && leftOpponent) || (size === 3 && sidePos === 'left' && sideOpponent)) && (
                                             <button
                                                 onClick={() => {
                                                     audioManager.playSound('click');
-                                                    handleChooseOpponent('PLAYER3', 'LEFT', sideOpponent.id);
+                                                    handleChooseOpponent('PLAYER3', 'LEFT', (size === 4 ? leftOpponent! : sideOpponent).id);
                                                 }}
                                                 disabled={isProcessing}
                                                 onMouseEnter={() => !isMobile && !isProcessing && onHoverTarget('LEFT')}
@@ -165,7 +171,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                                 className={`${shootFrontBtnClass} w-full justify-center`}
                                             >
                                                 <Target size={14} />
-                                                {sideOpponent.name.toUpperCase()}
+                                                {(size === 4 ? leftOpponent! : sideOpponent).name.toUpperCase()}
                                             </button>
                                         )}
                                     </div>
@@ -187,11 +193,11 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                     </div>
 
                                     <div className="col-start-3 row-start-2 flex justify-center">
-                                        {sidePos === 'right' && (
+                                        {((size === 4 && rightOpponent) || (size === 3 && sidePos === 'right' && sideOpponent)) && (
                                             <button
                                                 onClick={() => {
                                                     audioManager.playSound('click');
-                                                    handleChooseOpponent('PLAYER3', 'RIGHT', sideOpponent.id);
+                                                    handleChooseOpponent(size === 4 ? 'PLAYER4' : 'PLAYER3', 'RIGHT', (size === 4 ? rightOpponent! : sideOpponent).id);
                                                 }}
                                                 disabled={isProcessing}
                                                 onMouseEnter={() => !isMobile && !isProcessing && onHoverTarget('RIGHT')}
@@ -199,7 +205,7 @@ const ControlsComponent: React.FC<ControlsProps> = ({
                                                 className={`${shootFrontBtnClass} w-full justify-center`}
                                             >
                                                 <Target size={14} />
-                                                {sideOpponent.name.toUpperCase()}
+                                                {(size === 4 ? rightOpponent! : sideOpponent).name.toUpperCase()}
                                             </button>
                                         )}
                                     </div>

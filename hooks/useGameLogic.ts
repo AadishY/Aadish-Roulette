@@ -1,5 +1,5 @@
   import { useState, useEffect, useRef } from 'react';
-import { GameState, PlayerState, ShellType, ItemType, LogEntry, TurnOwner, CameraView, AimTarget, AnimationState, RoomSettings, TarotCard } from '../types';
+import { GameState, PlayerState, ShellType, ItemType, LogEntry, TurnOwner, CameraView, AimTarget, AnimationState, RoomSettings, TarotCard, PlayerModelKey } from '../types';
 import { MAX_HP, MAX_ITEMS, ITEMS } from '../constants';
 import { randomInt, wait } from '../utils/gameUtils';
 import * as ItemActions from '../utils/game/itemActions';
@@ -13,7 +13,9 @@ export const useGameLogic = () => {
   const [playerName, setPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const onBatchEndRef = useRef<((keepTurn: boolean) => void) | null>(null);
-  const onMPRoundEndRef = useRef<((winner: TurnOwner) => void) | null>(null);
+  const onMPRoundEndRef = useRef<((winner: TurnOwner, pWin?: number, oWin?: number) => void | Promise<void>) | null>(null);
+  const [dealerModel, setDealerModel] = useState<PlayerModelKey>('DEFAULT');
+
 
   const [gameState, setGameState] = useState<GameState>({
     phase: 'BOOT',
@@ -256,6 +258,7 @@ export const useGameLogic = () => {
     setShowLootOverlay(false);
     setOverlayText(null);
     resetStats();
+    setDealerModel('DEFAULT');
 
     setGameState({
       phase: toMenu ? 'INTRO' : 'LOAD',
@@ -759,7 +762,7 @@ export const useGameLogic = () => {
     }
 
     if (onMPRoundEndRef.current) {
-      onMPRoundEndRef.current(winner);
+      await onMPRoundEndRef.current(winner, pWin, oWin);
       setIsProcessing(false);
       return;
     }
@@ -1059,7 +1062,7 @@ export const useGameLogic = () => {
         setOverlayText(null);
 
         if (onMPRoundEndRef.current) {
-          onMPRoundEndRef.current(roundWinner);
+          await onMPRoundEndRef.current(roundWinner);
         }
         setIsProcessing(false);
         return;
@@ -2356,10 +2359,12 @@ export const useGameLogic = () => {
     setOverlayText,
     matchStats: matchStatsRef.current,
     setOnBatchEnd: (cb: (keepTurn: boolean) => void) => { onBatchEndRef.current = cb; },
-    setOnMPRoundEnd: (cb: (winner: TurnOwner) => void) => { onMPRoundEndRef.current = cb; },
+    setOnMPRoundEnd: (cb: (winner: TurnOwner, pWin?: number, oWin?: number) => void | Promise<void>) => { onMPRoundEndRef.current = cb; },
     startRound,
     handleHardModeRoundEnd,
     handleMPRoundEnd,
-    handleNormalModeRoundEnd
+    handleNormalModeRoundEnd,
+    dealerModel,
+    setDealerModel
   };
 };

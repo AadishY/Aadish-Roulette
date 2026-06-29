@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { MultiplayerGameState, RoomSettings, ChatMessage, MultiplayerPlayer } from '../types';
+import { SocketBatcher } from '../utils/socketOptimizer';
 
 const params = new URLSearchParams(window.location.search);
 const isDiscord = params.has('frame_id') || params.has('instance_id') || window.location.search.includes('platform=') || window.location.hostname.includes('discordsays.com');
@@ -56,6 +57,7 @@ export function useMultiplayer() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
 
     const connectionAttemptsRef = useRef(0);
+    const socketBatcherRef = useRef<SocketBatcher | null>(null);
 
     // Callback for incoming actions
     const onActionRef = useRef<((data: { playerId: string, action: any }) => void) | null>(null);
@@ -95,6 +97,18 @@ export function useMultiplayer() {
             setError(null);
             setConnectionStatus('');
             connectionAttemptsRef.current = 0;
+
+            // Initialize socket batcher for game actions (batches up to 3 actions or 100ms)
+            socketBatcherRef.current = new SocketBatcher(3, 100, (actions) => {
+                if (actions.length === 1) {
+                    // Single action - send directly
+                    const action = actions[0];
+                    newSocket.emit('gameAction', action.data);
+                } else {
+                    // Batch multiple actions
+                    newSocket.emit('gameActionBatch', { actions });
+                }
+            });
         });
 
         newSocket.on('connect_error', () => {
@@ -208,7 +222,12 @@ export function useMultiplayer() {
     };
 
     const sendAction = (roomId: string, action: any) => {
-        socket?.emit('gameAction', { roomId, action });
+        // Use batcher to batch multiple actions together for efficiency
+        if (socketBatcherRef.current && socket?.connected) {
+            socketBatcherRef.current.queue('gameAction', { roomId, action });
+        } else {
+            socket?.emit('gameAction', { roomId, action });
+        }
     };
 
     const kickPlayer = (roomId: string, targetPlayerId: string) => {

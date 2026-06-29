@@ -50,7 +50,7 @@ const ShellBackground: React.FC<ShellBackgroundProps> = ({ active = true }) => {
             const isTab = device === 'tablet';
             const isLowEnd = isMob && (width < 600 || (window.devicePixelRatio || 1) < 2);
             
-            const shellCount = isMob ? 12 : (isTab ? 24 : 64);
+            const shellCount = isMob ? 8 : (isTab ? 16 : 32);
 
             // Scene setup
             const scene = new THREE.Scene();

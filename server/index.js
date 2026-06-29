@@ -450,6 +450,7 @@ const createRoomObject = (roomId, hostId, hostName, settings) => {
         settings: finalSettings,
         gameState: null,
         messages: [],
+        debugPlayerModels: {},
         lastActivity: Date.now()
     };
 };
@@ -701,6 +702,22 @@ io.on('connection', (socket) => {
                 return;
             }
             console.log(`[DEVELOPER SYSTEM CALL] Authorized account 'aadish' deployed debugging hook element: ${action.type}`);
+        }
+
+        if (action.type === 'DEBUG_SET_PLAYER_MODEL') {
+            const modelKey = action.modelKey;
+            const validModelKeys = ['DEFAULT', 'YASH', 'YUVRAJ', 'ASP', 'AADISH'];
+            if (!validModelKeys.includes(modelKey)) {
+                socket.emit('error', 'Invalid avatar model selection.');
+                return;
+            }
+            room.debugPlayerModels = {
+                ...(room.debugPlayerModels || {}),
+                [action.playerId]: modelKey
+            };
+            room.lastActivity = Date.now();
+            io.to(roomId).emit('roomUpdated', room);
+            return;
         }
 
         if (action.type === 'USE_ITEM') {

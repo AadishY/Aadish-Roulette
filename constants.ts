@@ -41,6 +41,7 @@ const getInitialSettings = (): GameSettings => {
       musicVolume: 0.5,
       sfxVolume: 0.5,
       debugMode: false,
+      debugHeadModel: 'DEFAULT',
       ultraPerformance: false,
       balancedPerformance: true
     };
@@ -54,6 +55,7 @@ const getInitialSettings = (): GameSettings => {
       musicVolume: 0.5,
       sfxVolume: 1.0,
       debugMode: false,
+      debugHeadModel: 'DEFAULT',
       ultraPerformance: false,
       balancedPerformance: true
     };

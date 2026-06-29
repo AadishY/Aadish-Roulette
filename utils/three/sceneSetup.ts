@@ -5,29 +5,63 @@ import { setupLighting, createTable, createGunModel, createDealerModel, createPl
 
 
 export const cleanScene = (scene: THREE.Scene) => {
-    scene.traverse((object) => {
+    const disposedResources = new Set<any>();
+
+    const disposeResource = (resource: any) => {
+        if (!resource || disposedResources.has(resource)) return;
+        disposedResources.add(resource);
+        try {
+            if (typeof resource.dispose === 'function') {
+                resource.dispose();
+            }
+        } catch (e) {
+            // Ignore disposal errors from transient or already-released resources.
+        }
+    };
+
+    const disposeMaterial = (material: THREE.Material | THREE.Material[]) => {
+        const materials = Array.isArray(material) ? material : [material];
+
+        materials.forEach((mat) => {
+            if (!mat || disposedResources.has(mat)) return;
+
+            const materialWithMaps = mat as THREE.Material & Record<string, any>;
+            const textureKeys = ['map', 'alphaMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap', 'bumpMap', 'displacementMap', 'envMap'];
+
+            textureKeys.forEach((key) => {
+                if (materialWithMaps[key] instanceof THREE.Texture) {
+                    disposeResource(materialWithMaps[key]);
+                }
+            });
+
+            disposeResource(mat);
+        });
+    };
+
+    const objects: THREE.Object3D[] = [];
+    scene.traverse((object) => objects.push(object));
+
+    objects.forEach((object) => {
+        if (object.parent) {
+            object.parent.remove(object);
+        }
+
         if (object instanceof THREE.Mesh || object instanceof THREE.Points || (object as any).isLine) {
-            const mesh = object as any;
-            if (mesh.geometry) mesh.geometry.dispose();
+            const mesh = object as THREE.Mesh & { geometry?: THREE.BufferGeometry; material?: THREE.Material | THREE.Material[] };
+            if (mesh.geometry) {
+                disposeResource(mesh.geometry);
+            }
             if (mesh.material) {
-                const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-                materials.forEach((mat) => {
-                    for (const key in mat) {
-                        const val = (mat as any)[key];
-                        if (val && val instanceof THREE.Texture) {
-                            val.dispose();
-                        }
-                    }
-                    mat.dispose();
-                });
+                disposeMaterial(mesh.material);
             }
         }
 
-        // Dispose of light shadow maps to prevent WebGL memory leaks
         if ((object as any).isLight && (object as any).shadow && (object as any).shadow.map) {
-            (object as any).shadow.map.dispose();
+            disposeResource((object as any).shadow.map);
         }
     });
+
+    scene.clear();
 };
 
 export const initThreeScene = (container: HTMLElement, props: any): SceneContext | null => {
@@ -123,7 +157,11 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     }
 
     // Desktop: default to 3 or user setting. Mobile: strictly optimized.
-    const pixelScale = (isMobile || isTablet) ? mobilePixelScale : (props.settings.ultraPerformance ? 5.0 : (props.settings.balancedPerformance ? 4.0 : (props.settings.pixelScale || 3)));
+    let basePixelScale = (isMobile || isTablet) ? mobilePixelScale : (props.settings.ultraPerformance ? 5.0 : (props.settings.balancedPerformance ? 4.0 : (props.settings.pixelScale || 3)));
+    if (props.settings.debugHeadModel && props.settings.debugHeadModel !== 'DEFAULT') {
+        basePixelScale = Math.max(1.0, basePixelScale * 0.45);
+    }
+    const pixelScale = basePixelScale;
 
     const maxPixelRatio = (isMobile || props.settings.ultraPerformance) ? 1.0 : (isTablet ? 1.2 : Math.min(window.devicePixelRatio, 2)); // Cap at 2x for desktop
     renderer.setPixelRatio(maxPixelRatio);
@@ -222,6 +260,35 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     let player3Group: THREE.Group | undefined;
     let player4Group: THREE.Group | undefined;
 
+    // ---------------------------------------------------------------------------
+    // Player head-model assignment for multiplayer.
+    // Debug-selected models take priority. Defaults are stable per player ID,
+    // so the same player keeps the same custom head across scene resets.
+    // ---------------------------------------------------------------------------
+    type PlayerModelKey = 'DEFAULT' | 'AADISH' | 'ASP' | 'YASH' | 'YUVRAJ';
+    const ALL_PLAYER_MODELS: PlayerModelKey[] = ['AADISH', 'ASP', 'YASH', 'YUVRAJ'];
+
+    const stableHash = (value: string) => {
+        let hash = 0;
+        for (let i = 0; i < value.length; i++) {
+            hash = ((hash << 5) - hash) + value.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash);
+    };
+
+    const getDefaultModelForPlayer = (playerId?: string, seat: 'dealer' | 'front' | 'left' | 'right' = 'front') => {
+        if (!playerId) return 'AADISH' as PlayerModelKey;
+        const key = `${seat}:${playerId}`;
+        return ALL_PLAYER_MODELS[stableHash(key) % ALL_PLAYER_MODELS.length];
+    };
+
+    const roomDebugModels = props.gameState?.multiplayerState?.debugPlayerModels || {};
+    const getModelForSeat = (seat: 'dealer' | 'front' | 'left' | 'right', playerId?: string) => {
+        if (playerId && roomDebugModels[playerId]) return roomDebugModels[playerId];
+        return getDefaultModelForPlayer(playerId, seat);
+    };
+
     if (isFourPlayer && props.gameState?.multiplayerState?.players) {
         const players = props.gameState.multiplayerState.players;
         const myId = props.gameState.localPlayerId || '';
@@ -229,26 +296,34 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
 
         if (myIndex !== -1) {
             const frontOpponent = players[(myIndex + 2) % 4];
-            const leftOpponent = players[(myIndex + 1) % 4];
+            const leftOpponent  = players[(myIndex + 1) % 4];
             const rightOpponent = players[(myIndex + 3) % 4];
 
             // Front player -> DEALER
-            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI, frontOpponent ? frontOpponent.name : 'OPPONENT 1');
+            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI,
+                frontOpponent ? frontOpponent.name : 'OPPONENT 1', 4, 4, getModelForSeat('dealer', frontOpponent?.id));
             dealerGroup.name = 'DEALER';
 
             // Left player -> PLAYER3
-            player3Group = createPlayerAvatar(scene, new THREE.Vector3(-8, -4.5, -2), Math.PI / 2, leftOpponent ? leftOpponent.name : 'OPPONENT 2');
+            player3Group = createPlayerAvatar(scene, new THREE.Vector3(-8, -4.5, -2), Math.PI / 2,
+                leftOpponent ? leftOpponent.name : 'OPPONENT 2', 4, 4, getModelForSeat('left', leftOpponent?.id));
             player3Group.name = 'PLAYER3';
             scene.userData.player3Side = 'left';
 
             // Right player -> PLAYER4
-            player4Group = createPlayerAvatar(scene, new THREE.Vector3(8, -4.5, -2), -Math.PI / 2, rightOpponent ? rightOpponent.name : 'OPPONENT 3');
+            player4Group = createPlayerAvatar(scene, new THREE.Vector3(8, -4.5, -2), -Math.PI / 2,
+                rightOpponent ? rightOpponent.name : 'OPPONENT 3', 4, 4, getModelForSeat('right', rightOpponent?.id));
             player4Group.name = 'PLAYER4';
             scene.userData.player4Side = 'right';
         } else {
-            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI, 'OPPONENT 1');
+            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI,
+                'OPPONENT 1', 4, 4, getDefaultModelForPlayer(undefined, 'dealer'));
             dealerGroup.name = 'DEALER';
         }
+
+        // Reduce fog so the head models are clearly visible in multiplayer
+        if (scene.fog instanceof THREE.FogExp2) scene.fog.density = 0.008;
+
     } else if (isThreePlayer && props.gameState?.multiplayerState?.players) {
         const players = props.gameState.multiplayerState.players;
         const myId = props.gameState.localPlayerId || '';
@@ -256,31 +331,47 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
 
         if (myIndex !== -1) {
             const frontOpponent = players[(myIndex + 2) % 3];
-            const sideOpponent = players[(myIndex + 1) % 3];
+            const sideOpponent  = players[(myIndex + 1) % 3];
             const sidePos = myIndex === 1 ? 'right' : 'left';
 
             // Front player -> DEALER
-            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI, frontOpponent.name);
+            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI,
+                frontOpponent.name, 4, 4, getModelForSeat('dealer', frontOpponent?.id));
             dealerGroup.name = 'DEALER';
 
             // Side player -> PLAYER3
-            const sideX = sidePos === 'left' ? -8 : 8;
+            const sideX   = sidePos === 'left' ? -8 : 8;
             const sideRot = sidePos === 'left' ? Math.PI / 2 : -Math.PI / 2;
-            player3Group = createPlayerAvatar(scene, new THREE.Vector3(sideX, -4.5, -2), sideRot, sideOpponent.name);
+            player3Group = createPlayerAvatar(scene, new THREE.Vector3(sideX, -4.5, -2), sideRot,
+                sideOpponent.name, 4, 4, getModelForSeat('left', sideOpponent?.id));
             player3Group.name = 'PLAYER3';
             scene.userData.player3Side = sidePos;
         } else {
-            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI, 'OPPONENT 1');
+            dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI,
+                'OPPONENT 1', 4, 4, getDefaultModelForPlayer(undefined, 'dealer'));
             dealerGroup.name = 'DEALER';
         }
+
+        if (scene.fog instanceof THREE.FogExp2) scene.fog.density = 0.008;
+
     } else if (isMP) {
-        // Opponent is another player
         const opponentName = props.gameState?.opponentName || 'OPPONENT';
-        // Positioned lower so head aligns with dealer head height
-        dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI, opponentName);
-        dealerGroup.name = 'DEALER'; // Keep name 'DEALER' for animation logic compatibility
+        const remotePlayer = props.gameState?.multiplayerState?.players?.find((p: any) => p.id !== props.gameState?.localPlayerId);
+        dealerGroup = createPlayerAvatar(scene, new THREE.Vector3(0, -4.5, -8), Math.PI,
+            opponentName, 4, 4, getModelForSeat('dealer', remotePlayer?.id));
+        dealerGroup.name = 'DEALER'; // Keep 'DEALER' for animation logic compatibility
+
+        if (scene.fog instanceof THREE.FogExp2) scene.fog.density = 0.008;
+
     } else {
-        dealerGroup = createDealerModel(scene);
+        dealerGroup = createDealerModel(scene, props.settings?.debugHeadModel ?? 'DEFAULT');
+
+        // Reduce global fog density when a non-default head model is active so it isn't obscured
+        if (props.settings?.debugHeadModel && props.settings.debugHeadModel !== 'DEFAULT') {
+            if (scene.fog instanceof THREE.FogExp2) {
+                scene.fog.density = 0.008;
+            }
+        }
     }
     const playerAvatars: THREE.Group[] = [];
 

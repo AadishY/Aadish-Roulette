@@ -1,0 +1,255 @@
+diff --git a/utils/three/player.ts b/utils/three/player.ts
+index eaccde6..08abecf 100644
+--- a/utils/three/player.ts
++++ b/utils/three/player.ts
+@@ -1,6 +1,39 @@
+ import * as THREE from 'three';
++import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
++import { getPreloadedGLB } from './glbPreloader';
+ 
+-export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string, hp: number = 4, maxHp: number = 4) => {
++type HeadModelKey = 'DEFAULT' | 'YASH' | 'YUVRAJ' | 'ASP' | 'AADISH';
++
++// Mirrors MODEL_CONFIGS in dealer.ts ΓÇö same paths, scale, offsets
++interface ModelConfig { path: string; scale: number; positionOffset: THREE.Vector3; }
++
++const PLAYER_MODEL_CONFIGS: Record<HeadModelKey, ModelConfig> = {
++    DEFAULT:  { path: '/head/dealer.glb',       scale: 2.3, positionOffset: new THREE.Vector3(0, -4.1, -4.3) },
++    ASP:      { path: '/head/aspdealer.glb',    scale: 2.0, positionOffset: new THREE.Vector3(0, -2.10, -8.15)   },
++    YUVRAJ:   { path: '/head/yuvrajdealer.glb', scale: 2.0, positionOffset: new THREE.Vector3(0, -2.10, -8.25)   },
++    YASH:     { path: '/head/yashdealer.glb',   scale: 2.1, positionOffset: new THREE.Vector3(0, -2.10, -8.15)  },
++    AADISH:   { path: '/head/aadishdealer.glb', scale: 2.1, positionOffset: new THREE.Vector3(0, -2.10, -8.15)   },
++};
++
++// Hidden fragment set ΓÇö same logic as dealer.ts
++const HIDDEN_FRAGS = new Set([
++    'smoke','plane','bg','background','wall','floor','room',
++    'collider','bbox','helper','camera','light','lamp',
++    'stage','backdrop','env','environment','grid','ground','ceil','ceiling',
++]);
++const shouldHide = (name: string) => { const l = name.toLowerCase(); for (const f of HIDDEN_FRAGS) if (l.includes(f)) return true; return false; };
++
++const _loader = new GLTFLoader();
++
++export const createPlayerAvatar = (
++    scene: THREE.Scene,
++    position: THREE.Vector3,
++    rotationY: number,
++    name: string,
++    _hp: number = 4,
++    _maxHp: number = 4,
++    modelKey: HeadModelKey = 'DEFAULT'
++) => {
+     const avatarGroup = new THREE.Group();
+     avatarGroup.name = 'PLAYER_' + name;
+     avatarGroup.position.copy(position);
+@@ -9,76 +42,100 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3,
+     const settings = scene.userData.settings || {};
+     const ultraPerformance = !!settings.ultraPerformance;
+     const balancedPerformance = !!settings.balancedPerformance;
+-
+-    const skinMat = ultraPerformance 
+-        ? new THREE.MeshBasicMaterial({ color: 0xffccaa }) 
+-        : (balancedPerformance 
+-            ? new THREE.MeshLambertMaterial({ color: 0xffccaa }) 
+-            : new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.5 }));
+-            
+-    const suitMat = ultraPerformance 
+-        ? new THREE.MeshBasicMaterial({ color: 0x222222 }) 
+-        : (balancedPerformance 
+-            ? new THREE.MeshLambertMaterial({ color: 0x222222 }) 
+-            : new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }));
+-
+-    // Body
+-    const torso = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), suitMat);
+-    torso.position.set(0, 3, 0);
+-    torso.castShadow = true;
+-    torso.name = "TORSO";
+-    avatarGroup.add(torso);
+-
+-    // Head (Normal Sphere)
+-    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), skinMat);
+-    head.position.set(0, 7.5, 0);
+-    head.castShadow = true;
+-    head.name = "HEAD";
+-    avatarGroup.add(head);
+-
+-    // Sunglasses
+-    const glasses = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+-    glasses.position.set(0, 7.6, 1.3);
+-    avatarGroup.add(glasses);
+-
+-    // Arms
+-    const lArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
+-    lArm.position.set(-3, 3, 0); lArm.rotation.z = 0.2;
+-    lArm.castShadow = true;
+-    lArm.name = "LEFT_ARM";
+-    avatarGroup.add(lArm);
+-    const rArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
+-    rArm.position.set(3, 3, 0); rArm.rotation.z = -0.2;
+-    rArm.castShadow = true;
+-    rArm.name = "RIGHT_ARM";
+-    avatarGroup.add(rArm);
+-
+-    // === HEALTH BAR REMOVED AT USER REQUEST ===
+-    /*
+-    const hpGroup = new THREE.Group();
+-    hpGroup.position.set(0, 10.5, 0);
+-
+-    const hpBgGeo = new THREE.PlaneGeometry(4, 0.5);
+-    const hpBg = new THREE.Mesh(hpBgGeo, new THREE.MeshBasicMaterial({ color: 0x331111, side: THREE.DoubleSide }));
+-    hpGroup.add(hpBg);
+-
+-    const hpWidth = (hp / maxHp) * 3.8;
+-    const hpFillGeo = new THREE.PlaneGeometry(hpWidth, 0.4);
+-    const hpFill = new THREE.Mesh(hpFillGeo, new THREE.MeshBasicMaterial({ color: 0xff3333, side: THREE.DoubleSide }));
+-    hpFill.position.x = (hpWidth - 3.8) / 2;
+-    hpFill.position.z = 0.01;
+-    hpGroup.add(hpFill);
+-
+-    avatarGroup.add(hpGroup);
+-    avatarGroup.userData.hpGroup = hpGroup;
+-    avatarGroup.userData.hpFill = hpFill;
+-    avatarGroup.userData.maxHp = maxHp;
+-    */
+-
+-    // === NAME TAG ===
+-    // Removed 3D name tag to use clean, crisp native HTML name tag overlay.
+-
+-    // === CHAT BUBBLE ===
++    const lowPerf = ultraPerformance || balancedPerformance;
++
++    const config = PLAYER_MODEL_CONFIGS[modelKey] ?? PLAYER_MODEL_CONFIGS.DEFAULT;
++
++    // Dummy HEAD so look-at code never crashes before load completes
++    const headPivot = new THREE.Group();
++    headPivot.name = 'HEAD';
++    avatarGroup.add(headPivot);
++
++    const dummy = new THREE.Group();
++    dummy.name = 'PLACEHOLDER';
++    headPivot.add(dummy);
++
++    _loader.load(
++        config.path,
++        (gltf) => {
++            const model: THREE.Group = gltf.scene;
++            headPivot.remove(dummy);
++
++            model.traverse((obj) => {
++                if (obj instanceof THREE.Light || obj instanceof THREE.Camera || (obj as any).isHelper) {
++                    obj.visible = false;
++                    if ('intensity' in obj) (obj as any).intensity = 0;
++                    return;
++                }
++                if (shouldHide(obj.name)) { obj.visible = false; return; }
++
++                if (obj instanceof THREE.Mesh) {
++                    obj.castShadow = !lowPerf;
++                    obj.receiveShadow = false;
++                    if (obj.material) {
++                        const mats: THREE.Material[] = Array.isArray(obj.material) ? obj.material : [obj.material];
++                        for (const mat of mats) {
++                            const m = mat as THREE.MeshStandardMaterial;
++                            if (m.map)        { m.map.colorSpace = THREE.SRGBColorSpace; m.map.needsUpdate = true; }
++                            if (m.normalMap)  { m.normalMap.colorSpace = THREE.LinearSRGBColorSpace; m.normalMap.needsUpdate = true; }
++                            if (m.roughnessMap) { m.roughnessMap.colorSpace = THREE.LinearSRGBColorSpace; m.roughnessMap.needsUpdate = true; }
++                            if (m.transparent || m.opacity < 0.9) m.depthWrite = false;
++                            if (m instanceof THREE.MeshStandardMaterial) {
++                                m.roughness = m.roughnessMap ? m.roughness : 0.72;
++                                m.metalness = 0.0;
++                                m.envMapIntensity = lowPerf ? 0.4 : 1.2;
++                                m.fog = false;
++                                m.needsUpdate = true;
++                            }
++                        }
++                    }
++                }
++            });
++
++            model.name = 'HEAD';
++            model.position.set(0, 0, 0);
++            model.rotation.set(0, 0, 0);
++            model.updateMatrixWorld(true);
++            headPivot.add(model);
++
++            // 3-point warm/cool lighting rig (same as dealer custom heads)
++            const keyLight = new THREE.PointLight(0xfff0d0, lowPerf ? 0.8 : 2.2, 8);
++            keyLight.position.set(-1.2, 2.8, 1.8);
++            keyLight.name = 'KEY_LIGHT';
++            model.add(keyLight);
++
++            const fillLight = new THREE.PointLight(0xc8d8ff, lowPerf ? 0.3 : 0.75, 7);
++            fillLight.position.set(1.8, 1.5, 1.2);
++            fillLight.name = 'FILL_LIGHT';
++            model.add(fillLight);
++
++            if (!lowPerf) {
++                const rimLight = new THREE.PointLight(0xffe8b0, 0.5, 6);
++                rimLight.position.set(0, 2.0, -2.5);
++                rimLight.name = 'RIM_LIGHT';
++                model.add(rimLight);
++            }
++
++            model.scale.setScalar(config.scale);
++            model.rotation.set(0, 0, 0);
++
++            const box = new THREE.Box3().setFromObject(model);
++            const center = box.getCenter(new THREE.Vector3());
++            model.position.x = -center.x + config.positionOffset.x;
++            model.position.y = -box.min.y + config.positionOffset.y;
++            model.position.z = -center.z + config.positionOffset.z;
++
++            // Invalidate head cache so sceneLogic re-queries this avatar's HEAD
++            delete scene.userData.cachedHeadGroup;
++        },
++        undefined,
++        (err) => console.warn(`[Player] Failed to load GLB "${config.path}":`, err)
++    );
++
++    // Group-level transform matching dealer positions
++    avatarGroup.scale.set(0.9, 0.9, 0.9);
++
++    // Chat bubble group (preserved for compatibility)
+     const chatGroup = new THREE.Group();
+     chatGroup.position.set(0, 13, 0);
+     avatarGroup.add(chatGroup);
+@@ -89,15 +146,9 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3,
+     return avatarGroup;
+ };
+ 
+-// Helper to update player health bar
+-export const updatePlayerHealth = (avatarGroup: THREE.Group, hp: number) => {
+-    const hpFill = avatarGroup.userData.hpFill as THREE.Mesh;
+-    const maxHp = avatarGroup.userData.maxHp || 4;
+-    if (hpFill) {
+-        const hpWidth = Math.max(0.1, (hp / maxHp) * 3.8);
+-        hpFill.scale.x = hp / maxHp;
+-        hpFill.position.x = (hpWidth - 3.8) / 2;
+-    }
++// Helper to update player health bar (kept for API compatibility)
++export const updatePlayerHealth = (_avatarGroup: THREE.Group, _hp: number) => {
++    // No-op: health bar was removed at user request
+ };
+ 
+ // Helper to show chat bubble
+@@ -105,10 +156,8 @@ export const showChatBubble = (avatarGroup: THREE.Group, message: string) => {
+     const chatGroup = avatarGroup.userData.chatGroup as THREE.Group;
+     if (!chatGroup) return;
+ 
+-    // Clear existing
+     while (chatGroup.children.length) chatGroup.remove(chatGroup.children[0]);
+ 
+-    // Create bubble
+     const canvas = document.createElement('canvas');
+     canvas.width = 512; canvas.height = 128;
+     const ctx = canvas.getContext('2d');
+@@ -130,7 +179,6 @@ export const showChatBubble = (avatarGroup: THREE.Group, message: string) => {
+     bubbleSprite.scale.set(6, 1.5, 1);
+     chatGroup.add(bubbleSprite);
+ 
+-    // Auto-remove after delay
+     setTimeout(() => {
+         if (chatGroup.children.length) chatGroup.remove(bubbleSprite);
+     }, 4000);
+

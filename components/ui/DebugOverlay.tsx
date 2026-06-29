@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameState, PlayerState, ItemType, ShellType, TurnOwner } from '../../types';
+import { GameSettings, GameState, PlayerState, ItemType, ShellType, TurnOwner, PlayerModelKey } from '../../types';
 import { ITEMS } from '../../constants';
 import { Bug, X, Plus, Trash2, Heart, Shield, Award, RefreshCw, Zap } from 'lucide-react';
 
@@ -9,6 +9,8 @@ interface DebugOverlayProps {
     dealer: PlayerState;
     player3?: PlayerState;
     player4?: PlayerState;
+    settings: GameSettings;
+    setSettings: React.Dispatch<React.SetStateAction<GameSettings>>;
     setPlayer: React.Dispatch<React.SetStateAction<PlayerState>>;
     setDealer: React.Dispatch<React.SetStateAction<PlayerState>>;
     setPlayer3?: React.Dispatch<React.SetStateAction<PlayerState>>;
@@ -18,7 +20,7 @@ interface DebugOverlayProps {
     setCameraView?: (view: any) => void;
     onClose?: () => void;
     processItemEffect?: (user: TurnOwner, item: ItemType) => Promise<boolean>;
-    onSyncDebugState?: (type: 'PLAYER' | 'DEALER' | 'PLAYER3' | 'PLAYER4' | 'GAMESTATE', state: any) => void;
+    onSyncDebugState?: (type: 'PLAYER' | 'DEALER' | 'PLAYER3' | 'PLAYER4' | 'GAMESTATE' | 'MULTIPLAYER_MODEL', state: any) => void;
 }
 
 export const DebugOverlay: React.FC<DebugOverlayProps> = ({
@@ -31,6 +33,8 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
     setDealer,
     setPlayer3,
     setPlayer4,
+    settings,
+    setSettings,
     setGameState,
     selectTarotCard,
     setCameraView,
@@ -82,7 +86,35 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
         });
     }, [setGameState]);
 
+    // --- Avatar Model Options ---
+    const modelOptions: { value: PlayerModelKey; label: string }[] = [
+        { value: 'DEFAULT', label: 'Default' },
+        { value: 'AADISH',  label: 'Aadish'  },
+        { value: 'ASP',     label: 'Asp'     },
+        { value: 'YASH',    label: 'Yash'    },
+        { value: 'YUVRAJ',  label: 'Yuvraj'  },
+    ];
+
+    const handleMultiplayerModelChange = (playerId: string, modelKey: PlayerModelKey) => {
+        // Optimistically update local gameState so the select reflects the change instantly
+        setGameState(prev => ({
+            ...prev,
+            multiplayerState: prev.multiplayerState
+                ? {
+                    ...prev.multiplayerState,
+                    debugPlayerModels: {
+                        ...(prev.multiplayerState.debugPlayerModels || {}),
+                        [playerId]: modelKey,
+                    },
+                }
+                : prev.multiplayerState,
+        }));
+        // Broadcast to all room nodes via server → roomUpdated
+        if (onSyncDebugState) onSyncDebugState('MULTIPLAYER_MODEL', { playerId, modelKey });
+    };
+
     // --- Chamber Cheats ---
+
     const toggleShell = (index: number) => {
         setGameState(prev => {
             const newChamber = [...prev.chamber];
@@ -251,6 +283,9 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
             }
         }, 400);
     };
+
+
+
 
     if (isCollapsed) {
         return (
@@ -441,6 +476,75 @@ export const DebugOverlay: React.FC<DebugOverlayProps> = ({
                 {/* TAB 3: STATUS / FLOW */}
                 {activeTab === 'status' && (
                     <div className="space-y-3 md:space-y-4">
+                        {/* Players in session */}
+                        <div className="space-y-2 md:space-y-3">
+                            <span className="font-extrabold tracking-widest text-stone-500 uppercase text-[7.5px] md:text-[9px] block">Players</span>
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-center bg-stone-900/50 px-2 py-1 rounded border border-stone-800">
+                                    <span className="text-[6.5px] md:text-[8px] text-stone-500 uppercase tracking-widest">You</span>
+                                    <span className="font-black text-white text-[8px] md:text-[10px] uppercase tracking-wide">{playerDisplayName}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-stone-900/50 px-2 py-1 rounded border border-stone-800">
+                                    <span className="text-[6.5px] md:text-[8px] text-stone-500 uppercase tracking-widest">Front</span>
+                                    <span className="font-black text-white text-[8px] md:text-[10px] uppercase tracking-wide">{dealerDisplayName}</span>
+                                </div>
+                                {(gameState.isThreePlayer || gameState.isFourPlayer) && (
+                                    <div className="flex justify-between items-center bg-stone-900/50 px-2 py-1 rounded border border-stone-800">
+                                        <span className="text-[6.5px] md:text-[8px] text-stone-500 uppercase tracking-widest">Left</span>
+                                        <span className="font-black text-white text-[8px] md:text-[10px] uppercase tracking-wide">{player3DisplayName}</span>
+                                    </div>
+                                )}
+                                {gameState.isFourPlayer && (
+                                    <div className="flex justify-between items-center bg-stone-900/50 px-2 py-1 rounded border border-stone-800">
+                                        <span className="text-[6.5px] md:text-[8px] text-stone-500 uppercase tracking-widest">Right</span>
+                                        <span className="font-black text-white text-[8px] md:text-[10px] uppercase tracking-wide">{player4DisplayName}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {gameState.isMultiplayer && (
+                            <div className="space-y-2 md:space-y-3 pt-1.5 md:pt-2 border-t border-stone-900">
+                                <span className="font-extrabold tracking-widest text-stone-500 uppercase text-[7.5px] md:text-[9px] block">Multiplayer Avatar Models</span>
+                                <div className="space-y-1.5">
+                                    {(gameState.multiplayerState?.players || []).map((entry: any) => (
+                                        <div key={entry.id} className="flex items-center justify-between gap-2 bg-stone-900/50 px-2 py-1 rounded border border-stone-800">
+                                            <span className="font-bold text-[8px] md:text-[9px] uppercase text-stone-300">
+                                                {entry.id === gameState.localPlayerId ? 'YOU' : entry.name}
+                                            </span>
+                                            <select
+                                                value={gameState.multiplayerState?.debugPlayerModels?.[entry.id] || 'DEFAULT'}
+                                                onChange={(e) => handleMultiplayerModelChange(entry.id, e.target.value as PlayerModelKey)}
+                                                className="bg-stone-950 border border-stone-700 text-[7.5px] md:text-[8px] text-stone-200 rounded px-1.5 py-0.5 font-bold uppercase cursor-pointer"
+                                            >
+                                                {modelOptions.map((option) => (
+                                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <div className="space-y-2 md:space-y-3 pt-1.5 md:pt-2 border-t border-stone-900">
+                            <span className="font-extrabold tracking-widest text-stone-500 uppercase text-[7.5px] md:text-[9px] block">Local Head Model</span>
+                            <div className="flex items-center justify-between gap-2 bg-stone-900/50 px-2 py-1 rounded border border-stone-800">
+                                <span className="font-bold text-[8px] md:text-[9px] uppercase text-stone-300">Dealer Head</span>
+                                <select
+                                    value={settings.debugHeadModel || 'DEFAULT'}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        debugHeadModel: e.target.value as PlayerModelKey
+                                    })}
+                                    className="bg-stone-950 border border-stone-700 text-[7.5px] md:text-[8px] text-stone-200 rounded px-1.5 py-0.5 font-bold uppercase cursor-pointer"
+                                >
+                                    {modelOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
                         {/* Health settings */}
                         <div className="space-y-2 md:space-y-3">
                             <span className="font-extrabold tracking-widest text-stone-500 uppercase text-[7.5px] md:text-[9px] block">Health Editor</span>

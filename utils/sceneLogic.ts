@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SceneContext, SceneProps } from '../types';
 import { audioManager } from './audioManager';
 import { updateItemAnimations, updateBlood, updateSparks, updateBullet, updateShell } from './scene/animations';
+import { performanceMonitor } from './performanceMonitor';
 
 export function updateScene(context: SceneContext, props: SceneProps, time: number, delta?: number) {
     const { gunGroup, camera, dealerGroup, shellCasings, shellVelocities, scene, bulletMesh, bloodParticles, sparkParticles, dustParticles, bulbLight, mouse, renderer, muzzleFlash, baseLights, gunLight, underLight } = context;
@@ -96,7 +97,7 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
 
     // --- VARIANT GUN MODELS (SAWED-OFF / CHOKE) ---
     const isSawed = animState.isSawing || props.player.isSawedActive || props.dealer.isSawedActive;
-    const isChoke = props.player.isChokeActive || props.dealer.isChokeActive;
+    const isChoke = props.player.isChokeActive || props.dealer.isChokeActive || false;
     const flashZ = isSawed ? (isChoke ? 7.8 : 4.0) : (isChoke ? 15.5 : 10.5);
 
     // --- GUN LOGIC ---
@@ -683,12 +684,22 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
     if (!scene.userData.cachedHeadGroup) scene.userData.cachedHeadGroup = dealerGroup.getObjectByName("HEAD");
     const headGroup = scene.userData.cachedHeadGroup;
     if (headGroup) {
-        headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.2, 1 - Math.exp(-3.1 * dt));
-        headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.1, 1 - Math.exp(-3.1 * dt));
+        if (scene.userData.isMobile) {
+            // Mobile: idle sine waves layered ON TOP of touch position
+            // Taps still move the head suddenly; idle keeps it alive between touches
+            const idleY = Math.sin(time * 0.16) * 0.028 + Math.sin(time * 0.10 + 1.3) * 0.014;
+            const idleX = Math.sin(time * 0.13 + 0.7) * 0.008 + Math.sin(time * 0.07 + 2.1) * 0.004;
+            headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.08 + idleY, 1 - Math.exp(-1.8 * dt));
+            headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.01 + idleX, 1 - Math.exp(-1.8 * dt));
+        } else {
+            // Desktop: follow mouse cursor
+            headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, -mouse.x * 0.08, 1 - Math.exp(-3.1 * dt));
+            headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, mouse.y * 0.01, 1 - Math.exp(-3.1 * dt));
+        }
 
         // ENHANCED RED EYES - Skip for Player Model
         if (!gameState.isMultiplayer) {
-            headGroup.children.forEach(child => {
+            headGroup.children.forEach((child: THREE.Object3D) => {
                 if (child instanceof THREE.PointLight) {
                     const basePulse = 4.0 + Math.sin(time * 4) * 2.0;
                     const heartbeat = Math.sin(time * 8) > 0.7 ? 3.0 : 0;
@@ -830,6 +841,9 @@ export function updateScene(context: SceneContext, props: SceneProps, time: numb
             updateShell(shellCasings[i], shellVelocities[i], time, dt);
         }
     }
+
+    // Track frame performance for debug monitoring
+    performanceMonitor.updateFrame();
 
     renderer.render(scene, camera);
 }

@@ -368,92 +368,104 @@ export function updateItemAnimations(context: SceneContext, props: SceneProps, t
         }
 
         // CIGARETTE
-        if (animState.triggerHeal < scene.userData.lastHeal) scene.userData.lastHeal = animState.triggerHeal;
-        if (animState.triggerHeal > scene.userData.lastHeal) {
-            scene.userData.lastHeal = animState.triggerHeal;
-            scene.userData.healStart = time;
-            audioManager.playSound('cig');
-        }
-        const healTime = time - (scene.userData.healStart || -999);
-        if (healTime >= 0 && healTime < 4.0) {
-            items.itemCigs.visible = true;
-            if (isPlayerTurn) {
-                items.itemCigs.scale.setScalar(2.0);
-                if (healTime < 0.8) {
-                    const p = healTime / 0.8;
-                    const ease = easeOutBack(p);
-                    items.itemCigs.position.set(2.0 * (1 - ease) + 0.5, -3 + ease * 4.5, 4);
-                    items.itemCigs.rotation.set(0.2, -0.3 + (1 - ease), 0);
-                } else if (healTime < 3.0) {
-                    items.itemCigs.position.set(0.5, 1.5 + Math.sin(time) * 0.05, 4);
-                    items.itemCigs.rotation.set(0.3 + Math.sin(time * 5) * 0.05, -0.2, 0.1);
-
-                    const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
-                    if (tip) {
-                        const intensity = (Math.sin(time * 20) + 1) * 0.5;
-                        (tip.material as THREE.MeshBasicMaterial).color.setHSL(0.04, 1.0, 0.3 + intensity * 0.7);
-                    }
-                    const smokePool = items.itemCigs.getObjectByName("SMOKE_POOL");
-                    if (smokePool) {
-                        smokePool.children.forEach((p, i) => {
-                            const mesh = p as THREE.Mesh;
-                            const offset = (time * 2 + i) % 5;
-                            if (offset < 2.0) {
-                                mesh.visible = true;
-                                (mesh.material as THREE.Material).opacity = 1.0 - (offset / 2.0);
-                                mesh.position.set(0, offset * 0.5, offset * 0.2);
-                                mesh.scale.setScalar(1 + offset);
-                            } else {
-                                mesh.visible = false;
-                            }
-                        });
-                    }
-                    camera.rotation.z = Math.sin(time) * 0.005;
-                } else {
-                    items.itemCigs.visible = false;
-                }
-            } else {
-                items.itemCigs.scale.setScalar(2.0);
-                if (healTime < 0.6) {
-                    const p = healTime / 0.6;
-                    const ease = easeOutBack(p); // Smooth raise
-                    // Start right, move center
-                    items.itemCigs.position.set(2.0 * (1 - ease), -2 + ease * 4.6, -4.0); // Target Y ~2.6
-                    items.itemCigs.rotation.set(0, 0.2, 0.3 * (1 - ease));
-                } else if (healTime < 3.0) {
-                    items.itemCigs.position.set(0, 2.6 + Math.sin(healTime * 2) * 0.1, -4.0);
-                    items.itemCigs.rotation.set(0, 0.2 + Math.sin(time * 2) * 0.1, 0.3);
-
-                    const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
-                    if (tip) {
-                        const intensity = (Math.sin(time * 15) + 1) * 0.5;
-                        (tip.material as THREE.MeshBasicMaterial).color.setHSL(0.05, 1.0, 0.3 + intensity * 0.7);
-                    }
-
-                    const smokePool = items.itemCigs.getObjectByName("SMOKE_POOL");
-                    if (smokePool) {
-                        smokePool.children.forEach((p, i) => {
-                            const mesh = p as THREE.Mesh;
-                            const offset = (time * 2 + i) % 5;
-                            if (offset < 2.0) {
-                                mesh.visible = true;
-                                (mesh.material as THREE.Material).opacity = 1.0 - (offset / 2.0);
-                                mesh.position.set(0, offset * 0.5, -offset * 0.2);
-                                mesh.scale.setScalar(1 + offset);
-                            } else {
-                                mesh.visible = false;
-                            }
-                        });
-                    }
-                } else {
-                    const p = (healTime - 3.0) / 0.5;
-                    items.itemCigs.position.y = 2.6 - p * 6;
-                    items.itemCigs.position.x = -p * 2;
-                    if (healTime > 3.3) items.itemCigs.visible = false;
-                }
+        const hasDebugHead = !!scene.userData.settings?.debugHeadModel && scene.userData.settings.debugHeadModel !== 'DEFAULT';
+        if (hasDebugHead) {
+            items.itemCigs.visible = false;
+            const smokePool = items.itemCigs.getObjectByName('SMOKE_POOL');
+            if (smokePool) {
+                smokePool.children.forEach((p) => {
+                    const mesh = p as THREE.Mesh;
+                    mesh.visible = false;
+                });
             }
         } else {
-            items.itemCigs.visible = false;
+            if (animState.triggerHeal < scene.userData.lastHeal) scene.userData.lastHeal = animState.triggerHeal;
+            if (animState.triggerHeal > scene.userData.lastHeal) {
+                scene.userData.lastHeal = animState.triggerHeal;
+                scene.userData.healStart = time;
+                audioManager.playSound('cig');
+            }
+            const healTime = time - (scene.userData.healStart || -999);
+            if (healTime >= 0 && healTime < 4.0) {
+                items.itemCigs.visible = true;
+                if (isPlayerTurn) {
+                    items.itemCigs.scale.setScalar(2.0);
+                    if (healTime < 0.8) {
+                        const p = healTime / 0.8;
+                        const ease = easeOutBack(p);
+                        items.itemCigs.position.set(2.0 * (1 - ease) + 0.5, -3 + ease * 4.5, 4);
+                        items.itemCigs.rotation.set(0.2, -0.3 + (1 - ease), 0);
+                    } else if (healTime < 3.0) {
+                        items.itemCigs.position.set(0.5, 1.5 + Math.sin(time) * 0.05, 4);
+                        items.itemCigs.rotation.set(0.3 + Math.sin(time * 5) * 0.05, -0.2, 0.1);
+
+                        const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
+                        if (tip) {
+                            const intensity = (Math.sin(time * 20) + 1) * 0.5;
+                            (tip.material as THREE.MeshBasicMaterial).color.setHSL(0.04, 1.0, 0.3 + intensity * 0.7);
+                        }
+                        const smokePool = items.itemCigs.getObjectByName("SMOKE_POOL");
+                        if (smokePool) {
+                            smokePool.children.forEach((p, i) => {
+                                const mesh = p as THREE.Mesh;
+                                const offset = (time * 2 + i) % 5;
+                                if (offset < 2.0) {
+                                    mesh.visible = true;
+                                    (mesh.material as THREE.Material).opacity = 1.0 - (offset / 2.0);
+                                    mesh.position.set(0, offset * 0.5, offset * 0.2);
+                                    mesh.scale.setScalar(1 + offset);
+                                } else {
+                                    mesh.visible = false;
+                                }
+                            });
+                        }
+                        camera.rotation.z = Math.sin(time) * 0.005;
+                    } else {
+                        items.itemCigs.visible = false;
+                    }
+                } else {
+                    items.itemCigs.scale.setScalar(2.0);
+                    if (healTime < 0.6) {
+                        const p = healTime / 0.6;
+                        const ease = easeOutBack(p); // Smooth raise
+                        // Start right, move center
+                        items.itemCigs.position.set(2.0 * (1 - ease), -2 + ease * 4.6, -4.0); // Target Y ~2.6
+                        items.itemCigs.rotation.set(0, 0.2, 0.3 * (1 - ease));
+                    } else if (healTime < 3.0) {
+                        items.itemCigs.position.set(0, 2.6 + Math.sin(healTime * 2) * 0.1, -4.0);
+                        items.itemCigs.rotation.set(0, 0.2 + Math.sin(time * 2) * 0.1, 0.3);
+
+                        const tip = items.itemCigs.getObjectByName("CIG_TIP") as THREE.Mesh;
+                        if (tip) {
+                            const intensity = (Math.sin(time * 15) + 1) * 0.5;
+                            (tip.material as THREE.MeshBasicMaterial).color.setHSL(0.05, 1.0, 0.3 + intensity * 0.7);
+                        }
+
+                        const smokePool = items.itemCigs.getObjectByName("SMOKE_POOL");
+                        if (smokePool) {
+                            smokePool.children.forEach((p, i) => {
+                                const mesh = p as THREE.Mesh;
+                                const offset = (time * 2 + i) % 5;
+                                if (offset < 2.0) {
+                                    mesh.visible = true;
+                                    (mesh.material as THREE.Material).opacity = 1.0 - (offset / 2.0);
+                                    mesh.position.set(0, offset * 0.5, -offset * 0.2);
+                                    mesh.scale.setScalar(1 + offset);
+                                } else {
+                                    mesh.visible = false;
+                                }
+                            });
+                        }
+                    } else {
+                        const p = (healTime - 3.0) / 0.5;
+                        items.itemCigs.position.y = 2.6 - p * 6;
+                        items.itemCigs.position.x = -p * 2;
+                        if (healTime > 3.3) items.itemCigs.visible = false;
+                    }
+                }
+            } else {
+                items.itemCigs.visible = false;
+            }
         }
 
         // SAW ANIMATION

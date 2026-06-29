@@ -1,57 +1,194 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string, hp: number = 4, maxHp: number = 4) => {
+type PlayerModelKey = 'DEFAULT' | 'AADISH' | 'ASP' | 'YASH' | 'YUVRAJ';
+
+interface PlayerModelConfig {
+    path: string;
+    scale: number;
+    positionOffset: THREE.Vector3;
+}
+
+const resolveAssetPath = (assetPath: string) => {
+    const normalized = assetPath.replace(/^\/+/, '');
+    return `${import.meta.env.BASE_URL}${normalized}`;
+};
+
+const PLAYER_MODEL_CONFIGS: Record<PlayerModelKey, PlayerModelConfig> = {
+    DEFAULT: {
+        path: 'head/dealer.glb',
+        scale: 2.2,
+        positionOffset: new THREE.Vector3(0, 0.5, -7.03),
+    },
+    ASP: {
+        path: 'head/aspdealer.glb',
+        scale: 2.25,
+        positionOffset: new THREE.Vector3(0, 3.5, 0.03),  // dealer: -7.4 + 4.5 offset
+    },
+    YUVRAJ: {
+        path: 'head/yuvrajdealer.glb',
+        scale: 2,
+        positionOffset: new THREE.Vector3(0, 3.5, 0.3),  // dealer: -6.0 + 4.5 offset
+    },
+    YASH: {
+        path: 'head/yashdealer.glb',
+        scale: 2.1,
+        positionOffset: new THREE.Vector3(0, 3.5, 0.1), // dealer: -7.5 + 4.5 offset
+    },
+    AADISH: {
+        path: 'head/aadishdealer.glb',
+        scale: 2.1,
+        positionOffset: new THREE.Vector3(0, 3.8, 0.019), // dealer: -5.65 + 4.5 offset
+    },
+};
+
+
+const HIDDEN_NAME_FRAGMENTS = new Set([
+    'smoke','bg','background','wall','floor','room',
+    'collider','bbox','helper','camera','light','lamp',
+    'stage','backdrop','env','environment','grid','ground','ceil','ceiling',
+    // NOTE: 'plane' intentionally excluded — body mesh nodes are often named Plane001/Plane002
+]);
+
+const shouldHideByName = (name: string): boolean => {
+    const lower = name.toLowerCase();
+    for (const frag of HIDDEN_NAME_FRAGMENTS) {
+        if (lower.includes(frag)) return true;
+    }
+    return false;
+};
+
+const _sharedPlayerLoader = new GLTFLoader();
+
+export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, rotationY: number, name: string, hp: number = 4, maxHp: number = 4, modelKey: PlayerModelKey = 'DEFAULT') => {
     const avatarGroup = new THREE.Group();
     avatarGroup.name = 'PLAYER_' + name;
     avatarGroup.position.copy(position);
-    avatarGroup.rotation.y = rotationY;
+
+    // Match the dealer-facing orientation used by the singleplayer model.
+    // The multiplayer seats pass in a world-space rotation, but the GLB itself
+    // needs an extra 180° correction so it faces the table correctly.
+    avatarGroup.rotation.y = rotationY + Math.PI;
 
     const settings = scene.userData.settings || {};
     const ultraPerformance = !!settings.ultraPerformance;
     const balancedPerformance = !!settings.balancedPerformance;
+    const lowPerf = ultraPerformance || balancedPerformance;
+    const config = PLAYER_MODEL_CONFIGS[modelKey] ?? PLAYER_MODEL_CONFIGS.DEFAULT;
 
-    const skinMat = ultraPerformance 
-        ? new THREE.MeshBasicMaterial({ color: 0xffccaa }) 
-        : (balancedPerformance 
-            ? new THREE.MeshLambertMaterial({ color: 0xffccaa }) 
-            : new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.5 }));
-            
-    const suitMat = ultraPerformance 
-        ? new THREE.MeshBasicMaterial({ color: 0x222222 }) 
-        : (balancedPerformance 
-            ? new THREE.MeshLambertMaterial({ color: 0x222222 }) 
-            : new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }));
+    const placeholderGroup = new THREE.Group();
+    placeholderGroup.name = 'BODY_PLACEHOLDER';
+    avatarGroup.add(placeholderGroup);
 
-    // Body
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 2.5), suitMat);
-    torso.position.set(0, 3, 0);
-    torso.castShadow = true;
-    torso.name = "TORSO";
-    avatarGroup.add(torso);
+    _sharedPlayerLoader.load(
+        resolveAssetPath(config.path),
+        (gltf) => {
+            const model = gltf.scene as THREE.Group;
+            model.traverse((obj: THREE.Object3D) => {
+                if (obj instanceof THREE.Light || obj instanceof THREE.Camera || (obj as any).isHelper) {
+                    obj.visible = false;
+                    if ('intensity' in obj) (obj as any).intensity = 0;
+                    return;
+                }
 
-    // Head (Normal Sphere)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), skinMat);
-    head.position.set(0, 7.5, 0);
-    head.castShadow = true;
-    head.name = "HEAD";
-    avatarGroup.add(head);
+                if (shouldHideByName(obj.name)) {
+                    obj.visible = false;
+                    return;
+                }
 
-    // Sunglasses
-    const glasses = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-    glasses.position.set(0, 7.6, 1.3);
-    avatarGroup.add(glasses);
+                // Only hide obviously background-like meshes. The default dealer model
+                // can have a large body mesh, so keep the threshold high enough to avoid
+                // hiding the main head geometry.
+                if (obj instanceof THREE.Mesh && obj.geometry) {
+                    try {
+                        const bbox = new THREE.Box3().setFromObject(obj);
+                        const size = new THREE.Vector3();
+                        bbox.getSize(size);
+                        const isVeryLarge = size.x > 16 || size.y > 16 || size.z > 16;
+                        const isFlatPlane = (size.x > 12 && size.y < 1.5) || (size.z > 12 && size.y < 1.5);
+                        if ((isVeryLarge || isFlatPlane) && /bg|background|wall|floor|room|stage|backdrop|env|environment|plane/i.test(obj.name)) {
+                            console.warn(`[GLB-HIDE] Player GLB "${config.path}" hiding mesh`, obj.name || '(unnamed)', `size=${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}`);
+                            obj.visible = false;
+                            return;
+                        }
+                    } catch (e) {
+                        // ignore errors computing bounds
+                    }
+                }
 
-    // Arms
-    const lArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
-    lArm.position.set(-3, 3, 0); lArm.rotation.z = 0.2;
-    lArm.castShadow = true;
-    lArm.name = "LEFT_ARM";
-    avatarGroup.add(lArm);
-    const rArm = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 7), suitMat);
-    rArm.position.set(3, 3, 0); rArm.rotation.z = -0.2;
-    rArm.castShadow = true;
-    rArm.name = "RIGHT_ARM";
-    avatarGroup.add(rArm);
+                if (obj instanceof THREE.Mesh) {
+                    obj.castShadow = !lowPerf;
+                    obj.receiveShadow = false;
+
+                    if (obj.material) {
+                        const mats: THREE.Material[] = Array.isArray(obj.material)
+                            ? obj.material
+                            : [obj.material];
+
+                        for (const mat of mats) {
+                            const m = mat as THREE.MeshStandardMaterial;
+
+                            if ((m as any).map) {
+                                (m as any).map.colorSpace = THREE.SRGBColorSpace;
+                                (m as any).map.needsUpdate = true;
+                            }
+                            if ((m as any).normalMap) {
+                                (m as any).normalMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                (m as any).normalMap.needsUpdate = true;
+                            }
+                            if ((m as any).roughnessMap) {
+                                (m as any).roughnessMap.colorSpace = THREE.LinearSRGBColorSpace;
+                                (m as any).roughnessMap.needsUpdate = true;
+                            }
+
+                            if (m.transparent || m.opacity < 0.9) {
+                                m.depthWrite = false;
+                            }
+
+                            if (m instanceof THREE.MeshStandardMaterial) {
+                                if (modelKey !== 'DEFAULT') {
+                                    m.roughness = m.roughnessMap ? m.roughness : 0.72;
+                                    m.metalness = 0.0;
+                                    m.envMapIntensity = lowPerf ? 0.4 : 1.2;
+                                    m.fog = false;
+                                    m.needsUpdate = true;
+                                } else {
+                                    m.roughness = Math.max(0.75, m.roughness);
+                                    m.metalness = Math.min(0.08, m.metalness);
+                                    m.envMapIntensity = lowPerf ? 0.15 : 0.35;
+                                    m.fog = true;
+                                    if (m.color) {
+                                        m.color.setHex(0x050505);
+                                    }
+                                    m.needsUpdate = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Name the loaded player model 'HEAD' so the shared name-tag
+            // projection logic can find it (ThreeScene expects a 'HEAD' node).
+            model.name = 'HEAD';
+            model.scale.setScalar(config.scale);
+
+            // Match the dealer path: position the model from its bounding box and
+            // leave its authored orientation intact. The parent avatar group handles
+            // the seat-facing rotation.
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.set(-center.x + config.positionOffset.x, -box.min.y + config.positionOffset.y, -center.z + config.positionOffset.z);
+            model.updateMatrixWorld(true);
+
+            avatarGroup.remove(placeholderGroup);
+            avatarGroup.add(model);
+        },
+        undefined,
+        (error) => {
+            console.warn(`[PlayerAvatar] Failed to load GLB "${config.path}":`, error);
+        }
+    );
 
     // === HEALTH BAR REMOVED AT USER REQUEST ===
     /*

@@ -6,25 +6,39 @@ interface StatusDisplayProps {
     player: PlayerState;
     dealer: PlayerState;
     player3?: PlayerState;
+    player4?: PlayerState;
     playerName: string;
     gameState: GameState;
     settings?: GameSettings;
 }
 
-const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, player3, playerName, gameState, settings }) => {
+const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, player3, player4, playerName, gameState, settings }) => {
     const isBalanced = !!settings?.balancedPerformance || !!settings?.ultraPerformance;
     const isPotato = !!settings?.ultraPerformance;
 
     const getPlayer3Name = () => {
-        if (!gameState.isThreePlayer || !gameState.multiplayerState?.players) return 'OPPONENT 2';
+        if (!gameState.multiplayerState?.players) return 'OPPONENT 2';
         const players = gameState.multiplayerState.players;
+        const size = players.length >= 4 ? 4 : 3;
         const myId = gameState.localPlayerId || '';
         const myIndex = players.findIndex((p: any) => p.id === myId);
         if (myIndex !== -1) {
-            const sideOpponent = players[(myIndex + 1) % 3];
+            const sideOpponent = players[(myIndex + 1) % size];
             return sideOpponent ? sideOpponent.name : 'OPPONENT 2';
         }
         return 'OPPONENT 2';
+    };
+
+    const getPlayer4Name = () => {
+        if (!gameState.isFourPlayer || !gameState.multiplayerState?.players) return 'OPPONENT 3';
+        const players = gameState.multiplayerState.players;
+        const myId = gameState.localPlayerId || '';
+        const myIndex = players.findIndex((p: any) => p.id === myId);
+        if (myIndex !== -1 && players.length >= 4) {
+            const rightOpponent = players[(myIndex + 3) % 4];
+            return rightOpponent ? rightOpponent.name : 'OPPONENT 3';
+        }
+        return 'OPPONENT 3';
     };
 
     const renderItems = (items: import('../../types').ItemType[]) => {
@@ -142,7 +156,7 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                         ? `text-green-500 ${isBalanced ? '' : 'drop-shadow-[0_0_15px_rgba(34,197,94,0.5)]'}`
                         : `text-red-600 ${isBalanced ? '' : 'drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]'}`
                         } ${gameState.isHardMode && gameState.turnOwner === 'DEALER' && !isPotato ? 'animate-[chromatic_0.2s_infinite]' : ''}`}>
-                        {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : (gameState.turnOwner === 'PLAYER3' ? getPlayer3Name().toUpperCase() + "'S TURN" : (gameState.opponentName?.toUpperCase() || "DEALER") + "'S TURN")}
+                        {gameState.turnOwner === 'PLAYER' ? 'YOUR TURN' : (gameState.turnOwner === 'PLAYER3' ? getPlayer3Name().toUpperCase() + "'S TURN" : (gameState.turnOwner === 'PLAYER4' ? getPlayer4Name().toUpperCase() + "'S TURN" : (gameState.opponentName?.toUpperCase() || "DEALER") + "'S TURN"))}
                     </div>
                 </div>
 
@@ -200,8 +214,8 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                     {renderItems(dealer.items)}
                 </div>
 
-                {/* Opponent 2 (Player 3 / Side) */}
-                {gameState.isThreePlayer && player3 && (
+                {/* Opponent 2 (Player 3 / Left Side) */}
+                {(gameState.isThreePlayer || gameState.isFourPlayer) && player3 && (
                     <div className="flex flex-col items-end border-t border-stone-800/40 pt-3 md:pt-4 w-full">
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase flex items-center gap-1">
@@ -238,6 +252,47 @@ const StatusDisplayComponent: React.FC<StatusDisplayProps> = ({ player, dealer, 
                             </div>
                         </div>
                         {renderItems(player3.items)}
+                    </div>
+                )}
+
+                {/* Opponent 3 (Player 4 / Right Side) */}
+                {gameState.isFourPlayer && player4 && (
+                    <div className="flex flex-col items-end border-t border-stone-800/40 pt-3 md:pt-4 w-full">
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] md:text-sm font-black tracking-[0.2em] md:tracking-[0.4em] text-stone-500 mb-1 uppercase flex items-center gap-1">
+                                {getPlayer4Name()}
+                                {player4.isFlashbanged && <span className="text-red-500 animate-pulse text-[8px] md:text-xs font-black">⚡ BLINDED</span>}
+                            </span>
+                            <div className="flex gap-1 md:gap-2">
+                                {[...Array(player4.maxHp)].map((_, i) => {
+                                    const isActive = i < player4.hp;
+                                    
+                                    let hpClass = '';
+                                    if (isActive) {
+                                        if (isPotato) {
+                                            hpClass = 'bg-red-650 border-red-750';
+                                        } else {
+                                            hpClass = `bg-gradient-to-t from-red-950/80 via-red-600/60 to-red-500/40 border-red-500/50 ${isBalanced ? '' : 'shadow-[0_0_25px_rgba(239,68,68,0.3)]'}`;
+                                        }
+                                    } else {
+                                        if (isPotato) {
+                                            hpClass = 'bg-neutral-900 border-neutral-850 opacity-20';
+                                        } else {
+                                            hpClass = 'bg-stone-950 border-stone-800/40 opacity-10';
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={i} className={`relative group w-1.5 h-4 md:w-5 md:h-12 border rounded-sm transition-all duration-1000 ${hpClass}`}>
+                                            {isActive && !isPotato && (
+                                                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.1)_50%,transparent_100%)] animate-[scanline_3s_linear_infinite]" />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        {renderItems(player4.items)}
                     </div>
                 )}
             </div>

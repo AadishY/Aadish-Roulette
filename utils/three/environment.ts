@@ -1221,7 +1221,7 @@ export const createEnvironment = (scene: THREE.Scene, isMobile: boolean = false,
     }
 };
 
-export const createDust = (scene: THREE.Scene, isMobile: boolean = false, ultraPerformance: boolean = false) => {
+export const createDust = (scene: THREE.Scene, isMobile: boolean = false, ultraPerformance: boolean = false): THREE.Points | null => {
     const settings = scene.userData.settings || {};
     const ultraPerformanceMode = ultraPerformance || !!settings.ultraPerformance;
     // ═══════════════════════════════════════════════════════════════

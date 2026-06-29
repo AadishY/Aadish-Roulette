@@ -279,7 +279,18 @@ export const GameUI: React.FC<GameUIProps> = ({
 
             {showFlash && <div className="absolute inset-0 z-50 flash-screen" />}
             {showFlashbang && <div className="absolute inset-0 z-50 flashbang-screen" />}
-            {smokeActive && <div className="absolute inset-0 z-30 pointer-events-none bg-stone-500/30 animate-[pulse_2s_ease-out] mix-blend-hard-light backdrop-blur-[2px]" />}
+            {smokeActive && (
+                <div
+                    className="absolute inset-x-0 bottom-0 z-30 pointer-events-none animate-[pulse_2s_ease-out]"
+                    style={{
+                        height: '72%',
+                        clipPath: 'polygon(0 18%, 100% 18%, 100% 100%, 0 100%)',
+                        background: 'linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(148,163,184,0.14) 40%, rgba(30,30,30,0.42) 70%, rgba(15,23,42,0.62) 100%)',
+                        mixBlendMode: 'hard-light',
+                        backdropFilter: 'blur(2px)'
+                    }}
+                />
+            )}
             {drinkActive && <div className="absolute inset-0 z-30 pointer-events-none bg-yellow-600/10 backdrop-blur-[3px]" />}
             {showBlood && (
                 <div className="absolute inset-0 pointer-events-none z-40 blood-overlay blood-active">
@@ -625,7 +636,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 
                         {/* Top Bar */}
                         <div className="flex justify-between items-start gap-2">
-                            <StatusDisplay player={player} dealer={dealer} player3={player3} playerName={playerName} gameState={gameState} settings={settings} />
+                            <StatusDisplay player={player} dealer={dealer} player3={player3} player4={player4} playerName={playerName} gameState={gameState} settings={settings} />
                             <button onClick={() => {
                                 audioManager.playSound('click');
                                 onOpenSettings();
@@ -649,6 +660,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                                         currentAimTarget={aimTarget}
                                         isMultiplayer={isMultiplayer}
                                         isThreePlayer={gameState.isThreePlayer}
+                                        isFourPlayer={gameState.isFourPlayer}
                                         mpGameState={mpGameState}
                                         mpMyPlayerId={mpMyPlayerId}
                                         settings={settings}
