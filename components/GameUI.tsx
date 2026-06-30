@@ -244,8 +244,13 @@ export const GameUI: React.FC<GameUIProps> = ({
     // Auto-adjust scale for small screens if needed, otherwise use user setting
     const baseScale = isMobileViewport ? Math.min(settings.uiScale, 0.75) : settings.uiScale;
     const finalScale = isVeryNarrow ? baseScale * 0.85 : baseScale;
+    const showExternalSettingsButton = finalScale < 0.45;
+    const isHudHidden = finalScale <= 0;
 
-    const uiStyle = {
+    const uiStyle = isHudHidden ? {
+        opacity: 0,
+        pointerEvents: 'none' as const,
+    } : {
         transform: `scale(${finalScale})`,
         transformOrigin: 'center center',
         width: `${100 / finalScale}%`,
@@ -637,12 +642,14 @@ export const GameUI: React.FC<GameUIProps> = ({
                         {/* Top Bar */}
                         <div className="flex justify-between items-start gap-2">
                             <StatusDisplay player={player} dealer={dealer} player3={player3} player4={player4} playerName={playerName} gameState={gameState} settings={settings} />
-                            <button onClick={() => {
-                                audioManager.playSound('click');
-                                onOpenSettings();
-                            }} className="pointer-events-auto p-1 md:p-2 text-stone-600 hover:text-white transition-colors shrink-0">
-                                <SettingsIcon size={18} className="md:w-5 md:h-5" />
-                            </button>
+                            {!showExternalSettingsButton && (
+                                <button onClick={() => {
+                                    audioManager.playSound('click');
+                                    onOpenSettings();
+                                }} className="pointer-events-auto p-1 md:p-2 text-stone-600 hover:text-white transition-colors shrink-0">
+                                    <SettingsIcon size={18} className="md:w-5 md:h-5" />
+                                </button>
+                            )}
                         </div>
 
                         {/* Bottom UI Area - Vertically stacked Controls & Inventory */}
@@ -711,6 +718,19 @@ export const GameUI: React.FC<GameUIProps> = ({
                     </div>
                 )}
             </div>
+
+            {showExternalSettingsButton && gameState.phase !== 'INTRO' && gameState.phase !== 'BOOT' && gameState.phase !== 'GAME_OVER' && (
+                <button
+                    onClick={() => {
+                        audioManager.playSound('click');
+                        onOpenSettings();
+                    }}
+                    className="fixed top-4 right-4 z-[220] pointer-events-auto p-2 md:p-3 text-stone-600 hover:text-white bg-black/60 hover:bg-black/80 rounded-full transition-colors shadow-xl"
+                    aria-label="Open settings"
+                >
+                    <SettingsIcon size={18} className="md:w-5 md:h-5" />
+                </button>
+            )}
 
             {/* Global Loot Overlay - Priority Layer Outside UI Scale */}
             {showLootOverlay && (

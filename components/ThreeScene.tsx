@@ -53,8 +53,13 @@ const calculatePixelScale = (settings: GameSettings, width: number) => {
     } else if (isTab) {
         mobilePixelScale = settings.ultraPerformance ? 4.0 : (settings.balancedPerformance ? 3.0 : 2.2);
     }
+    mobilePixelScale = Math.max(mobilePixelScale, settings.pixelScale || 0);
 
-    const baseScale = (isMob || isTab) ? mobilePixelScale : (settings.ultraPerformance ? 5.0 : (settings.balancedPerformance ? 4.0 : (settings.pixelScale || 3)));
+    const desktopProfileMin = settings.ultraPerformance ? 5.0 : (settings.balancedPerformance ? 4.0 : 0);
+    const desktopPixelScale = settings.pixelScale || 3;
+    const desktopBaseScale = desktopProfileMin > 0 ? Math.max(desktopProfileMin, desktopPixelScale) : desktopPixelScale;
+
+    const baseScale = (isMob || isTab) ? mobilePixelScale : desktopBaseScale;
     if (settings.debugHeadModel && settings.debugHeadModel !== 'DEFAULT') {
         return Math.max(1.0, baseScale * 0.45);
     }
@@ -368,7 +373,7 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
                     worldPos.project(camera);
 
                     const x = (worldPos.x * 0.5 + 0.5) * 100;
-                    const y = (worldPos.y * -0.5 + 0.5) * 100;
+                    const y = Math.min(100, (worldPos.y * -0.5 + 0.5) * 100 + 7);
                     const visible = worldPos.z <= 1.0;
 
                     tagsList.push({ name: label, x, y, visible });

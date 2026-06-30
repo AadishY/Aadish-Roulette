@@ -34,22 +34,23 @@ const CustomSlider: React.FC<{
         onChange(clampedValue);
     };
 
-    const handlePointerDown = (e: React.PointerEvent) => {
-        // Only allow dragging if clicking the thumb area
-        e.preventDefault(); // Prevent scrolling while dragging
+    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        e.preventDefault();
         setIsDragging(true);
-        const target = e.target as HTMLElement;
+        updateValue(e.clientX);
+        const target = e.currentTarget;
         target.setPointerCapture(e.pointerId);
     };
 
-    const handlePointerMove = (e: React.PointerEvent) => {
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
         if (!isDragging) return;
         updateValue(e.clientX);
     };
 
-    const handlePointerUp = (e: React.PointerEvent) => {
+    const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDragging) return;
         setIsDragging(false);
-        const target = e.target as HTMLElement;
+        const target = e.currentTarget;
         target.releasePointerCapture(e.pointerId);
     };
 
@@ -60,6 +61,10 @@ const CustomSlider: React.FC<{
         <div
             className="relative w-full h-6 flex items-center touch-none select-none"
             ref={trackRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            style={{ touchAction: 'none' }}
         >
             {/* Track Background */}
             <div className="absolute w-full h-1.5 bg-stone-800 rounded-full overflow-hidden">
@@ -74,10 +79,6 @@ const CustomSlider: React.FC<{
             <div
                 className="absolute w-5 h-5 bg-red-600 rounded-full border-2 border-stone-200 cursor-grab active:cursor-grabbing shadow-lg shadow-black/50 z-10 hover:scale-110 transition-transform"
                 style={{ left: `calc(${percent}% - 10px)` }}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-            // touch-action none is important for the thumb to prevent browser scrolling while dragging
             />
         </div>
     );
@@ -155,7 +156,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                                     <span className="text-white font-black text-[10px] tabular-nums bg-stone-900 px-1.5 py-0.5 rounded border border-white/5">{settings.uiScale.toFixed(2)}x</span>
                                 </div>
                                 <CustomSlider
-                                    min={0.6} max={1.4} step={0.1}
+                                    min={0.0} max={1.4} step={0.1}
                                     value={settings.uiScale}
                                     onChange={(val) => handleChange('uiScale', val)}
                                 />
