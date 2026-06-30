@@ -20,6 +20,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
     const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
     const [selectedIdx, setSelectedIdx] = React.useState<number | null>(null);
     const [isMobileView, setIsMobileView] = React.useState(false);
+    const [tooltipBottom, setTooltipBottom] = React.useState<string>('1.5rem');
 
     // Scroll indicators state & ref
     const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -58,6 +59,23 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
             window.removeEventListener('resize', handleScroll);
         };
     }, [player.items.length, handleScroll]);
+
+    React.useEffect(() => {
+        const updateBottom = () => {
+            const el = scrollRef.current;
+            if (!el) {
+                setTooltipBottom('1.5rem');
+                return;
+            }
+            const height = el.clientHeight;
+            const offset = Math.max(height + 16, 24);
+            setTooltipBottom(`${offset}px`);
+        };
+
+        updateBottom();
+        window.addEventListener('resize', updateBottom);
+        return () => window.removeEventListener('resize', updateBottom);
+    }, [player.items.length]);
 
     // Clear selection on item changes or turn changes
     React.useEffect(() => {
@@ -211,7 +229,7 @@ const InventoryComponent: React.FC<InventoryProps> = ({ player, dealer, gameStat
 
             {/* Bottom-right tooltip panel for hovered inventory items */}
             {(mobileTooltipItem || hoveredIdx !== null) && (
-                <div className="fixed bottom-6 right-6 z-[999] w-[min(22rem,92vw)] max-w-[22rem] bg-stone-950/95 border border-stone-800 rounded-3xl p-4 text-left text-stone-300 shadow-[0_25px_70px_rgba(0,0,0,0.8)] backdrop-blur-2xl pointer-events-none">
+                <div style={{ bottom: tooltipBottom }} className="fixed right-6 z-[999] w-[min(22rem,92vw)] max-w-[22rem] bg-stone-950/95 border border-stone-800 rounded-3xl p-4 text-left text-stone-300 shadow-[0_25px_70px_rgba(0,0,0,0.8)] backdrop-blur-2xl pointer-events-none">
                     <div className="flex items-center justify-between gap-3 mb-3">
                         <div className="font-black text-white text-sm uppercase tracking-[0.35em]">{ITEM_NAMES[mobileTooltipItem || hoveredItem!]}</div>
                         <span className="text-[10px] text-stone-400 uppercase tracking-[0.35em]">Description</span>
