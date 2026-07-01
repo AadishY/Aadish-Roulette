@@ -3,6 +3,7 @@ import { X, Trophy, Activity, Target, Zap, Skull, Swords } from 'lucide-react';
 import { GameStats, getStoredStats } from '../../utils/statsManager';
 import { getUserStatsFromRedis } from '../../utils/redisService';
 import { audioManager } from '../../utils/audioManager';
+import { Icons } from './Icons';
 
 // Thematic codename pools for match history display
 const NORMAL_CODENAMES = [
@@ -25,6 +26,55 @@ const getMatchCodename = (index: number, isHardMode: boolean): string => {
     return pool[index % pool.length];
 };
 
+const ITEM_ICONS: Record<string, React.ElementType> = {
+    CIGS: Icons.Cigs,
+    SAW: Icons.Saw,
+    PHONE: Icons.Phone,
+    INVERTER: Icons.Inverter,
+    BEER: Icons.Beer,
+    GLASS: Icons.Glass,
+    CUFFS: Icons.Cuffs,
+    ADRENALINE: Icons.Adrenaline,
+    CHOKE: Icons.Choke,
+    REMOTE: Icons.Remote,
+    BIG_INVERTER: Icons.BigInverter,
+    CONTRACT: Icons.Contract,
+    LUCKYCHARM: Icons.Luckycharm,
+    FLASHBANG: Icons.Flashbang,
+    CRUSHER: Icons.Crusher,
+    TOTEM: Icons.Totem,
+    MIRROR: Icons.Mirror,
+    DECK_CARD: Icons.DeckCard,
+    JACKPOT: Icons.Jackpot
+};
+
+const renderItemsUsed = (itemsUsed: Record<string, number>) => {
+    const entries = Object.entries(itemsUsed || {}).filter(([, count]) => Number(count) > 0);
+    if (entries.length === 0) return null;
+
+    return (
+        <div className="space-y-2 pt-2 border-t border-stone-900/60">
+            <span className="text-[8px] text-stone-500 uppercase tracking-widest font-black block">ITEMS DEPLOYED</span>
+            <div className="grid grid-cols-2 gap-2">
+                {entries.sort((a, b) => Number(b[1]) - Number(a[1])).map(([item, count]) => {
+                    const IconComponent = ITEM_ICONS[item] || Icons.Zap;
+                    return (
+                        <div key={item} className="flex items-center gap-2 p-2 bg-stone-950/70 border border-stone-900/60 rounded-xl">
+                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 text-stone-100">
+                                <IconComponent size={16} className="text-stone-100" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[9px] uppercase tracking-[0.25em] text-stone-500">{item}</div>
+                                <div className="text-sm font-black text-white">{count}×</div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 interface ScoreboardProps {
     onClose: () => void;
     stats?: GameStats;
@@ -40,10 +90,17 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose, stats: initialS
         const initializeStats = async () => {
             setIsLoading(true);
             setLoadError(null);
+
+            if (initialStats) {
+                setStats(initialStats);
+                setIsLoading(false);
+                return;
+            }
+
             const loggedInUser = localStorage.getItem('aadish_roulette_logged_in_user');
 
             if (!loggedInUser) {
-                setStats(initialStats || getStoredStats());
+                setStats(getStoredStats());
                 setIsLoading(false);
                 return;
             }
@@ -51,7 +108,7 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose, stats: initialS
             try {
                 const userObj = JSON.parse(loggedInUser);
                 if (!userObj?.username) {
-                    setStats(initialStats || getStoredStats());
+                    setStats(getStoredStats());
                     setIsLoading(false);
                     return;
                 }
@@ -233,6 +290,31 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose, stats: initialS
                         </div>
                     </div>
 
+                    {/* Tactical Loadout */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-[1px] flex-1 bg-stone-800/50" />
+                            <h3 className="text-stone-500 font-black tracking-[0.3em] uppercase text-[9px]">Tactical Loadout</h3>
+                            <div className="h-[1px] flex-1 bg-stone-800/50" />
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col items-center justify-center group hover:border-cyan-900/30 transition-all">
+                                <Zap className="text-cyan-400/80 mb-2 group-hover:scale-110 transition-transform" size={18} />
+                                <div className="text-2xl font-black text-white leading-none">{stats.itemsUsed}</div>
+                                <div className="text-[8px] text-stone-600 font-bold uppercase tracking-wider mt-2">Items Used</div>
+                            </div>
+                            <div className="bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col items-center justify-center group hover:border-yellow-900/30 transition-all">
+                                <div className="text-yellow-300 mb-2 font-black text-lg">★</div>
+                                <div className="text-2xl font-black text-white leading-none">{stats.itemPoints}</div>
+                                <div className="text-[8px] text-stone-600 font-bold uppercase tracking-wider mt-2">Item Score</div>
+                            </div>
+                            <div className="col-span-2 sm:col-span-2 bg-black/40 p-4 border border-white/5 rounded-xl flex flex-col justify-center gap-2">
+                                <div className="text-[8px] text-stone-500 uppercase tracking-widest font-black">Top Used Item</div>
+                                <div className="text-sm sm:text-base font-black text-white uppercase tracking-[0.2em] truncate">{stats.mostUsedItem || 'NONE'}</div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Match History */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
@@ -383,6 +465,8 @@ export const Scoreboard: React.FC<ScoreboardProps> = ({ onClose, stats: initialS
                                         </div>
                                     </div>
                                 </div>
+
+                                {selectedMPMatch.itemsUsed && Object.keys(selectedMPMatch.itemsUsed).length > 0 && renderItemsUsed(selectedMPMatch.itemsUsed)}
                             </div>
 
                             <button onClick={() => setSelectedMPMatch(null)} className="w-full mt-4 py-2 bg-cyan-950/20 border border-cyan-850 hover:bg-cyan-900/20 text-cyan-400 font-black text-[9px] tracking-wider uppercase rounded-xl transition-all cursor-pointer">

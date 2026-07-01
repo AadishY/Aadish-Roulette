@@ -72,16 +72,37 @@ const createMatchHistorySignature = (entry: any): string => {
     ].join('|');
 };
 
+const calculateMostUsedItem = (matchHistory: MatchStats[], fallback = 'NONE'): string => {
+    const usageTotals = new Map<string, number>();
+
+    matchHistory.forEach((entry) => {
+        Object.entries(entry.itemsUsed || {}).forEach(([item, count]) => {
+            const parsedCount = Number(count) || 0;
+            if (parsedCount > 0) {
+                usageTotals.set(item, (usageTotals.get(item) || 0) + parsedCount);
+            }
+        });
+    });
+
+    if (usageTotals.size === 0) {
+        return fallback || 'NONE';
+    }
+
+    return [...usageTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || fallback || 'NONE';
+};
+
 export const getStoredStats = (): GameStats => {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             const parsed = JSON.parse(saved) || {};
+            const matchHistory = Array.isArray(parsed.matchHistory) ? parsed.matchHistory : [];
             return {
                 ...emptyStats(),
                 ...parsed,
-                matchHistory: Array.isArray(parsed.matchHistory) ? parsed.matchHistory : [],
+                matchHistory,
                 shotsHit: parsed.shotsHit ?? 0,
+                mostUsedItem: parsed.mostUsedItem || calculateMostUsedItem(matchHistory, 'NONE')
             };
         }
     } catch (e) {
@@ -144,17 +165,7 @@ export const mergeGameStats = (localStats?: GameStats | null, remoteStats?: Game
         .entries.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0))
         .slice(0, 20);
 
-    const usageTotals = new Map<string, number>();
-    mergedMatchHistory.forEach((entry: any) => {
-        Object.entries(entry.itemsUsed || {}).forEach(([item, count]) => {
-            const parsedCount = Number(count) || 0;
-            if (parsedCount > 0) {
-                usageTotals.set(item, (usageTotals.get(item) || 0) + parsedCount);
-            }
-        });
-    });
-
-    const mostUsedItem = [...usageTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || base.mostUsedItem || incoming.mostUsedItem || 'NONE';
+    const mostUsedItem = calculateMostUsedItem(mergedMatchHistory, base.mostUsedItem || incoming.mostUsedItem || 'NONE');
 
     return {
         wins: (base.wins || 0) + (incoming.wins || 0),
@@ -212,6 +223,7 @@ export const saveGameStats = async (matchStats: MatchStats): Promise<GameStats> 
         mpPlayers: matchStats.mpPlayers || []
     };
     current.matchHistory = [historyEntry, ...current.matchHistory].slice(0, 20);
+    current.mostUsedItem = calculateMostUsedItem(current.matchHistory, current.mostUsedItem || 'NONE');
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
 

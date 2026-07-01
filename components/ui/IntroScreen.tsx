@@ -1108,6 +1108,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                     damageDealt: selectedCareerUser.stats?.damageDealt || 0,
                     damageTaken: selectedCareerUser.stats?.damageTaken || 0,
                     itemsUsed: typeof selectedCareerUser.stats?.itemsUsed === 'number' ? selectedCareerUser.stats.itemsUsed : 0,
+                    mostUsedItem: selectedCareerUser.stats?.mostUsedItem || 'NONE',
                     matchHistory: selectedCareerUser.stats?.matchHistory || []
                 };
                 return (
