@@ -225,8 +225,8 @@ export function useMultiplayer() {
             }
         });
 
-        newSocket.on('playerTempDisconnected', ({ playerName, graceMs }: { playerName: string, graceMs: number }) => {
-            setConnectionStatus(`WAITING: ${playerName} (${Math.round(graceMs / 1000)}s)`);
+        newSocket.on('matchAborted', () => {
+            // Match abort state is handled by App state and room updates.
         });
 
         newSocket.on('kicked', () => {
@@ -255,6 +255,7 @@ export function useMultiplayer() {
             setConnectionStatus('');
             connectionAttemptsRef.current = 0;
             setRoom(null);
+            setError(null);
             lastJoinRef.current = null;
         }
     }, [socket]);

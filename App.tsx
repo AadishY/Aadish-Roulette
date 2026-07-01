@@ -1551,9 +1551,16 @@ export default function App() {
 
   const handleBackToMenu = () => {
     mp.disconnect();
+    mp.clearError();
     setAppState('MENU');
     spGame.resetGame(true);
   };
+
+  useEffect(() => {
+    if (appState === 'MENU') {
+      mp.clearError();
+    }
+  }, [appState, mp.clearError]);
 
   // Sync multiplayerState in gameState with mp.room dynamically
   useEffect(() => {
@@ -2206,21 +2213,7 @@ export default function App() {
         </div>
       )}
 
-      {appState === 'GAME' && spGame.gameState.isMultiplayer && !mp.isConnected && (
-        <div className="fixed inset-0 z-[400] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-sm bg-stone-950 border border-stone-900 shadow-2xl rounded-2xl p-6 text-center space-y-6">
-            <div className="inline-flex items-center justify-center p-3 bg-stone-900 border border-stone-800 rounded-full text-stone-400">
-              <RotateCw className="animate-spin text-cyan-500" size={24} />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-sm font-black text-white tracking-[0.25em] uppercase">CONNECTION INTERRUPTED</h3>
-              <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                Attempting to restore tunnel connection to server...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+
       {/* Crisp HTML Player Name Tags (Multiplayer only) */}
       {appState === 'GAME' && spGame.gameState.isMultiplayer && nameTags.map((tag, i) => (
         tag.visible && (

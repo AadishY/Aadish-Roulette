@@ -157,11 +157,10 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     }
 
     // Desktop: default to 3 or user setting. Mobile: balanced between quality and performance.
-    let basePixelScale = (isMobile || isTablet) ? mobilePixelScale : (props.settings.ultraPerformance ? 5.0 : (props.settings.balancedPerformance ? 4.0 : (props.settings.pixelScale || 3)));
-    if (props.settings.debugHeadModel && props.settings.debugHeadModel !== 'DEFAULT') {
-        basePixelScale = Math.max(1.0, basePixelScale * 0.45);
-    }
-    const pixelScale = basePixelScale;
+    const basePixelScale = (isMobile || isTablet) ? mobilePixelScale : (props.settings.ultraPerformance ? 5.0 : (props.settings.balancedPerformance ? 4.0 : (props.settings.pixelScale || 3)));
+    const debugHeadModel = props.settings.debugHeadModel ?? 'DEFAULT';
+    const isCustomDebugHead = debugHeadModel !== 'DEFAULT';
+    const pixelScale = isCustomDebugHead ? Math.max(1.0, basePixelScale * 0.45) : basePixelScale;
 
     const maxPixelRatio = props.settings.ultraPerformance || props.settings.balancedPerformance
         ? 1.0
@@ -171,11 +170,22 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
 
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
-    renderer.domElement.style.imageRendering = (isMobile && !props.settings.ultraPerformance && !props.settings.balancedPerformance) ? 'auto' : 'pixelated';
+    const customHeadModels = props.gameState?.multiplayerState?.debugPlayerModels || {};
+    const hasSmoothPlayerHead = Object.values(customHeadModels).some((model: any) => ['ASP', 'YUVRAJ', 'AADISH', 'YASH'].includes(model));
+    const shouldUseAutoRendering = true;
+    renderer.domElement.style.imageRendering = 'auto';
 
-    // Disable shadows completely on ALL mobile/tablet devices or when ultraPerformance/balancedPerformance is active
-    renderer.shadowMap.enabled = (device === 'pc') && !props.settings.ultraPerformance && !props.settings.balancedPerformance;
-    renderer.shadowMap.type = (device === 'pc') ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
+    const rendererProps = renderer as any;
+    if ('outputColorSpace' in rendererProps) {
+        rendererProps.outputColorSpace = THREE.SRGBColorSpace;
+    } else if ('outputEncoding' in rendererProps) {
+        rendererProps.outputEncoding = THREE.sRGBEncoding;
+    }
+    rendererProps.physicallyCorrectLights = true;
+
+    const shadowsEnabled = !isLowEndDevice && !props.settings.ultraPerformance && !props.settings.balancedPerformance;
+    renderer.shadowMap.enabled = shadowsEnabled;
+    renderer.shadowMap.type = shadowsEnabled ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap;
 
 
 
@@ -189,6 +199,7 @@ export const initThreeScene = (container: HTMLElement, props: any): SceneContext
     scene.userData.isAndroid = isAndroid;
     scene.userData.isLowEndDevice = isLowEndDevice;
     scene.userData.settings = props.settings; // Make settings accessible to other scripts
+    scene.userData.multiplayerDebugModels = props.gameState?.multiplayerState?.debugPlayerModels || {};
 
     container.appendChild(renderer.domElement);
 

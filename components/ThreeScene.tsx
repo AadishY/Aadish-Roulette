@@ -60,10 +60,7 @@ const calculatePixelScale = (settings: GameSettings, width: number) => {
     const desktopBaseScale = desktopProfileMin > 0 ? Math.max(desktopProfileMin, desktopPixelScale) : desktopPixelScale;
 
     const baseScale = (isMob || isTab) ? mobilePixelScale : desktopBaseScale;
-    if (settings.debugHeadModel && settings.debugHeadModel !== 'DEFAULT') {
-        return Math.max(1.0, baseScale * 0.45);
-    }
-    return baseScale;
+    return Math.max(1.0, baseScale * 0.45);
 };
 
 const syncResolution = (container: HTMLDivElement, sceneContext: SceneContext, settings: GameSettings) => {
@@ -86,9 +83,13 @@ const syncResolution = (container: HTMLDivElement, sceneContext: SceneContext, s
     const maxPixelRatio = settings.ultraPerformance || settings.balancedPerformance
         ? 1.0
         : (isMobile ? Math.min(window.devicePixelRatio, 1.5) : (isTablet ? 1.2 : Math.min(window.devicePixelRatio, 2)));
+    const customHeadModels = Object.values(scene.userData.multiplayerDebugModels || {}).some((model: any) =>
+        ['ASP', 'YUVRAJ', 'AADISH', 'YASH'].includes(model)
+    );
+    const shouldUseAutoRendering = true;
     renderer.setPixelRatio(maxPixelRatio);
     renderer.setSize(width / pxScale, height / pxScale, false);
-    renderer.domElement.style.imageRendering = (isMobile && !settings.ultraPerformance && !settings.balancedPerformance) ? 'auto' : 'pixelated';
+    renderer.domElement.style.imageRendering = 'auto';
 
     const aspect = width / height;
     camera.aspect = aspect;

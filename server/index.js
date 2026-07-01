@@ -487,6 +487,39 @@ const createRoomObject = (roomId, hostId, hostName, settings) => {
     };
 };
 
+const serializeRoomForClient = (room) => {
+    const safeGameState = room.gameState && typeof room.gameState === 'object'
+        ? { ...room.gameState, multiplayerState: undefined }
+        : room.gameState;
+
+    return {
+        id: room.id,
+        name: room.name,
+        hostId: room.hostId,
+        players: Array.isArray(room.players) ? room.players.map((player) => ({
+            id: player.id,
+            name: player.name,
+            color: player.color,
+            ready: !!player.ready,
+            hp: player.hp,
+            maxHp: player.maxHp,
+            items: Array.isArray(player.items) ? player.items.slice() : [],
+            isHandcuffed: !!player.isHandcuffed,
+            isSawedActive: !!player.isSawedActive,
+            disconnected: !!player.disconnected
+        })) : [],
+        settings: room.settings,
+        gameState: safeGameState,
+        messages: Array.isArray(room.messages) ? room.messages.slice(-50) : [],
+        debugPlayerModels: room.debugPlayerModels || {},
+        lastActivity: room.lastActivity
+    };
+};
+
+const emitRoomUpdated = (roomId, room) => {
+    io.to(roomId).emit('roomUpdated', serializeRoomForClient(room));
+};
+
 const finalizeMidGameAbort = (room, roomId, disconnectedName) => {
     room.gameState = null;
     room.players.forEach(p => {
@@ -499,7 +532,7 @@ const finalizeMidGameAbort = (room, roomId, disconnectedName) => {
         delete p.disconnectTimer;
     });
     io.to(roomId).emit('matchAborted', { abortedBy: disconnectedName });
-    io.to(roomId).emit('roomUpdated', room);
+    emitRoomUpdated(roomId, room);
 };
 
 const getActionSize = (action) => {
@@ -529,6 +562,23 @@ const normalizeGameAction = (action, room) => {
     }
     if (normalized.playerId && !roomPlayerIds.has(normalized.playerId)) {
         delete normalized.playerId;
+    }
+
+    if (normalized.gameState && typeof normalized.gameState === 'object') {
+        // Prevent local client-side multiplayer state references from leaking into the socket payload.
+        delete normalized.gameState.multiplayerState;
+    }
+    if (normalized.playerState && typeof normalized.playerState === 'object') {
+        delete normalized.playerState.multiplayerState;
+    }
+    if (normalized.dealerState && typeof normalized.dealerState === 'object') {
+        delete normalized.dealerState.multiplayerState;
+    }
+    if (normalized.player3State && typeof normalized.player3State === 'object') {
+        delete normalized.player3State.multiplayerState;
+    }
+    if (normalized.player4State && typeof normalized.player4State === 'object') {
+        delete normalized.player4State.multiplayerState;
     }
 
     if ((normalized.type === 'DEBUG_SYNC_PLAYER_MODEL' || normalized.type === 'DEBUG_SET_PLAYER_MODEL') && !VALID_MODEL_KEYS.has(normalized.modelKey)) {
@@ -564,8 +614,8 @@ const joinSocketToRoom = (socket, room, playerName, authId) => {
             room.messages.push(reconnectMessage);
             if (room.messages.length > 50) room.messages.shift();
 
-            io.to(room.id).emit('roomUpdated', room);
-            socket.emit('joinedRoom', { room, playerId: socket.id, reconnected: true });
+            emitRoomUpdated(room.id, room);
+            socket.emit('joinedRoom', { room: serializeRoomForClient(room), playerId: socket.id, reconnected: true });
             io.to(room.id).emit('chatMessageReceived', reconnectMessage);
             io.to(room.id).emit('requestFullSync', { forPlayerId: socket.id });
             console.log(`[MID-GAME RECONNECT] ${returning.name} restored in room ${room.id}`);
@@ -614,8 +664,8 @@ const joinSocketToRoom = (socket, room, playerName, authId) => {
             room.messages.push(reconnectMessage);
             if (room.messages.length > 50) room.messages.shift();
             
-            io.to(room.id).emit('roomUpdated', room);
-            socket.emit('joinedRoom', { room, playerId: socket.id });
+            emitRoomUpdated(room.id, room);
+            socket.emit('joinedRoom', { room: serializeRoomForClient(room), playerId: socket.id });
             io.to(room.id).emit('chatMessageReceived', reconnectMessage);
             return;
         }
@@ -662,8 +712,8 @@ const joinSocketToRoom = (socket, room, playerName, authId) => {
     room.messages.push(joinMessage);
     if (room.messages.length > 50) room.messages.shift();
     
-    io.to(room.id).emit('roomUpdated', room);
-    socket.emit('joinedRoom', { room, playerId: socket.id });
+    emitRoomUpdated(room.id, room);
+    socket.emit('joinedRoom', { room: serializeRoomForClient(room), playerId: socket.id });
     socket.to(room.id).emit('chatMessageReceived', joinMessage);
 };
 
@@ -709,7 +759,7 @@ io.on('connection', (socket) => {
                 };
             }
             room.lastActivity = Date.now();
-            io.to(roomId).emit('roomUpdated', room);
+            emitRoomUpdated(roomId, room);
         }
 
         if (action.type === 'USE_ITEM') {
@@ -822,7 +872,7 @@ io.on('connection', (socket) => {
                 itemWeights: settings.itemWeights || null
             };
             room.lastActivity = Date.now();
-            io.to(roomId).emit('roomUpdated', room);
+            emitRoomUpdated(safeRoomId, room);
         }
     });
 
@@ -836,7 +886,7 @@ io.on('connection', (socket) => {
             if (player) {
                 player.ready = !!ready;
                 room.lastActivity = Date.now();
-                io.to(roomId).emit('roomUpdated', room);
+                emitRoomUpdated(safeRoomId, room);
             }
         }
     });
@@ -861,7 +911,7 @@ io.on('connection', (socket) => {
             globalMatchesPlayed++;
             
             // System message arrays removed to prevent structural layout pollution
-            io.to(roomId).emit('gameStarted', { room, gameData });
+            io.to(safeRoomId).emit('gameStarted', { room: serializeRoomForClient(room), gameData });
         }
     });
 
@@ -921,7 +971,7 @@ io.on('connection', (socket) => {
                 room.messages.push(chatEntry);
                 room.lastActivity = Date.now();
                 if (room.messages.length > 50) room.messages.shift();
-                io.to(roomId).emit('chatMessageReceived', chatEntry);
+                io.to(safeRoomId).emit('chatMessageReceived', chatEntry);
             }
         }
     });
@@ -951,10 +1001,10 @@ io.on('connection', (socket) => {
                 };
                 room.messages.push(kickMessage);
                 if (room.messages.length > 50) room.messages.shift();
-                io.to(roomId).emit('chatMessageReceived', kickMessage);
+                io.to(safeRoomId).emit('chatMessageReceived', kickMessage);
 
-                io.to(roomId).emit('roomUpdated', room);
-                console.log(`[KICK] Host ${socket.id} kicked player ${kickedPlayer.name} (${targetPlayerId}) from room ${roomId}`);
+                emitRoomUpdated(safeRoomId, room);
+                console.log(`[KICK] Host ${socket.id} kicked player ${kickedPlayer.name} (${targetPlayerId}) from room ${safeRoomId}`);
             }
         }
     });
@@ -973,9 +1023,9 @@ io.on('connection', (socket) => {
                 p.isSawedActive = false;
             });
             room.lastActivity = Date.now();
-            io.to(roomId).emit('roomUpdated', room);
-            io.to(roomId).emit('matchReset');
-            console.log(`[RESET] Host ${socket.id} reset room ${roomId} back to lobby.`);
+            emitRoomUpdated(safeRoomId, room);
+            io.to(safeRoomId).emit('matchReset');
+            console.log(`[RESET] Host ${socket.id} reset room ${safeRoomId} back to lobby.`);
         }
     });
 
@@ -989,56 +1039,15 @@ io.on('connection', (socket) => {
             const disconnectedPlayer = room.players[playerIndex];
             console.log(`[DISCONNECT LOOP] User ${disconnectedPlayer.name} abandoned pipeline link lane: ${roomId}`);
 
-            if (room.gameState && disconnectedPlayer.authId) {
+            if (room.gameState) {
                 if (room.hostId === socket.id) {
-                    const activeHost = room.players.find(p => p.id !== socket.id && !p.disconnected);
+                    const activeHost = room.players.find(p => p.id !== socket.id);
                     if (activeHost) {
                         room.hostId = activeHost.id;
-                        console.log(`[AUTHORITY ESCALATION] Temporary host transfer to ${activeHost.name} during grace period`);
+                        console.log(`[AUTHORITY ESCALATION] Transfer host to ${activeHost.name} after disconnect in room ${roomId}`);
                     }
                 }
 
-                disconnectedPlayer.disconnected = true;
-                disconnectedPlayer.disconnectTimer = setTimeout(() => {
-                    const idx = room.players.findIndex(p => p.authId === disconnectedPlayer.authId && p.disconnected);
-                    if (idx === -1) return;
-                    room.players.splice(idx, 1);
-
-                    if (room.players.filter(p => !p.disconnected).length === 0) {
-                        rooms.delete(roomId);
-                        return;
-                    }
-
-                    if (room.gameState) {
-                        finalizeMidGameAbort(room, roomId, disconnectedPlayer.name);
-                    } else {
-                        io.to(roomId).emit('roomUpdated', room);
-                    }
-                }, RECONNECT_GRACE_MS);
-
-                const graceMessage = {
-                    sender: 'SYSTEM',
-                    color: '#737373',
-                    text: `${disconnectedPlayer.name} lost connection. Waiting ${RECONNECT_GRACE_MS / 1000}s to reconnect...`,
-                    timestamp: Date.now()
-                };
-                room.messages.push(graceMessage);
-                if (room.messages.length > 50) room.messages.shift();
-                io.to(roomId).emit('chatMessageReceived', graceMessage);
-                io.to(roomId).emit('playerTempDisconnected', {
-                    playerName: disconnectedPlayer.name,
-                    graceMs: RECONNECT_GRACE_MS
-                });
-                io.to(roomId).emit('roomUpdated', room);
-                return;
-            }
-
-            room.players.splice(playerIndex, 1);
-
-            if (room.players.length === 0) {
-                rooms.delete(roomId);
-                console.log(`[GARBAGE COLLECTION] Purged zero-node inactive room cache memory tree: ${roomId}`);
-            } else {
                 const leaveMessage = {
                     sender: 'SYSTEM',
                     color: '#737373',
@@ -1049,6 +1058,33 @@ io.on('connection', (socket) => {
                 if (room.messages.length > 50) room.messages.shift();
                 io.to(roomId).emit('chatMessageReceived', leaveMessage);
 
+                room.players.splice(playerIndex, 1);
+
+                if (room.players.length === 0) {
+                    rooms.delete(roomId);
+                    return;
+                }
+
+                finalizeMidGameAbort(room, roomId, disconnectedPlayer.name);
+                return;
+            }
+
+            const leaveMessage = {
+                sender: 'SYSTEM',
+                color: '#737373',
+                text: `${disconnectedPlayer.name} has left the bunker.`,
+                timestamp: Date.now()
+            };
+            room.messages.push(leaveMessage);
+            if (room.messages.length > 50) room.messages.shift();
+            io.to(roomId).emit('chatMessageReceived', leaveMessage);
+
+            room.players.splice(playerIndex, 1);
+
+            if (room.players.length === 0) {
+                rooms.delete(roomId);
+                console.log(`[GARBAGE COLLECTION] Purged zero-node inactive room cache memory tree: ${roomId}`);
+            } else {
                 if (room.gameState) {
                     console.log(`[STATE SAFEGUARD INTERVENTION] Thread client disconnected mid-match within room ${roomId}. Dropping active game instance safely.`);
                     finalizeMidGameAbort(room, roomId, disconnectedPlayer.name);
@@ -1061,7 +1097,7 @@ io.on('connection', (socket) => {
                         console.log(`[AUTHORITY ESCALATION SUCCESS] Allocated room context token to node ${activeHost.name} for lane ${roomId}`);
                     }
                 }
-                io.to(roomId).emit('roomUpdated', room);
+                emitRoomUpdated(roomId, room);
             }
         });
     });

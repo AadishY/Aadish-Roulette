@@ -4,6 +4,8 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 type DebugHeadModel = 'DEFAULT' | 'YASH' | 'YUVRAJ' | 'ASP' | 'AADISH';
 
+const SMOOTH_HEAD_MODELS = new Set<DebugHeadModel>(['ASP', 'YUVRAJ', 'AADISH']);
+
 // ---------------------------------------------------------------------------
 // Per-model configuration — adjust scale/position here for each GLB
 // ---------------------------------------------------------------------------
@@ -96,6 +98,63 @@ const shouldHideByName = (name: string): boolean => {
     return false;
 };
 
+const setTextureQuality = (texture: THREE.Texture | null | undefined, isColor = false, useNearest = false) => {
+    if (!texture) return;
+    const tex = texture as THREE.Texture & { colorSpace?: THREE.ColorSpace; encoding?: THREE.TextureEncoding };
+    tex.minFilter = useNearest ? THREE.NearestFilter : THREE.LinearMipMapLinearFilter;
+    tex.magFilter = useNearest ? THREE.NearestFilter : THREE.LinearFilter;
+    tex.generateMipmaps = !useNearest;
+    tex.anisotropy = Math.max(tex.anisotropy || 1, 8);
+    tex.needsUpdate = true;
+    const texAny = tex as any;
+    if (isColor) {
+        if ('colorSpace' in tex) {
+            tex.colorSpace = THREE.SRGBColorSpace;
+        } else {
+            texAny.encoding = THREE.sRGBEncoding;
+        }
+    } else {
+        if ('colorSpace' in tex) {
+            tex.colorSpace = THREE.LinearSRGBColorSpace;
+        } else {
+            texAny.encoding = THREE.LinearEncoding;
+        }
+    }
+};
+
+const configureDealerMaterialEffects = (material: THREE.MeshStandardMaterial, options: { pixelate?: boolean; blur?: boolean; } = {}) => {
+    if ((material as any).userData?.__dealerMaterialEffects) return;
+    material.onBeforeCompile = (shader) => {
+        shader.uniforms.dealerBlurStrength = { value: options.blur ? 0.12 : 0.0 };
+        shader.uniforms.pixelationSteps = { value: options.pixelate ? 22.0 : 1.0 };
+        shader.uniforms.pixelationAmount = { value: options.pixelate ? 0.18 : 0.0 };
+        shader.fragmentShader = `uniform float dealerBlurStrength;\nuniform float pixelationSteps;\nuniform float pixelationAmount;\n${shader.fragmentShader}`;
+        shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <output_fragment>',
+            `
+    vec3 blurredLight = outgoingLight;
+    #ifdef USE_MAP
+        vec3 mapBlur = texture2D(map, vUv).rgb;
+        mapBlur += texture2D(map, vUv + vec2(0.002, 0.0)).rgb;
+        mapBlur += texture2D(map, vUv + vec2(-0.002, 0.0)).rgb;
+        mapBlur += texture2D(map, vUv + vec2(0.0, 0.002)).rgb;
+        mapBlur += texture2D(map, vUv + vec2(0.0, -0.002)).rgb;
+        blurredLight = mapBlur * 0.2;
+    #endif
+    if (dealerBlurStrength > 0.0) {
+        outgoingLight = mix(outgoingLight, blurredLight, dealerBlurStrength);
+    }
+    if (pixelationAmount > 0.0) {
+        vec3 pixelated = floor(outgoingLight * pixelationSteps) / pixelationSteps;
+        outgoingLight = mix(outgoingLight, pixelated, pixelationAmount);
+    }
+    #include <output_fragment>`
+        );
+    };
+    material.userData = material.userData || {};
+    material.userData.__dealerMaterialEffects = true;
+};
+
 // ---------------------------------------------------------------------------
 // Main export
 // By default 'DEFAULT' (dealer.glb) is used.
@@ -114,6 +173,7 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
     const balancedPerformance = !!settings.balancedPerformance;
     const lowPerf = ultraPerformance || balancedPerformance;
     const isCustomModel = debugHeadModel !== 'DEFAULT';
+    const isSmoothHead = SMOOTH_HEAD_MODELS.has(debugHeadModel);
 
     // Resolve per-model config (fallback to DEFAULT if key is unknown)
     const config: ModelConfig = MODEL_CONFIGS[debugHeadModel] ?? MODEL_CONFIGS.DEFAULT;
@@ -176,48 +236,38 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
 
                         for (const mat of mats) {
                             const m = mat as THREE.MeshStandardMaterial;
+                            const isDefaultHead = !isCustomModel;
 
-                            // Ensure all maps use correct color spaces
-                            if (m.map) {
-                                m.map.colorSpace = THREE.SRGBColorSpace;
-                                m.map.needsUpdate = true;
-                            }
-                            // Normal / roughness / AO maps must stay Linear
-                            if (m.normalMap) {
-                                m.normalMap.colorSpace = THREE.LinearSRGBColorSpace;
-                                m.normalMap.needsUpdate = true;
-                            }
-                            if (m.roughnessMap) {
-                                m.roughnessMap.colorSpace = THREE.LinearSRGBColorSpace;
-                                m.roughnessMap.needsUpdate = true;
-                            }
+                            // Keep default dealer head textures smooth here; the small pixelation
+                            // effect is implemented in the material shader instead of using nearest filtering.
+                            setTextureQuality(m.map, true, false);
+                            setTextureQuality(m.normalMap, false, false);
+                            setTextureQuality(m.roughnessMap, false, false);
+                            setTextureQuality((m as any).aoMap, false, false);
+                            setTextureQuality((m as any).emissiveMap, true, false);
+                            setTextureQuality((m as any).metalnessMap, false, false);
+                            setTextureQuality((m as any).bumpMap, false, false);
+                            setTextureQuality((m as any).displacementMap, false, false);
 
                             if (m.transparent || m.opacity < 0.9) {
                                 m.depthWrite = false;
                             }
 
                             if (m instanceof THREE.MeshStandardMaterial) {
-                                if (isCustomModel) {
-                                    // Realistic head-scan materials under ACESFilmic @ ~1.8x exposure:
-                                    // - Low roughness so PBR specular responds naturally to the 3-point rig
-                                    // - Zero metalness (skin is not metallic)
-                                    // - Warm micro-emissive lift prevents washed-out darks under exposure
-                                    // - High envMapIntensity for natural skin sheen
-                                    // - fog OFF so scene fog doesn't grey-out the model
-                                    m.roughness = m.roughnessMap ? Math.min(m.roughness, 0.72) : 0.62;
-                                    m.metalness = 0.0;
-                                    m.envMapIntensity = lowPerf ? 0.35 : 1.1;
-                                    if (m.emissive) m.emissive.setHex(0x0a0704); // subtle warm lift
-                                    m.emissiveIntensity = 0.18;
-                                    m.fog = false;
-                                    m.needsUpdate = true;
-                                } else {
-                                    m.roughness = Math.max(0.68, m.roughness);
-                                    m.metalness = Math.min(0.06, m.metalness);
-                                    m.envMapIntensity = lowPerf ? 0.15 : 0.35;
-                                    m.fog = true;
-                                    m.needsUpdate = true;
+                                // Apply the same quality tuning to default and custom heads.
+                                m.roughness = m.roughnessMap ? Math.min(m.roughness, 0.72) : 0.62;
+                                m.metalness = 0.0;
+                                m.envMapIntensity = lowPerf ? 0.35 : 1.1;
+                                if (m.emissive) m.emissive.setHex(0x0a0704);
+                                m.emissiveIntensity = 0.18;
+                                m.fog = false;
+                                if (m.color) {
+                                    m.color.setHex(0xffffff);
                                 }
+                                if (isDefaultHead) {
+                                    configureDealerMaterialEffects(m, { pixelate: true, blur: true });
+                                }
+                                m.needsUpdate = true;
                             }
                         }
                     }
@@ -342,36 +392,36 @@ export const createDealerModel = (scene: THREE.Scene, debugHeadModel: DebugHeadM
 
         // Torso fog — only in full-quality mode AND only for the default dealer model
         // Non-default heads: skip entirely — dark fog sprites grey out realistic skin tone
-        if (!balancedPerformance && !isCustomModel) {
-            const dealerFogGroup = new THREE.Group();
-            dealerFogGroup.name = 'DEALER_TORSO_FOG';
-
-            const createFogSprite = (): THREE.Sprite => {
-                const mat = new THREE.SpriteMaterial({
-                    map: smokeTex || undefined,
-                    color: 0x010101,
-                    transparent: true,
-                    opacity: 0.14,
-                    blending: THREE.NormalBlending,
-                    depthWrite: false,
-                });
-                const spr = new THREE.Sprite(mat);
-                spr.scale.set(7.0, 5.5, 1.0);
-                return spr;
-            };
-
-            for (let i = 0; i < 6; i++) {
-                const spr = createFogSprite();
-                spr.position.set(
-                    (Math.random() - 0.5) * 6.5,
-                    -2.5 + (Math.random() - 0.5) * 3.5,
-                    -2.0 + (Math.random() - 0.5) * 3.5
-                );
-                spr.scale.setScalar(5.5 + Math.random() * 2.5);
-                dealerFogGroup.add(spr);
-            }
-            dealerGroup.add(dealerFogGroup);
-        }
+        // if (!balancedPerformance && !isCustomModel) {
+        //     const dealerFogGroup = new THREE.Group();
+        //     dealerFogGroup.name = 'DEALER_TORSO_FOG';
+        //
+        //     const createFogSprite = (): THREE.Sprite => {
+        //         const mat = new THREE.SpriteMaterial({
+        //             map: smokeTex || undefined,
+        //             color: 0x010101,
+        //             transparent: true,
+        //             opacity: 0.14,
+        //             blending: THREE.NormalBlending,
+        //             depthWrite: false,
+        //         });
+        //         const spr = new THREE.Sprite(mat);
+        //         spr.scale.set(7.0, 5.5, 1.0);
+        //         return spr;
+        //     };
+        //
+        //     for (let i = 0; i < 6; i++) {
+        //         const spr = createFogSprite();
+        //         spr.position.set(
+        //             (Math.random() - 0.5) * 6.5,
+        //             -2.5 + (Math.random() - 0.5) * 3.5,
+        //             -2.0 + (Math.random() - 0.5) * 3.5
+        //         );
+        //         spr.scale.setScalar(5.5 + Math.random() * 2.5);
+        //         dealerFogGroup.add(spr);
+        //     }
+        //     dealerGroup.add(dealerFogGroup);
+        // }
     }
 
     scene.add(dealerGroup);

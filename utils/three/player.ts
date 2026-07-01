@@ -4,6 +4,8 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 type PlayerModelKey = 'DEFAULT' | 'AADISH' | 'ASP' | 'YASH' | 'YUVRAJ';
 
+const SMOOTH_HEAD_MODELS = new Set<PlayerModelKey>(['ASP', 'YUVRAJ', 'AADISH']);
+
 interface PlayerModelConfig {
     path: string;
     scale: number;
@@ -59,6 +61,30 @@ const shouldHideByName = (name: string): boolean => {
     return false;
 };
 
+const setTextureQuality = (texture: THREE.Texture | null | undefined, isColor = false) => {
+    if (!texture) return;
+    const tex = texture as THREE.Texture & { colorSpace?: THREE.ColorSpace; encoding?: THREE.TextureEncoding };
+    tex.minFilter = THREE.LinearMipMapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = true;
+    tex.anisotropy = Math.max(tex.anisotropy || 1, 8);
+    tex.needsUpdate = true;
+    const texAny = tex as any;
+    if (isColor) {
+        if ('colorSpace' in tex) {
+            tex.colorSpace = THREE.SRGBColorSpace;
+        } else {
+            texAny.encoding = THREE.sRGBEncoding;
+        }
+    } else {
+        if ('colorSpace' in tex) {
+            tex.colorSpace = THREE.LinearSRGBColorSpace;
+        } else {
+            texAny.encoding = THREE.LinearEncoding;
+        }
+    }
+};
+
 const _dracoLoader = new DRACOLoader();
 _dracoLoader.setDecoderPath(`${import.meta.env.BASE_URL}draco/`);
 _dracoLoader.preload(); // Compile WASM decoder eagerly
@@ -79,6 +105,7 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
     const ultraPerformance = !!settings.ultraPerformance;
     const balancedPerformance = !!settings.balancedPerformance;
     const lowPerf = ultraPerformance || balancedPerformance;
+    const isSmoothHead = SMOOTH_HEAD_MODELS.has(modelKey);
     const config = PLAYER_MODEL_CONFIGS[modelKey] ?? PLAYER_MODEL_CONFIGS.DEFAULT;
 
     const placeholderGroup = new THREE.Group();
@@ -133,48 +160,30 @@ export const createPlayerAvatar = (scene: THREE.Scene, position: THREE.Vector3, 
                         for (const mat of mats) {
                             const m = mat as THREE.MeshStandardMaterial;
 
-                            if ((m as any).map) {
-                                (m as any).map.colorSpace = THREE.SRGBColorSpace;
-                                (m as any).map.needsUpdate = true;
-                            }
-                            if ((m as any).normalMap) {
-                                (m as any).normalMap.colorSpace = THREE.LinearSRGBColorSpace;
-                                (m as any).normalMap.needsUpdate = true;
-                            }
-                            if ((m as any).roughnessMap) {
-                                (m as any).roughnessMap.colorSpace = THREE.LinearSRGBColorSpace;
-                                (m as any).roughnessMap.needsUpdate = true;
-                            }
+                            setTextureQuality(m.map, true);
+                            setTextureQuality(m.normalMap, false);
+                            setTextureQuality(m.roughnessMap, false);
+                            setTextureQuality((m as any).aoMap, false);
+                            setTextureQuality((m as any).emissiveMap, true);
+                            setTextureQuality((m as any).metalnessMap, false);
+                            setTextureQuality((m as any).bumpMap, false);
+                            setTextureQuality((m as any).displacementMap, false);
 
                             if (m.transparent || m.opacity < 0.9) {
                                 m.depthWrite = false;
                             }
 
                             if (m instanceof THREE.MeshStandardMaterial) {
-                                if (modelKey !== 'DEFAULT') {
-                                    // Realistic head-scan materials under ACESFilmic @ ~1.8x exposure:
-                                    // - Lower roughness for natural PBR specular under point lights
-                                    // - Zero metalness (skin/hair)
-                                    // - Warm micro-emissive lift prevents muddy darks at high exposure
-                                    // - High envMapIntensity for realistic skin sheen
-                                    // - fog OFF — scene fog greys out realistic skin tones
-                                    m.roughness = m.roughnessMap ? Math.min(m.roughness, 0.72) : 0.62;
-                                    m.metalness = 0.0;
-                                    m.envMapIntensity = lowPerf ? 0.35 : 1.1;
-                                    if (m.emissive) m.emissive.setHex(0x0a0704); // subtle warm lift
-                                    m.emissiveIntensity = 0.18;
-                                    m.fog = false;
-                                    m.needsUpdate = true;
-                                } else {
-                                    m.roughness = Math.max(0.75, m.roughness);
-                                    m.metalness = Math.min(0.08, m.metalness);
-                                    m.envMapIntensity = lowPerf ? 0.15 : 0.35;
-                                    m.fog = true;
-                                    if (m.color) {
-                                        m.color.setHex(0x050505);
-                                    }
-                                    m.needsUpdate = true;
+                                m.roughness = m.roughnessMap ? Math.min(m.roughness, 0.68) : 0.58;
+                                m.metalness = 0.0;
+                                m.envMapIntensity = lowPerf ? 0.45 : 1.4;
+                                if (m.emissive) m.emissive.setHex(0x120a08); // subtle warm lift
+                                m.emissiveIntensity = 0.22;
+                                m.fog = false;
+                                if (m.color) {
+                                    m.color.setHex(0xffffff);
                                 }
+                                m.needsUpdate = true;
                             }
                         }
                     }

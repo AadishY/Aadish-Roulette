@@ -107,6 +107,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
     // PWA Install State
     const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
     const [isInstallable, setIsInstallable] = React.useState(false);
+    const [promptAvailable, setPromptAvailable] = React.useState(false);
 
     // Login Quote Randomizer State
     const [loginQuote, setLoginQuote] = React.useState(AUTH_QUOTES[0]);
@@ -159,7 +160,11 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
         setIsIOS(ios);
         setIsMobile(isMobileUA);
 
-        if (isMobileUA || ios) setIsInstallable(true);
+        if ((window as any).deferredPWAPrompt || promptAvailable || ios) {
+            setIsInstallable(true);
+        } else {
+            setIsInstallable(false);
+        }
 
         const handleResize = () => {
             const hScale = Math.min(1, (window.innerHeight - 10) / 650);
@@ -191,56 +196,72 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
 
         if ((window as any).deferredPWAPrompt) {
             setDeferredPrompt((window as any).deferredPWAPrompt);
+            setPromptAvailable(true);
             setIsInstallable(true);
         }
 
-        const pwaHandler = (e: any) => {
+        const beforeInstallPromptHandler = (e: any) => {
+            if (!e || !e.preventDefault) return;
             e.preventDefault();
-            setDeferredPrompt(e);
+            const promptEvent = e;
+            setDeferredPrompt(promptEvent);
+            setPromptAvailable(true);
             setIsInstallable(true);
-            (window as any).deferredPWAPrompt = e;
+            (window as any).deferredPWAPrompt = promptEvent;
         };
 
         const globalPwaHandler = (e: any) => {
             if (e.detail) {
                 setDeferredPrompt(e.detail);
+                setPromptAvailable(true);
                 setIsInstallable(true);
+                (window as any).deferredPWAPrompt = e.detail;
             }
         };
 
         const appInstalledHandler = () => {
             setIsStandalone(true);
             setIsInstallable(false);
+            setPromptAvailable(false);
             setDeferredPrompt(null);
             (window as any).deferredPWAPrompt = null;
         };
 
-        window.addEventListener('beforeinstallprompt', pwaHandler);
+        window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler as any);
         window.addEventListener('pwa-prompt-available' as any, globalPwaHandler);
         window.addEventListener('appinstalled', appInstalledHandler);
 
         return () => {
             window.removeEventListener('resize', handleResize);
-            window.removeEventListener('beforeinstallprompt', pwaHandler);
+            window.removeEventListener('beforeinstallprompt', beforeInstallPromptHandler as any);
             window.removeEventListener('pwa-prompt-available' as any, globalPwaHandler);
             window.removeEventListener('appinstalled', appInstalledHandler);
         };
     }, []);
 
     const handleInstallClick = async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setDeferredPrompt(null);
-                setIsInstallable(false);
+        const promptEvent = deferredPrompt || (window as any).deferredPWAPrompt;
+
+        if (promptEvent && typeof promptEvent.prompt === 'function') {
+            try {
+                await promptEvent.prompt();
+                const result = await promptEvent.userChoice;
+                if (result?.outcome === 'accepted') {
+                    setDeferredPrompt(null);
+                    setPromptAvailable(false);
+                    setIsInstallable(false);
+                    (window as any).deferredPWAPrompt = null;
+                }
+            } catch (err) {
+                console.warn('PWA install prompt failed:', err);
             }
+            return;
+        }
+
+        if (isIOS) {
+            alert("📲 INSTALL ON iOS:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap 'Add to Home Screen'");
         } else {
-            if (isIOS) {
-                alert("📲 INSTALL ON iOS:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap 'Add to Home Screen'");
-            } else {
-                alert("📲 INSTALL MANUALLY:\n\n1. Tap the Browser Menu (three dots ⋮ or arrow)\n2. Select 'Add to Home Screen' or 'Install App'");
-            }
+            alert("📲 INSTALL MANUALLY:\n\n1. Tap the Browser Menu (three dots ⋮ or arrow)\n2. Select 'Add to Home Screen' or 'Install App'");
         }
     };
 
@@ -1349,7 +1370,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({
                     </>
                 )}
                 <div className="mt-2.5 sm:mt-4 flex flex-col items-center gap-2">
-                    {!isStandalone && (isInstallable || isMobile || isIOS) && (
+                    {!isStandalone && (promptAvailable || isIOS) && (
                         <button
                             onClick={handleInstallClick}
                             className="px-4 py-1.5 rounded-full border border-blue-900/30 bg-blue-950/20 text-blue-500 text-[9px] font-black tracking-[0.5em] hover:bg-blue-900/30 hover:text-blue-400 transition-all animate-pulse uppercase cursor-pointer"

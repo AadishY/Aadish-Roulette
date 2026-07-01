@@ -14,7 +14,7 @@ export const handleContract = async (
     setPlayer: StateSetter<PlayerState>,
     setDealer: StateSetter<PlayerState>,
     setGameState: StateSetter<GameState>,
-    setAnim: (update: any) => void,
+    setAnim: StateSetter<AnimationState>,
     setTriggerContract: StateSetter<number>,
     addLog: (text: string, type: LogEntry['type']) => void,
     setOverlayText?: StateSetter<string | null>,
@@ -36,7 +36,7 @@ export const handleContract = async (
         const hasJackpot = player.jackpotImmunityShots !== undefined && player.jackpotImmunityShots > 0;
 
         if (hasJackpot) {
-            const nextImmunity = Math.max(0, player.jackpotImmunityShots - 1);
+            const nextImmunity = Math.max(0, (player.jackpotImmunityShots ?? 0) - 1);
             setPlayer(p => ({ ...p, jackpotImmunityShots: nextImmunity }));
             if (nextImmunity <= 0) {
                 audioManager.stopJackpotMusic();

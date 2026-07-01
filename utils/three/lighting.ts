@@ -69,7 +69,7 @@ export const setupLighting = (scene: THREE.Scene, settings?: GameSettings) => {
     scene.add(bulbLight);
 
     // Dealer Rim - Essential for look (Stronger)
-    const dealerRim = new THREE.SpotLight(0xff7700, isMobile ? 16 : 28);
+    const dealerRim = new THREE.SpotLight(0xffa470, isMobile ? 18 : 32);
     dealerRim.position.set(0, 14, -35);
     dealerRim.target.position.set(0, 4, -14);
     dealerRim.angle = 0.6;
