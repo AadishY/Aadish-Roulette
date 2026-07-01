@@ -1,90 +1,91 @@
 {
-    "name": "Aadish Roulette",
-    "short_name": "Roulette",
-    "description": "A high-stakes tabletop horror game where you play Russian Roulette with a 12-gauge pump-action shotgun. Features 3D graphics, strategic items, and multiplayer.",
-    "start_url": "https://aadishroulette.pages.dev/",
-    "id": "https://aadishroulette.pages.dev/",
-    "scope": "https://aadishroulette.pages.dev/",
-    "display": "fullscreen",
-    "display_override": [
-        "fullscreen",
-        "standalone",
-        "minimal-ui"
-    ],
-    "orientation": "landscape",
-    "background_color": "#050505",
-    "theme_color": "#0a0a0a",
-    "icons": [
-        {
-            "src": "/image/favicon/android-chrome-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/image/favicon/android-chrome-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "maskable"
-        },
-        {
-            "src": "/image/favicon/android-chrome-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/image/favicon/android-chrome-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-        }
-    ],
-    "categories": [
-        "games",
-        "entertainment",
-        "strategy",
-        "horror"
-    ],
-    "screenshots": [
-        {
-            "src": "/image/preview-normalquality.jpg",
-            "sizes": "1920x1080",
-            "type": "image/jpeg",
-            "form_factor": "wide",
-            "label": "Aadish Roulette Wide Gameplay"
-        },
-        {
-            "src": "/image/preview-lowquality.jpg",
-            "sizes": "1080x1920",
-            "type": "image/jpeg",
-            "form_factor": "narrow",
-            "label": "Aadish Roulette Mobile Gameplay"
-        }
-    ],
-    "related_applications": [
-        {
-            "platform": "play",
-            "url": "https://play.google.com/store/apps/details?id=com.aadishroulette.game",
-            "id": "com.aadishroulette.game"
-        }
-    ],
-    "prefer_related_applications": false,
-    "scope_extensions": [
-        {
-            "type": "origin",
-            "origin": "https://yoakatsuki-buckshot.hf.space"
-        }
-    ],
-    "launch_handler": {
-        "client_mode": "focus-existing"
+  "name": "Aadish Roulette",
+  "short_name": "Roulette",
+  "description": "A high-stakes tabletop horror game where you play Russian Roulette with a 12-gauge pump-action shotgun. Features 3D graphics, strategic items, and multiplayer.",
+  "start_url": "https://aadishroulette.pages.dev/",
+  "id": "https://aadishroulette.pages.dev/",
+  "scope": "https://aadishroulette.pages.dev/",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone",
+    "minimal-ui",
+    "window-controls-overlay"
+  ],
+  "orientation": "landscape",
+  "background_color": "#050505",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/image/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
-    "protocol_handlers": [
-        {
-            "protocol": "web+aadishroulette",
-            "url": "/?url=%s"
-        }
-    ],
-    "lang": "en-US",
-    "dir": "ltr"
+    {
+      "src": "/image/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/image/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/image/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "games",
+    "entertainment",
+    "strategy",
+    "horror"
+  ],
+  "screenshots": [
+    {
+      "src": "/image/preview-normalquality.jpg",
+      "sizes": "1920x1080",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Aadish Roulette Wide Gameplay"
+    },
+    {
+      "src": "/image/preview-lowquality.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Aadish Roulette Mobile Gameplay"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.aadishroulette.game",
+      "id": "com.aadishroulette.game"
+    }
+  ],
+  "prefer_related_applications": false,
+  "scope_extensions": [
+    {
+      "type": "origin",
+      "origin": "https://yoakatsuki-buckshot.hf.space"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+aadishroulette",
+      "url": "/?url=%s"
+    }
+  ],
+  "lang": "en-US",
+  "dir": "ltr"
 }
