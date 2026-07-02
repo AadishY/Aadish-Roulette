@@ -250,6 +250,11 @@ This project is a fan-made, open-source tribute built to explore web-based 3D gr
 
 ### 🔊 Audio & SFX
 *   **Ambient & Item Sounds**: Sourced entirely from public web domains and community creative commons archives[cite: 1]. No original game files were extracted, ripped, or reverse-engineered to obtain these sounds[cite: 1].
+*   **Audio credit**: Game audio inspired by / attributed to <https://github.com/uncreativeCultist/buckshot-decomp-public> and <https://github.com/uncreativeCultist>.
+
+### 🎨 Asset Credits
+*   Dealer model by <https://sketchfab.com/VibaPop>.
+*   Hand model by <https://sketchfab.com/bttkller>.
 
 ### 🛠️ Built With
 *   [React](https://react.dev/) & [TypeScript](https://www.typescriptlang.org/) — Powering the reactive state machine and type-safe gameplay loop[cite: 1].

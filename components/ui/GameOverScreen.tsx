@@ -389,8 +389,8 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ winner, onResetG
                         </div>
                         <div className="w-[1px] h-8 bg-stone-800" />
                         <div className="flex flex-col items-center gap-1">
-                            <span className="text-2xl font-black text-yellow-500">{stats.itemPoints}</span>
-                            <span className="text-[9px] font-black tracking-widest text-stone-600 uppercase">Points</span>
+                            <span className="text-2xl font-black text-yellow-500">{stats.itemsUsed}</span>
+                            <span className="text-[9px] font-black tracking-widest text-stone-600 uppercase">Items Used</span>
                         </div>
                     </div>
                 </div>

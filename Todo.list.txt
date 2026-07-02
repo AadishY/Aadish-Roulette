@@ -1,7 +1,8 @@
-Multiplayer
+Multiplayer v3
 Shop
 Option of buying things like revive
 Discord rich presence
 discord integration improvement
 adding discord bot commands 
 item probability improvement
+hdr

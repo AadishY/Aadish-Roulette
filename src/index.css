@@ -92,6 +92,12 @@
     animation: scan-line-move 4s linear infinite;
 }
 
+/* Debug modal helper (remove after verification) */
+.debug-modal {
+    box-shadow: 0 0 0 4px rgba(255,0,255,0.55) inset, 0 0 40px rgba(255,0,255,0.08);
+    background-image: linear-gradient(90deg, rgba(255,0,128,0.02), rgba(0,255,128,0.02));
+}
+
 @keyframes progress-pop {
     0% { width: 0%; opacity: 0; }
     100% { width: 100%; opacity: 1; }
@@ -296,4 +302,4 @@
     .lobby-main-view .w-44 {
         width: 110px !important;
     }
-}
+}

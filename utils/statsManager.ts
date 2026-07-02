@@ -7,9 +7,7 @@ export interface GameStats {
     selfShots: number;
     damageDealt: number;
     itemsUsed: number;
-    mostUsedItem: string;
     highestRound: number;
-    itemPoints: number; // Calculated score based on effective item use
     matchHistory: MatchStats[];
 }
 
@@ -41,9 +39,7 @@ const emptyStats = (): GameStats => ({
     selfShots: 0,
     damageDealt: 0,
     itemsUsed: 0,
-    mostUsedItem: 'NONE',
     highestRound: 0,
-    itemPoints: 0,
     matchHistory: []
 });
 
@@ -72,24 +68,6 @@ const createMatchHistorySignature = (entry: any): string => {
     ].join('|');
 };
 
-const calculateMostUsedItem = (matchHistory: MatchStats[], fallback = 'NONE'): string => {
-    const usageTotals = new Map<string, number>();
-
-    matchHistory.forEach((entry) => {
-        Object.entries(entry.itemsUsed || {}).forEach(([item, count]) => {
-            const parsedCount = Number(count) || 0;
-            if (parsedCount > 0) {
-                usageTotals.set(item, (usageTotals.get(item) || 0) + parsedCount);
-            }
-        });
-    });
-
-    if (usageTotals.size === 0) {
-        return fallback || 'NONE';
-    }
-
-    return [...usageTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || fallback || 'NONE';
-};
 
 export const getStoredStats = (): GameStats => {
     try {
@@ -101,8 +79,7 @@ export const getStoredStats = (): GameStats => {
                 ...emptyStats(),
                 ...parsed,
                 matchHistory,
-                shotsHit: parsed.shotsHit ?? 0,
-                mostUsedItem: parsed.mostUsedItem || calculateMostUsedItem(matchHistory, 'NONE')
+                shotsHit: parsed.shotsHit ?? 0
             };
         }
     } catch (e) {
@@ -165,8 +142,6 @@ export const mergeGameStats = (localStats?: GameStats | null, remoteStats?: Game
         .entries.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0))
         .slice(0, 20);
 
-    const mostUsedItem = calculateMostUsedItem(mergedMatchHistory, base.mostUsedItem || incoming.mostUsedItem || 'NONE');
-
     return {
         wins: (base.wins || 0) + (incoming.wins || 0),
         losses: (base.losses || 0) + (incoming.losses || 0),
@@ -176,9 +151,7 @@ export const mergeGameStats = (localStats?: GameStats | null, remoteStats?: Game
         selfShots: (base.selfShots || 0) + (incoming.selfShots || 0),
         damageDealt: (base.damageDealt || 0) + (incoming.damageDealt || 0),
         itemsUsed: (base.itemsUsed || 0) + (incoming.itemsUsed || 0),
-        mostUsedItem,
         highestRound: Math.max(base.highestRound || 0, incoming.highestRound || 0),
-        itemPoints: (base.itemPoints || 0) + (incoming.itemPoints || 0),
         matchHistory: mergedMatchHistory
     };
 };
@@ -203,15 +176,7 @@ export const saveGameStats = async (matchStats: MatchStats): Promise<GameStats> 
     });
     current.itemsUsed += totalItemsMatch;
     current.highestRound = Math.max(current.highestRound, matchStats.roundsSurvived);
-    current.itemPoints += totalItemsMatch * 15;
-
-    const topItem = Object.entries(matchStats.itemsUsed).reduce(
-        (best, [item, count]) => count > best.count ? { item, count } : best,
-        { item: current.mostUsedItem || 'NONE', count: 0 }
-    );
-    if (topItem.count > 0) {
-        current.mostUsedItem = topItem.item;
-    }
+    // itemsUsed is maintained; itemPoints and mostUsedItem removed
 
     // Add History
     if (!current.matchHistory) current.matchHistory = [];
@@ -223,7 +188,7 @@ export const saveGameStats = async (matchStats: MatchStats): Promise<GameStats> 
         mpPlayers: matchStats.mpPlayers || []
     };
     current.matchHistory = [historyEntry, ...current.matchHistory].slice(0, 20);
-    current.mostUsedItem = calculateMostUsedItem(current.matchHistory, current.mostUsedItem || 'NONE');
+    // mostUsedItem removed
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
 

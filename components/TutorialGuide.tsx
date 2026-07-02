@@ -844,7 +844,41 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
             )
         },
 
-        // Page 8: Developer Info
+        // Page 8: Credits
+        {
+            title: "CREDITS",
+            icon: <Heart size={20} className="text-amber-400" />,
+            content: (
+                <div className="space-y-4">
+                    <div className="text-center mb-4">
+                        <div className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-3 bg-gradient-to-br from-amber-700 to-orange-900 rounded-full flex items-center justify-center border border-amber-500/30">
+                            <Heart size={24} className="text-white" />
+                        </div>
+                        <p className="text-sm md:text-base text-stone-300">Acknowledgements & Asset Credits</p>
+                        <p className="text-xs md:text-sm text-stone-500 mt-1">Thank you to the original creators and contributors.</p>
+                    </div>
+
+                    <div className="space-y-3 text-stone-300 text-[10px] md:text-sm leading-relaxed">
+                        <p>This project is inspired by the original <span className="text-red-400 font-bold">Buckshot Roulette</span> concept.</p>
+                        <div className="bg-stone-900/70 border border-stone-700 p-3 rounded-xl space-y-2">
+                            <p className="font-black uppercase tracking-[0.2em] text-stone-200 text-[9px] md:text-[10px]">Original Creator</p>
+                            <p>Mike Klubnika — the original creator behind <a href="https://mikeklubnika.itch.io/buckshot-roulette" target="_blank" rel="noopener noreferrer" className="text-red-400 font-bold hover:text-white">Buckshot Roulette</a>.</p>
+                        </div>
+                        <div className="bg-stone-900/70 border border-stone-700 p-3 rounded-xl space-y-2">
+                            <p className="font-black uppercase tracking-[0.2em] text-stone-200 text-[9px] md:text-[10px]">3D Asset Credits</p>
+                            <p>Dealer model by <a href="https://sketchfab.com/VibaPop" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-white">VibaPop</a>.</p>
+                            <p>Hand model by <a href="https://sketchfab.com/bttkller" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-white">61c3n</a>.</p>
+                        </div>
+                        <div className="bg-stone-900/70 border border-stone-700 p-3 rounded-xl space-y-2">
+                            <p className="font-black uppercase tracking-[0.2em] text-stone-200 text-[9px] md:text-[10px]">Audio Credits</p>
+                            <p>Game audio sources attributed to <a href="https://github.com/uncreativeCultist/buckshot-decomp-public" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-white">uncreativeCultist/buckshot-decomp-public</a> and <a href="https://github.com/uncreativeCultist" target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-white">@uncreativeCultist</a>.</p>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+
+        // Page 9: Developer Info
         {
             title: "DEVELOPER",
             icon: <Code size={20} className="text-red-500" />,
@@ -942,7 +976,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
     return (
         <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto custom-scrollbar select-none animate-in fade-in duration-300">
             <div
-                className="w-[95vw] h-[90vh] md:w-[85vw] md:h-[85vh] max-w-[95vw] max-h-[90vh] bg-stone-950/45 backdrop-blur-2xl border border-stone-850 shadow-[0_40px_100px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5 my-auto"
+                className="w-[94vw] h-[94vh] max-w-[94vw] max-h-[94vh] md:w-[88vw] md:h-[90vh] md:max-w-[88vw] md:max-h-[90vh] bg-stone-950/45 backdrop-blur-2xl border-[2px] border-stone-700/80 shadow-[0_30px_90px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden rounded-2xl ring-2 ring-white/10 my-auto"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -951,7 +985,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                 <div className="absolute top-0 left-0 w-full h-[1.5px] bg-gradient-to-r from-transparent via-red-500/30 to-transparent z-50" />
  
                 {/* Header */}
-                <div className="flex justify-between items-center p-4 border-b border-stone-800/50 bg-stone-950/30 shrink-0">
+                <div className="flex justify-between items-center p-3 sm:p-4 border-b border-stone-800/50 bg-stone-950/30 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-stone-900/80 rounded-xl border border-stone-800 flex items-center justify-center text-red-500 shadow-inner">
                             {pages[currentPage].icon}
@@ -973,16 +1007,16 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                 </div>
  
                 {/* Split Navigation & Content Container */}
-                <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
-                    {/* Navigation Sidebar (Vertical on Desktop, Horizontal on Mobile) */}
-                    <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto bg-stone-950/60 border-b md:border-b-0 md:border-r border-stone-850 p-2 md:p-4 gap-1.5 shrink-0 select-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] w-full md:w-56 items-center md:items-stretch">
+                <div className="flex flex-row flex-1 overflow-hidden h-full">
+                    {/* Navigation Sidebar */}
+                    <div className="flex flex-col overflow-y-auto bg-stone-950/60 border-r border-stone-850 p-1.5 md:p-3 gap-1.5 shrink-0 select-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] w-44 min-w-[11rem] h-full items-stretch">
                         {pages.map((page, idx) => {
                             const isActive = idx === currentPage;
                             return (
                                 <button
                                     key={idx}
                                     onClick={() => goToPage(idx)}
-                                    className={`flex items-center gap-2.5 px-3 py-2 md:py-3 border text-left transition-all shrink-0 md:shrink rounded-xl cursor-pointer ${
+                                    className={`flex items-center gap-2.5 px-2.5 py-2 md:py-2.5 border text-left transition-all shrink-0 md:shrink rounded-xl cursor-pointer ${
                                         isActive
                                         ? 'bg-red-500/10 border-red-500/35 text-white font-black shadow-[0_0_15px_rgba(239,68,68,0.06)]'
                                         : 'bg-transparent border-transparent text-stone-500 hover:text-stone-300 hover:bg-white/5'
@@ -998,7 +1032,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                     </div>
  
                     {/* Content Area */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-contain custom-scrollbar bg-stone-900/10">
+                    <div className="flex-1 overflow-y-auto p-3 sm:p-4 overscroll-contain custom-scrollbar bg-stone-900/10">
                         <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                             {pages[currentPage].content}
                         </div>
@@ -1006,12 +1040,12 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                 </div>
  
                 {/* Footer - Navigation Stepper */}
-                <div className="shrink-0 p-3 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl">
+                <div className="shrink-0 p-2.5 sm:p-3 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl">
                     <div className="max-w-4xl mx-auto flex items-center justify-between">
                         <button
                             onClick={prevPage}
                             disabled={currentPage === 0}
-                            className={`flex items-center gap-1.5 px-4 py-2 font-black tracking-[0.2em] transition-all text-[8px] sm:text-[9px] rounded-xl border ${currentPage === 0
+                            className={`flex items-center gap-1.5 px-3 py-1.75 font-black tracking-[0.2em] transition-all text-[8px] sm:text-[9px] rounded-xl border ${currentPage === 0
                                 ? 'border-transparent text-transparent pointer-events-none'
                                 : 'border-stone-800 text-stone-400 hover:text-white hover:bg-white/5 hover:border-stone-600'
                                 }`}
@@ -1020,15 +1054,27 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                             BACK
                         </button>
  
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 justify-center">
                             {pages.map((_, index) => (
                                 <button
                                     key={index}
                                     onClick={() => goToPage(index)}
-                                    className={`h-1.5 rounded-full transition-all ${index === currentPage
-                                        ? 'w-6 bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]'
-                                        : 'w-1.5 bg-stone-800 hover:bg-stone-700'
+                                    type="button"
+                                    className={`block p-0 transition-all ${index === currentPage
+                                        ? 'bg-red-500'
+                                        : 'bg-stone-700 hover:bg-stone-600'
                                         }`}
+                                    style={{
+                                        width: index === currentPage ? 5 : 2,
+                                        height: 1,
+                                        minWidth: 0,
+                                        minHeight: 0,
+                                        padding: 0,
+                                        lineHeight: 0,
+                                        borderRadius: 9999,
+                                    }}
+                                    aria-current={index === currentPage ? 'true' : undefined}
+                                    aria-label={`Go to page ${index + 1}`}
                                 />
                             ))}
                         </div>
@@ -1036,7 +1082,7 @@ export const TutorialGuide: React.FC<TutorialGuideProps> = ({ onClose }) => {
                         <button
                             onClick={nextPage}
                             disabled={currentPage === pages.length - 1}
-                            className={`flex items-center gap-1.5 px-4 py-2 font-black tracking-[0.2em] transition-all text-[8px] sm:text-[9px] rounded-xl border ${currentPage === pages.length - 1
+                            className={`flex items-center gap-1.5 px-3 py-1.75 font-black tracking-[0.2em] transition-all text-[8px] sm:text-[9px] rounded-xl border ${currentPage === pages.length - 1
                                 ? 'border-transparent text-transparent pointer-events-none'
                                 : 'bg-white text-black hover:bg-stone-200 border-white'
                                 }`}

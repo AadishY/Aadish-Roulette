@@ -36,7 +36,7 @@ const getInitialSettings = (): GameSettings => {
     return {
       pixelScale: 3.5,
       brightness: 1.0,
-      uiScale: 0.60,
+      uiScale: 0.50,
       fov: 60,
       musicVolume: 0.5,
       sfxVolume: 0.5,
@@ -64,5 +64,5 @@ const getInitialSettings = (): GameSettings => {
 
 export const DEFAULT_SETTINGS: GameSettings = getInitialSettings();
 
-export const GAME_VERSION = '1.4.2';
+export const GAME_VERSION = '1.5.0';
 

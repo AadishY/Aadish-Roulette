@@ -118,9 +118,7 @@ const emptyStats = (): GameStats => ({
     selfShots: 0,
     damageDealt: 0,
     itemsUsed: 0,
-    mostUsedItem: 'NONE',
     highestRound: 0,
-    itemPoints: 0,
     matchHistory: []
 });
 
@@ -170,18 +168,6 @@ export const mergeGameStats = (localStats?: GameStats | null, remoteStats?: Game
         .entries.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0))
         .slice(0, 20);
 
-    const usageTotals = new Map<string, number>();
-    mergedMatchHistory.forEach((entry: any) => {
-        Object.entries(entry.itemsUsed || {}).forEach(([item, count]) => {
-            const parsedCount = Number(count) || 0;
-            if (parsedCount > 0) {
-                usageTotals.set(item, (usageTotals.get(item) || 0) + parsedCount);
-            }
-        });
-    });
-
-    const mostUsedItem = [...usageTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || base.mostUsedItem || incoming.mostUsedItem || 'NONE';
-
     return {
         wins: (base.wins || 0) + (incoming.wins || 0),
         losses: (base.losses || 0) + (incoming.losses || 0),
@@ -191,9 +177,8 @@ export const mergeGameStats = (localStats?: GameStats | null, remoteStats?: Game
         selfShots: (base.selfShots || 0) + (incoming.selfShots || 0),
         damageDealt: (base.damageDealt || 0) + (incoming.damageDealt || 0),
         itemsUsed: (base.itemsUsed || 0) + (incoming.itemsUsed || 0),
-        mostUsedItem,
         highestRound: Math.max(base.highestRound || 0, incoming.highestRound || 0),
-        itemPoints: (base.itemPoints || 0) + (incoming.itemPoints || 0),
+        // itemPoints and mostUsedItem removed
         matchHistory: mergedMatchHistory
     };
 };
@@ -236,9 +221,7 @@ export const registerUser = async (username: string, passwordHash: string): Prom
             selfShots: 0,
             damageDealt: 0,
             itemsUsed: 0,
-            mostUsedItem: 'NONE',
             highestRound: 0,
-            itemPoints: 0,
             matchHistory: []
         };
 
@@ -279,8 +262,8 @@ export const loginUser = async (username: string, passwordHash: string): Promise
         if (passwordHash === devPass) {
             let stats: GameStats = {
                 wins: 0, losses: 0, totalRounds: 0, shotsFired: 0, shotsHit: 0,
-                selfShots: 0, damageDealt: 0, itemsUsed: 0, mostUsedItem: 'NONE',
-                highestRound: 0, itemPoints: 0, matchHistory: []
+                selfShots: 0, damageDealt: 0, itemsUsed: 0,
+                highestRound: 0, matchHistory: []
             };
             try {
                 const existingDataStr = await executeRedisCommand(['GET', key]);
@@ -378,7 +361,7 @@ export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
             if (resObj && resObj.result) {
                 try {
                     const userData: UserData = JSON.parse(resObj.result);
-                    const stats: GameStats = userData.stats || { wins: 0, losses: 0, totalRounds: 0, shotsFired: 0, shotsHit: 0, selfShots: 0, damageDealt: 0, itemsUsed: 0, mostUsedItem: 'NONE', highestRound: 0, itemPoints: 0, matchHistory: [] };
+                    const stats: GameStats = userData.stats || { wins: 0, losses: 0, totalRounds: 0, shotsFired: 0, shotsHit: 0, selfShots: 0, damageDealt: 0, itemsUsed: 0, highestRound: 0, matchHistory: [] };
                     const matchHistory = stats.matchHistory || [];
                     
                     const hardModeWins = matchHistory.filter((m: any) => m.result === 'WIN' && m.isHardMode).length;

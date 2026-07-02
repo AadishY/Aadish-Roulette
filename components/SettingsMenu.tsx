@@ -90,15 +90,15 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
     };
 
     return (
-        <div className="fixed inset-0 z-[250] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-4 overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 z-[250] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md p-1.5 sm:p-4 overflow-y-auto custom-scrollbar">
             <div
-                className="w-[85vw] h-[85vh] max-w-[85vw] max-h-[85vh] bg-stone-950/45 backdrop-blur-2xl border border-stone-850 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/5 my-auto"
+                className="w-[92vw] max-w-[92vw] max-h-[92vh] h-auto max-h-[92vh] bg-stone-950/45 backdrop-blur-2xl border-[2px] border-stone-700/80 shadow-[0_30px_90px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden rounded-2xl ring-2 ring-white/10 my-auto"
             >
                 {/* Decorative */}
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-stone-500/20 to-transparent" />
 
                 {/* Header */}
-                <div className="p-3 sm:p-4 border-b border-stone-800/50 flex justify-between items-center bg-stone-950/20">
+                <div className="p-2.5 sm:p-4 border-b border-stone-800/50 flex justify-between items-center bg-stone-950/20">
                     <div className="flex items-center gap-2.5">
                         <div className="p-1.5 bg-stone-900/60 rounded-xl border border-stone-800 flex items-center justify-center text-stone-400">
                             <Monitor size={18} />
@@ -113,7 +113,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-2.5 sm:p-5 space-y-3 sm:space-y-5 custom-scrollbar">
 
                     {/* Visuals Group */}
                     <div className="space-y-3 sm:space-y-4">
@@ -177,7 +177,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                         </div>
 
                         {/* Graphics Quality Profile Selector */}
-                        <div className="p-3 bg-stone-950/65 border border-stone-850 rounded-xl space-y-2">
+                        <div className="p-2.5 sm:p-3 bg-stone-950/65 border border-stone-700/70 rounded-xl space-y-2">
                             <div>
                                 <span className="text-stone-300 font-bold tracking-widest text-[9px] sm:text-[10px] uppercase block">Graphics Quality Profile</span>
                                 <span className="text-[8px] sm:text-[9px] text-stone-500 font-bold uppercase tracking-wider block mt-0.5">Select performance layout optimized for your device hardware.</span>
@@ -287,7 +287,7 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                                 <div className="h-[1px] flex-1 bg-red-950/30" />
                             </div>
 
-                            <div className="flex items-center justify-between p-3 bg-red-950/10 border border-red-900/30 rounded-xl">
+                            <div className="flex items-center justify-between p-2.5 sm:p-3 bg-red-950/10 border border-red-900/30 rounded-xl">
                                 <div>
                                     <span className="text-stone-300 font-bold tracking-widest text-[9px] sm:text-[10px] uppercase block">Debug Overlay</span>
                                     <span className="text-[8px] sm:text-[9px] text-stone-500 font-bold uppercase tracking-wider block mt-0.5">Enables cheats, item management, and chamber editor</span>
@@ -322,16 +322,16 @@ export const SettingsMenu: React.FC<SettingsMenuProps> = ({ settings, onUpdateSe
                     )}
                 </div>
 
-                <div className="p-3 sm:p-4 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex flex-row gap-2.5 sm:gap-3 shrink-0">
+                <div className="p-2.5 sm:p-4 border-t border-stone-800/50 bg-stone-950/40 backdrop-blur-xl flex flex-row gap-2 sm:gap-3 shrink-0">
                     {showExitToMenu && !isMultiplayer && onExitToMenu && (
-                        <button onClick={onExitToMenu} className="flex-1 h-10 border border-red-900/50 bg-red-950/20 text-red-500 hover:text-red-400 hover:bg-red-950/40 hover:border-red-770/50 px-3 font-black tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all rounded-xl text-[9px] sm:text-[10px] uppercase cursor-pointer">
+                        <button onClick={onExitToMenu} className="flex-1 h-9 sm:h-10 border border-red-900/50 bg-red-950/20 text-red-500 hover:text-red-400 hover:bg-red-950/40 hover:border-red-770/50 px-2 sm:px-3 font-black tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all rounded-xl text-[8px] sm:text-[10px] uppercase cursor-pointer">
                             <LogOut size={12} /> Exit
                         </button>
                     )}
-                    <button onClick={onResetDefaults} className="flex-1 h-10 border border-stone-700 bg-stone-900/80 text-stone-300 hover:text-white hover:bg-stone-800/90 px-3 font-black tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all rounded-xl text-[9px] sm:text-[10px] uppercase cursor-pointer">
+                    <button onClick={onResetDefaults} className="flex-1 h-9 sm:h-10 border border-stone-700 bg-stone-900/80 text-stone-300 hover:text-white hover:bg-stone-800/90 px-2 sm:px-3 font-black tracking-[0.2em] flex items-center justify-center gap-1.5 transition-all rounded-xl text-[8px] sm:text-[10px] uppercase cursor-pointer">
                         <RotateCcw size={12} /> Reset Settings
                     </button>
-                    <button onClick={onClose} className="flex-[1.5] h-10 bg-white text-black font-black px-4 hover:bg-stone-200 transition-all tracking-[0.25em] rounded-xl text-[10px] sm:text-xs uppercase shadow-xl cursor-pointer">
+                    <button onClick={onClose} className="flex-[1.5] h-9 sm:h-10 bg-white text-black font-black px-3 sm:px-4 hover:bg-stone-200 transition-all tracking-[0.2em] sm:tracking-[0.25em] rounded-xl text-[8px] sm:text-xs uppercase shadow-xl cursor-pointer">
                         Return to Game
                     </button>
                 </div>
